@@ -44,21 +44,23 @@ void setup() {
   Serial.println("128x64 OLED FeatherWing test");
   delay(250); // wait for the OLED to power up
   display.begin(0x3C, true); // Address 0x3C default
-
   Serial.println("OLED begun");
 
   // Show image buffer on the display hardware.
   // Since the buffer is intialized with an Adafruit splashscreen
   // internally, this will display the splashscreen.
   display.display();
-  delay(500);
+  delay(500/10);
 
   // Clear the buffer.
   display.clearDisplay();
   display.display();
 
   display.setRotation(1);
-  Serial.println("Button test");
+  display.setTextSize(1);
+  display.setTextColor(SH110X_WHITE);
+  display.setCursor(0,0);
+  display.display(); // actually display all of the above
 
 /*
   pinMode(BUTTON_A, INPUT_PULLUP);
@@ -68,16 +70,6 @@ void setup() {
   button1.begin();
   button2.begin();
   button3.begin();
- 
-  // text display tests
-  display.setTextSize(1);
-  display.setTextColor(SH110X_WHITE);
-  display.setCursor(0,0);
-  display.print("Connecting to SSID\n'adafruit':");
-  display.print("connected!");
-  display.println("IP: 10.0.1.23");
-  display.println("Sending val #0");
-  display.display(); // actually display all of the above
 }
 
 const int MAX_TERMS = 10;
@@ -146,45 +138,18 @@ const char* terms[MAX_TERMS];
 void loop() {
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
-
     int nb_terms = parse((char*)command.c_str(), terms);
     if (nb_terms > 0)
       interpret(terms, nb_terms);
-
-
-/*
-    char* str = (char*)command.c_str();
-    char* rest = str;
-    char* token = strtok_r(str," ", &rest);
-    
-    const int MAX_TERMS = 10;
-
-    char* term[MAX_TERMS];
-    int nb_terms = 0;
-
-    while (token != NULL && nb_terms < MAX_TERMS) {
-      term[nb_terms++] = token;
-      Serial.print("string found ");
-      Serial.println(token);
-      token = strtok_r(NULL, " ", &rest);
-    }
-    for (int i = 0; i < nb_terms; ++i) {
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.println(term[i]);
-    }
-    */
   }
   else {
     delay(10);
   }
 
-//  ++c; if (c%120 == 0) Serial.print("\n");
-
   yield();
   return;
 
-
+/***
 
   Serial.print("?");
   String incoming = Serial.readStringUntil('\n');
@@ -193,11 +158,9 @@ void loop() {
 
   return;
 
-  /*
   if(!digitalRead(BUTTON_A)) display.print("A");
   if(!digitalRead(BUTTON_B)) display.print("B");
   if(!digitalRead(BUTTON_C)) display.print("C");
-  */
 
   if (button1.pressed())
     display.print("A");
@@ -210,4 +173,5 @@ void loop() {
   delay(10);
   yield();
   display.display();
+***/
 }
