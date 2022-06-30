@@ -1,8 +1,18 @@
+/*
+
+TODO:
+- command to inquire buttons states
+- indication of reboot (may be unrequested)
+- command to wait for a button change
+*/
+
+
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 #include <Button.h>  // Button by Michael Adams https://github.com/madleech/Button
+#include <ArduinoJson.h>  // https://github.com/bblanchon/ArduinoJson
 
 Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
 
@@ -41,10 +51,9 @@ void setup() {
   //Serial.begin(115200);
   Serial.begin(9600);
 
-  Serial.println("128x64 OLED FeatherWing test");
+  Serial.println("128x64 OLED FeatherWing ************");
   delay(250); // wait for the OLED to power up
   display.begin(0x3C, true); // Address 0x3C default
-
   Serial.println("OLED begun");
 
   // Show image buffer on the display hardware.
@@ -58,7 +67,7 @@ void setup() {
   display.display();
 
   display.setRotation(1);
-  Serial.println("Button test");
+  Serial.println("Ready");
 
 /*
   pinMode(BUTTON_A, INPUT_PULLUP);
@@ -69,40 +78,12 @@ void setup() {
   button2.begin();
   button3.begin();
  
-  // text display tests
   display.setTextSize(1);
   display.setTextColor(SH110X_WHITE);
   display.setCursor(0,0);
-  display.print("Connecting to SSID\n'adafruit':");
-  display.print("connected!");
-  display.println("IP: 10.0.1.23");
-  display.println("Sending val #0");
+  display.println("              ");
+  display.setCursor(0,0);
   display.display(); // actually display all of the above
-}
-
-const int MAX_TERMS = 10;
-
-int parse(char* str, const char* terms[]) {
-    // FIXME: strtok_r modifies the string, but should not
-    char* rest = str;
-    char* token = strtok_r(str," ", &rest);
-    int nb_terms = 0;
-
-    while (token != NULL && nb_terms < MAX_TERMS) {
-      terms[nb_terms] = token;
-      nb_terms++;
-      token = strtok_r(NULL, " ", &rest);
-    }
-
-    /*
-    for (int i = 0; i < nb_terms; ++i) {
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.println(terms[i]);
-    }
-    */
-
-    return nb_terms;
 }
 
 // https://stackoverflow.com/a/46711735
@@ -110,81 +91,92 @@ constexpr unsigned int hash(const char *s, int off = 0) {
     return !s[off] ? 5381 : (hash(s, off+1)*33) ^ s[off];                           
 }
 
-void error(const char* terms[], int nb_terms, int required_nb_args) {
-  Serial.print("ERROR ");
-  Serial.print(terms[0]);
-  Serial.print(" takes ");
-  Serial.print(required_nb_args);
-  Serial.print(" argument(s), but ");
-  Serial.print(nb_terms-1);
-  Serial.println(" were given");
-}
-
-bool check_str(const char* terms[], int nb_terms) {
-  if (nb_terms!= 2) {
-    error(terms, nb_terms, 1);
-    return false;
-  }
+bool parse_void(JsonDocument &doc) {
+  if (doc.size() != 1) return false;
   return true;
 }
 
-void interpret(const char* terms[], int nb_terms) {
-  switch (hash(terms[0])) {
-  case hash("print"):
-    if (check_str(terms, nb_terms)) {
-      display.print(terms[1]);
-      display.display();
-    }
-    break;
-  default:
-    Serial.println("UNKNOWN");
-  }
+bool parse_str(JsonDocument &doc, const char* *str) {
+  if (doc.size() != 2
+      || !doc[1].is<const char*>()) return false;
+  *str = doc[1].as<const char*>();
+  return true;
 }
 
-const char* terms[MAX_TERMS];
+bool parse_int(JsonDocument &doc, int* a) {
+  if (doc.size() != 2
+      || !doc[1].is<int>()
+      ) return false;
+  *a = doc[1].as<int>();
+  return true;
+}
+
+bool parse_int_int_int(JsonDocument &doc, int* a, int* b, int* c) {
+  if (doc.size() != 4
+      || !doc[1].is<int>()
+      || !doc[2].is<int>()
+      || !doc[3].is<int>()
+      ) return false;
+  *a = doc[1].as<int>();
+  *b = doc[2].as<int>();
+  *c = doc[3].as<int>();
+  return true;
+}
+
+bool interpret(JsonDocument &doc) {
+  switch (hash(doc[0].as<const char*>())) {
+  case hash("print"):  // ["print","HELLO\n"]
+    const char* text;
+    if (!parse_str(doc, &text)) return false;
+    display.print(text);
+    break;
+  case hash("clearDisplay"):  // ["clearDisplay"] <== crashes
+    if (!parse_void(doc)) return false;
+    display.clearDisplay();
+    break;
+  case hash("drawPixel"):  // ["drawPixel", 10, 10, 1]
+    int x, y, color;
+    if (!parse_int_int_int(doc, &x, &y, &color)) return false;
+    display.drawPixel(x, y, color);
+    break;
+  case hash("setRotation"):  // ["setRotation", 2]
+    int r;
+    if (!parse_int(doc, &r)) return false;
+    display.setRotation(r);
+    break;
+  default:
+    return false;
+  }
+  display.display();
+  return true;
+}
+
+//DynamicJsonDocument doc(200);
 
 void loop() {
   if (Serial.available() > 0) {
-    String command = Serial.readStringUntil('\n');
-
-    int nb_terms = parse((char*)command.c_str(), terms);
-    if (nb_terms > 0)
-      interpret(terms, nb_terms);
-
-
-/*
-    char* str = (char*)command.c_str();
-    char* rest = str;
-    char* token = strtok_r(str," ", &rest);
-    
-    const int MAX_TERMS = 10;
-
-    char* term[MAX_TERMS];
-    int nb_terms = 0;
-
-    while (token != NULL && nb_terms < MAX_TERMS) {
-      term[nb_terms++] = token;
-      Serial.print("string found ");
-      Serial.println(token);
-      token = strtok_r(NULL, " ", &rest);
+    StaticJsonDocument<256> doc;
+    deserializeJson(doc, Serial);
+    if (doc.size() > 0) {
+      bool ok = false;
+      if (doc[0].is<const char*>()) {
+        ok = interpret(doc);
+      }
+      if (ok) {
+        Serial.println("OK");
+      }
+      else {
+        Serial.println("ERROR");
+      }
     }
-    for (int i = 0; i < nb_terms; ++i) {
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.println(term[i]);
-    }
-    */
   }
   else {
     delay(10);
   }
-
-//  ++c; if (c%120 == 0) Serial.print("\n");
-
   yield();
   return;
 
-
+/*****
 
   Serial.print("?");
   String incoming = Serial.readStringUntil('\n');
@@ -193,11 +185,9 @@ void loop() {
 
   return;
 
-  /*
   if(!digitalRead(BUTTON_A)) display.print("A");
   if(!digitalRead(BUTTON_B)) display.print("B");
   if(!digitalRead(BUTTON_C)) display.print("C");
-  */
 
   if (button1.pressed())
     display.print("A");
@@ -210,4 +200,5 @@ void loop() {
   delay(10);
   yield();
   display.display();
+  *****/
 }
