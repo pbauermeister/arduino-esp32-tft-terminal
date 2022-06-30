@@ -70,6 +70,7 @@ void setup() {
   button1.begin();
   button2.begin();
   button3.begin();
+  Serial.println("Ready.");
 }
 
 const int MAX_TERMS = 10;
@@ -102,45 +103,64 @@ constexpr unsigned int hash(const char *s, int off = 0) {
     return !s[off] ? 5381 : (hash(s, off+1)*33) ^ s[off];                           
 }
 
-void error(const char* terms[], int nb_terms, int required_nb_args) {
-  Serial.print("ERROR ");
-  Serial.print(terms[0]);
-  Serial.print(" takes ");
-  Serial.print(required_nb_args);
-  Serial.print(" argument(s), but ");
-  Serial.print(nb_terms-1);
-  Serial.println(" were given");
-}
-
-bool check_str(const char* terms[], int nb_terms) {
-  if (nb_terms!= 2) {
-    error(terms, nb_terms, 1);
-    return false;
-  }
-  return true;
-}
-
-void interpret(const char* terms[], int nb_terms) {
-  switch (hash(terms[0])) {
+void interpret(String cmd, String rest) {
+  switch (hash(cmd.c_str())) {
   case hash("print"):
-    if (check_str(terms, nb_terms)) {
-      display.print(terms[1]);
-      display.display();
-    }
+    unescape(rest);
+    display.print(rest);
+    display.display();
+    break;
+  case hash("clearDisplay"):
+    display.clearDisplay();
+    display.display();
+    break;
+  case hash("home"):
+    display.setCursor(0,0);
+    display.display();
+    break;
+  case hash("reset"):
+    display.clearDisplay();
+    display.setCursor(0,0);
+    display.display();
+    break;
+  case hash("drawPixel"):  // drawPixel 10 10 1
+    String x, y, color;
+    split(rest, x, rest);
+    split(rest, y, color);
+    display.drawPixel(x.toInt(), y.toInt(), color.toInt());
+    display.display();
     break;
   default:
     Serial.println("UNKNOWN");
   }
 }
 
-const char* terms[MAX_TERMS];
+void unescape(String &s) {
+  s.replace("\\n", "\n");
+  s.replace("\\t", "\t");
+  s.replace("\\\\", "\\");
+}
+
+void split(String input, String &s1, String &s2) {
+  int pos = input.indexOf(" ");
+  if (pos == -1) {
+    s1 = input;
+    s2 = "";
+  }
+  else {
+    s1 = input.substring(0, pos);
+    s2 = input.substring(pos+1);
+  }
+}
 
 void loop() {
   if (Serial.available() > 0) {
-    String command = Serial.readStringUntil('\n');
-    int nb_terms = parse((char*)command.c_str(), terms);
-    if (nb_terms > 0)
-      interpret(terms, nb_terms);
+    String input = Serial.readStringUntil('\n');
+    //char* line = input.c_str();
+
+    String cmd, rest;
+    split(input, cmd, rest);
+    interpret(cmd, rest);
   }
   else {
     delay(10);
