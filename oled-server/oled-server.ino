@@ -123,16 +123,20 @@ void interpret(String cmd, String rest) {
     display.setCursor(0,0);
     display.display();
     break;
-  case hash("drawPixel"):  // drawPixel 10 10 1
+  case hash("drawPixel"):  // drawPixel 100 10 1
     String x, y, color;
-    split(rest, x, rest);
-    split(rest, y, color);
+    split(rest, x, rest); split(rest, y, color);
+    Serial.println(x);
+    Serial.println(y);
+    Serial.println(color);
     display.drawPixel(x.toInt(), y.toInt(), color.toInt());
     display.display();
     break;
   default:
     Serial.println("UNKNOWN");
+    return;
   }
+  Serial.println("OK");
 }
 
 void unescape(String &s) {
