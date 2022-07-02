@@ -103,12 +103,23 @@ int read_int(char**rest_p, char** error_p) {
   return atoi(v);
 }
 
+const char* read_last_str(char**rest_p, char** error_p) {
+  char* v = *rest_p;
+  if (v == NULL)
+    *error_p = "Missing argument";
+  else {
+    *error_p = NULL;
+    *rest_p = NULL;
+  }
+  return v;
+}
 // https://stackoverflow.com/a/46711735
 constexpr unsigned int hash(const char *s, int off = 0) {
     return !s[off] ? 5381 : (hash(s, off+1)*33) ^ (s[off]|0x20);
 }
 
 const char* OK = "OK";
+char response[64];
 
 const char* interpret(char* input) {
   char* cmd = input;
@@ -310,14 +321,25 @@ const char* interpret(char* input) {
       display.display();
       return(OK);
     }
+    case hash("getTextBounds"): {  // getTextBounds 40 20 Hello world
+      int x = read_int(&rest, &error);
+      int y = read_int(&rest, &error);
+      const char* str = read_last_str(&rest, &error);
+      if (error) return error;
+      int16_t x1;
+      int16_t y1;
+      uint16_t w;
+      uint16_t h;
+      display.getTextBounds(str, x, y, &x1, &y1, &w, &h);
+      snprintf(response, sizeof(response)-1, "%d %d %d %d", x1, y1, w, h);
+      return response;
+    }
     /*
     case hash("drawBitmap"):  // setRotation
     case hash("drawXBitmap"):  // setRotation
     case hash("drawGrayscaleBitmap"):  // setRotation
     case hash("drawRGBBitmap"):  // setRotation
 
-    case hash("drawChar"):  // setRotation
-    case hash("getTextBounds"):  // setRotation
     case hash("setTextSize"):  // setRotation
     case hash("setFont"):  // setRotation
     case hash("setCursor"):  // setRotation
