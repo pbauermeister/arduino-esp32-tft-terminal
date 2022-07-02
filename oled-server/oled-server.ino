@@ -89,6 +89,20 @@ char* split(char* s) {
   return rest;
 } 
 
+int read_int(char**rest_p, char** error_p) {
+  char* v = *rest_p;
+  *rest_p = split(*rest_p);
+
+  if (v == NULL)
+    *error_p = "Missing argument";
+  else if (*rest_p != NULL)
+    *error_p = "Extraneous argument";
+  else
+    *error_p = NULL;
+
+  return atoi(v);
+}
+
 // https://stackoverflow.com/a/46711735
 constexpr unsigned int hash(const char *s, int off = 0) {
     return !s[off] ? 5381 : (hash(s, off+1)*33) ^ (s[off]|0x20);
@@ -99,12 +113,14 @@ const char* OK = "OK";
 const char* interpret(char* input) {
   char* cmd = input;
   char* rest = split(input);
-
+  char* error = NULL;
+/*
   Serial.print(">>> <");
   Serial.print(cmd);
   Serial.print(",");
   Serial.print(rest);
   Serial.println(">");
+*/
 
   switch (hash(cmd)) {
     case hash("print"): {  // print HELLO\n
@@ -130,37 +146,176 @@ const char* interpret(char* input) {
       return(OK);
     }
     case hash("drawPixel"): {  // drawPixel 100 10 1
-      char* x = rest; rest = split(rest);
-      char* y = rest; rest = split(rest);
-      char* color = rest;
-      display.drawPixel(atoi(x), atoi(y), atoi(color));
+      int x = read_int(&rest, &error);
+      int y = read_int(&rest, &error);
+      int color = read_int(&rest, &error);
+      if (error) return error;
+      display.drawPixel(x, y, color);
       display.display();
       return(OK);
     }
     case hash("setRotation"): {  // setRotation 0 // ..3
-      char* x = rest;
-      display.setRotation(atoi(x));
+      int x = read_int(&rest, &error);
+      if (error) return error;
+      display.setRotation(x);
       display.display();
       return(OK);
     }
-/*
-    case hash("invertDisplay"):  // setRotation
-    case hash("drawFastVLine"):  // setRotation
-    case hash("drawFastHLine"):  // setRotation
-    case hash("fillRect"):  // setRotation
-    case hash("fillScreen"):  // setRotation
-    case hash("drawLine"):  // setRotation
-    case hash("drawRect"):  // setRotation
-    case hash("drawCircle"):  // setRotation
-    case hash("fillCircle"):  // setRotation
-    case hash("drawTriangle"):  // setRotation
-    case hash("fillTriangle"):  // setRotation
-    case hash("drawRoundRect"):  // setRotation
-    case hash("fillRoundRect"):  // setRotation
+#if 0
+    case hash("invertDisplay"): {  // invertDisplay
+      display.invertDisplay();
+      display.display();
+      return(OK);
+    }
+#endif
+    case hash("drawFastVLine"): {  // drawFastVLine 20 20 50 1
+      int x = read_int(&rest, &error);
+      int y = read_int(&rest, &error);
+      int h = read_int(&rest, &error);
+      int color = read_int(&rest, &error);
+      if (error) return error;
+      display.drawFastVLine(x, y, h, color);
+      display.display();
+      return(OK);
+    }
+    case hash("drawFastHLine"): {  // drawFastHLine 20 20 50 1
+      int x = read_int(&rest, &error);
+      int y = read_int(&rest, &error);
+      int w = read_int(&rest, &error);
+      int color = read_int(&rest, &error);
+      if (error) return error;
+      display.drawFastHLine(x, y, w, color);
+      display.display();
+      return(OK);
+  }
+    case hash("fillRect"): {  // fillRect 20 10 100 50 1
+      int x = read_int(&rest, &error);
+      int y = read_int(&rest, &error);
+      int w = read_int(&rest, &error);
+      int h = read_int(&rest, &error);
+      int color = read_int(&rest, &error);
+      if (error) return error;
+      display.fillRect(x, y, w, h, color);
+      display.display();
+      return(OK);
+    }
+    case hash("fillScreen"): {  // fillScreen 1
+      int color = read_int(&rest, &error);
+      if (error) return error;
+      display.fillScreen(color);
+      display.display();
+      return(OK);
+    }
+    case hash("drawLine"): {  // drawLine 20 5 100 45 1
+      int x0 = read_int(&rest, &error);
+      int y0 = read_int(&rest, &error);
+      int x1 = read_int(&rest, &error);
+      int y1 = read_int(&rest, &error);
+      int color = read_int(&rest, &error);
+      if (error) return error;
+      display.drawLine(x0, y0, x1, y1, color);
+      display.display();
+      return(OK);
+    }
+    case hash("drawRect"): {  // drawRect 20 5 100 50 1
+      int x = read_int(&rest, &error);
+      int y = read_int(&rest, &error);
+      int w = read_int(&rest, &error);
+      int h = read_int(&rest, &error);
+      int color = read_int(&rest, &error);
+      if (error) return error;
+      display.drawRect(x, y, w, h, color);
+      display.display();
+      return(OK);
+    }
+    case hash("drawCircle"): {  // drawCircle 50 30 25 1
+      int x0 = read_int(&rest, &error);
+      int y0 = read_int(&rest, &error);
+      int r = read_int(&rest, &error);
+      int color = read_int(&rest, &error);
+      if (error) return error;
+      display.drawCircle(x0, y0, r, color);
+      display.display();
+      return(OK);
+    }
+    case hash("fillCircle"): {  // fillCircle 50 30 25 1
+      int x0 = read_int(&rest, &error);
+      int y0 = read_int(&rest, &error);
+      int r = read_int(&rest, &error);
+      int color = read_int(&rest, &error);
+      if (error) return error;
+      display.fillCircle(x0, y0, r, color);
+      display.display();
+      return(OK);
+    }
+    case hash("drawTriangle"): {  // drawTriangle 10 25 100 5 120 50 1
+      int x0 = read_int(&rest, &error);
+      int y0 = read_int(&rest, &error);
+      int x1 = read_int(&rest, &error);
+      int y1 = read_int(&rest, &error);
+      int x2 = read_int(&rest, &error);
+      int y2 = read_int(&rest, &error);
+      int color = read_int(&rest, &error);
+      if (error) return error;
+      display.drawTriangle(x0, y0, x1, y1, x2, y2, color);
+      display.display();
+      return(OK);
+    }
+    case hash("fillTriangle"): {  // fillTriangle 12 27 102 7 122 52 1
+      int x0 = read_int(&rest, &error);
+      int y0 = read_int(&rest, &error);
+      int x1 = read_int(&rest, &error);
+      int y1 = read_int(&rest, &error);
+      int x2 = read_int(&rest, &error);
+      int y2 = read_int(&rest, &error);
+      int color = read_int(&rest, &error);
+      if (error) return error;
+      display.fillTriangle(x0, y0, x1, y1, x2, y2, color);
+      display.display();
+      return(OK);
+    }
+    case hash("drawRoundRect"): {  // drawRoundRect 20 5 100 50 12 1
+      int x = read_int(&rest, &error);
+      int y = read_int(&rest, &error);
+      int w = read_int(&rest, &error);
+      int h = read_int(&rest, &error);
+      int r = read_int(&rest, &error);
+      int color = read_int(&rest, &error);
+      if (error) return error;
+      display.drawRoundRect(x, y, w, h, r, color);
+      display.display();
+      return(OK);
+    }
+    case hash("fillRoundRect"): {  // fillRoundRect 20 5 100 50 12 1
+      int x = read_int(&rest, &error);
+      int y = read_int(&rest, &error);
+      int w = read_int(&rest, &error);
+      int h = read_int(&rest, &error);
+      int r = read_int(&rest, &error);
+      int color = read_int(&rest, &error);
+      if (error) return error;
+      display.fillRoundRect(x, y, w, h, r, color);
+      display.display();
+      return(OK);
+    }
+    case hash("drawChar"): {  // drawChar 40 20 65 0 1 3
+      int x = read_int(&rest, &error);
+      int y = read_int(&rest, &error);
+      unsigned char c = read_int(&rest, &error);
+      int color = read_int(&rest, &error);
+      int bg = read_int(&rest, &error);
+      int size = read_int(&rest, &error);
+      if (error) return error;
+      display.drawChar(x, y, c, color, bg, size);
+      display.display();
+      return(OK);
+    }
+    /*
     case hash("drawBitmap"):  // setRotation
     case hash("drawXBitmap"):  // setRotation
     case hash("drawGrayscaleBitmap"):  // setRotation
     case hash("drawRGBBitmap"):  // setRotation
+
     case hash("drawChar"):  // setRotation
     case hash("getTextBounds"):  // setRotation
     case hash("setTextSize"):  // setRotation
