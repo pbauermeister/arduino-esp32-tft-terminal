@@ -72,33 +72,33 @@ void setup() {
   button3.begin();
   Serial.println("Ready.");
 }
-
+/*
 void unescape(String &s) {
   s.replace("\\n", "\n");
   s.replace("\\t", "\t");
   s.replace("\\\\", "\\");
 }
+*/
+void unescape(char*) {
 
-void split(String input, String &s1, String &s2) {
-  int pos = input.indexOf(" ");
-  if (pos == -1) {
-    s1 = input;
-    s2 = "";
-  }
-  else {
-    s1 = input.substring(0, pos);
-    s2 = input.substring(pos+1);
-  }
 }
+
+char* split(char* s) {
+  char* rest;
+  strtok_r(s, " ", &rest);
+  return rest;
+} 
 
 // https://stackoverflow.com/a/46711735
 constexpr unsigned int hash(const char *s, int off = 0) {
     return !s[off] ? 5381 : (hash(s, off+1)*33) ^ (s[off]|0x20);
 }
 
-const String OK = "OK";
+const char* OK = "OK";
 
-String interpret(String cmd, String rest) {
+const char* interpret(char* input) {
+  char* cmd = input;
+  char* rest = split(input);
 
   Serial.print(">>> <");
   Serial.print(cmd);
@@ -106,17 +106,7 @@ String interpret(String cmd, String rest) {
   Serial.print(rest);
   Serial.println(">");
 
-  unsigned int h = hash(cmd.c_str());
-  /*
-  Serial.print(hash("setRotation"));
-  Serial.print(" : ");
-  Serial.print(h==hash("setRotation"));
-  Serial.print(" : ");
-  Serial.println(h);
-
-  String x, y, color;*/
-
-  switch (h) {
+  switch (hash(cmd)) {
     case hash("print"): {  // print HELLO\n
       unescape(rest);
       display.print(rest);
@@ -140,17 +130,16 @@ String interpret(String cmd, String rest) {
       return(OK);
     }
     case hash("drawPixel"): {  // drawPixel 100 10 1
-      String x, y, color;
-      split(rest, x, rest); split(rest, y, color);
-      display.drawPixel(x.toInt(), y.toInt(), color.toInt());
+      char* x = rest; rest = split(rest);
+      char* y = rest; rest = split(rest);
+      char* color = rest;
+      display.drawPixel(atoi(x), atoi(y), atoi(color));
       display.display();
       return(OK);
     }
     case hash("setRotation"): {  // setRotation 0 // ..3
-      Serial.println("setRotation");
-      String x = rest;
-      Serial.println(x);
-      display.setRotation(x.toInt());
+      char* x = rest;
+      display.setRotation(atoi(x));
       display.display();
       return(OK);
     }
@@ -194,10 +183,7 @@ String interpret(String cmd, String rest) {
 void loop() {
   if (Serial.available() > 0) {
     String input = Serial.readStringUntil('\n');
-
-    String cmd, rest;
-    split(input, cmd, rest);
-    String result = interpret(cmd, rest);
+    const char* result = interpret(input.c_str());
     Serial.println(result);
   }
   else {
