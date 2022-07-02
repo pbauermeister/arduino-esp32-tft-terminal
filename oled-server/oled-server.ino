@@ -41,10 +41,10 @@ void setup() {
   //Serial.begin(115200);
   Serial.begin(9600);
 
-  Serial.println("128x64 OLED FeatherWing test");
+  //Serial.println("128x64 OLED FeatherWing test");
   delay(250); // wait for the OLED to power up
   display.begin(0x3C, true); // Address 0x3C default
-  Serial.println("OLED begun");
+  Serial.println("# OLED begun");
 
   // Show image buffer on the display hardware.
   // Since the buffer is intialized with an Adafruit splashscreen
@@ -70,7 +70,7 @@ void setup() {
   button1.begin();
   button2.begin();
   button3.begin();
-  Serial.println("Ready.");
+  Serial.println("READY");
 }
 /*
 void unescape(String &s) {
@@ -89,14 +89,29 @@ char* split(char* s) {
   return rest;
 } 
 
-int read_int(char**rest_p, char** error_p) {
+const char* ERR_EXTRA_ARG = "ERROR extraneous argument";
+const char* ERR_MISSING_ARG = "ERROR extraneous argument";
+const char* OK = "OK";
+
+void no_arg(char**rest_p, char** error_p) {
+  if (*rest_p != NULL)
+    *error_p = ERR_EXTRA_ARG;
+  else
+    *error_p = NULL;
+}
+
+int read_int(char**rest_p, char** error_p, bool optional=false, int defval=-1) {
   char* v = *rest_p;
   *rest_p = split(*rest_p);
 
+  if (v == NULL && optional) {
+    return defval;
+  }
+
   if (v == NULL)
-    *error_p = "Missing argument";
+    *error_p = ERR_MISSING_ARG;
   else if (*rest_p != NULL)
-    *error_p = "Extraneous argument";
+    *error_p = ERR_EXTRA_ARG;
   else
     *error_p = NULL;
 
@@ -106,7 +121,7 @@ int read_int(char**rest_p, char** error_p) {
 const char* read_last_str(char**rest_p, char** error_p) {
   char* v = *rest_p;
   if (v == NULL)
-    *error_p = "Missing argument";
+    *error_p = ERR_MISSING_ARG;
   else {
     *error_p = NULL;
     *rest_p = NULL;
@@ -118,7 +133,6 @@ constexpr unsigned int hash(const char *s, int off = 0) {
     return !s[off] ? 5381 : (hash(s, off+1)*33) ^ (s[off]|0x20);
 }
 
-const char* OK = "OK";
 char response[64];
 
 const char* interpret(char* input) {
@@ -141,16 +155,19 @@ const char* interpret(char* input) {
       return(OK);
     }
     case hash("clearDisplay"): {
+      no_arg(&rest, &error); if (error) return error;
       display.clearDisplay();
       display.display();
       return(OK);
     }
     case hash("home"): {
+      no_arg(&rest, &error); if (error) return error;
       display.setCursor(0,0);
       display.display();
       return(OK);
     }
     case hash("reset"): {
+      no_arg(&rest, &error); if (error) return error;
       display.clearDisplay();
       display.setCursor(0,0);
       display.display();
@@ -334,27 +351,69 @@ const char* interpret(char* input) {
       snprintf(response, sizeof(response)-1, "%d %d %d %d", x1, y1, w, h);
       return response;
     }
-    /*
-    case hash("drawBitmap"):  // setRotation
-    case hash("drawXBitmap"):  // setRotation
-    case hash("drawGrayscaleBitmap"):  // setRotation
-    case hash("drawRGBBitmap"):  // setRotation
-
-    case hash("setTextSize"):  // setRotation
-    case hash("setFont"):  // setRotation
-    case hash("setCursor"):  // setRotation
-    case hash("setTextColor"):  // setRotation
-    case hash("setTextWrap"):  // setRotation
-    case hash("width"):  // setRotation
-    case hash("height"):  // setRotation
-    case hash("getRotation"):  // setRotation
-    case hash("getCursorX"):  // setRotation
-    case hash("getCursorY"):  // setRotation
-    */
+    case hash("setTextSize"): {  // setTextSize 3  / setTextSize 1 4
+      int s = read_int(&rest, &error);
+      int sy = read_int(&rest, &error, true);
+      if (error) return error;
+      if (sy == -1)
+        display.setTextSize(s);
+      else
+        display.setTextSize(s, sy);
+      return(OK);
+    }
+    case hash("setCursor"): {  // setCursor 50 5
+      int x = read_int(&rest, &error);
+      int y = read_int(&rest, &error);
+      if (error) return error;
+      display.setCursor(x, y);
+      return(OK);
+    }
+    case hash("setTextColor"): {  // fillScreen 1  /  setTextColor 1  /  print HELLO
+      int c = read_int(&rest, &error);
+      if (error) return error;
+      display.setTextColor(c);
+      return(OK);
+    }
+    case hash("setTextWrap"): {  // setTextWrap 0
+      int w = read_int(&rest, &error);
+      if (error) return error;
+      display.setTextWrap((bool)w);
+      return(OK);
+    }
+    case hash("width"): {  // width
+      return handle_get(&rest, display.width());
+    }
+    case hash("height"): {  // height
+      return handle_get(&rest, display.height());
+    }
+    case hash("getRotation"): {  // getRotation
+      return handle_get(&rest, display.getRotation());
+    }
+    case hash("getCursorX"): {  // getCursorX
+      return handle_get(&rest, display.getCursorX());
+    }
+    case hash("getCursorY"): {  // getCursorY
+      return handle_get(&rest, display.getCursorY());
+    }
+  /*
+    case hash("drawBitmap"): {  // 
+    case hash("drawXBitmap"): {  // 
+    case hash("drawGrayscaleBitmap"): {  // 
+    case hash("drawRGBBitmap"): {  // 
+    case hash("setFont"): {  //  
+  */
     default:
       break;
   }
   return "UNKNOWN";
+}
+
+const char* handle_get(const char**rest, int val) {
+  char* error;
+  no_arg(rest, &error); 
+  if (error) return error;
+  snprintf(response, sizeof(response)-1, "%d", val);
+  return response;
 }
 
 void loop() {
