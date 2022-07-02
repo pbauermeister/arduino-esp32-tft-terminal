@@ -50,7 +50,7 @@ void setup() {
   // Since the buffer is intialized with an Adafruit splashscreen
   // internally, this will display the splashscreen.
   display.display();
-  delay(500/10);
+  delay(500 / 50);
 
   // Clear the buffer.
   display.clearDisplay();
@@ -73,72 +73,6 @@ void setup() {
   Serial.println("Ready.");
 }
 
-const int MAX_TERMS = 10;
-
-int parse(char* str, const char* terms[]) {
-    // FIXME: strtok_r modifies the string, but should not
-    char* rest = str;
-    char* token = strtok_r(str," ", &rest);
-    int nb_terms = 0;
-
-    while (token != NULL && nb_terms < MAX_TERMS) {
-      terms[nb_terms] = token;
-      nb_terms++;
-      token = strtok_r(NULL, " ", &rest);
-    }
-
-    /*
-    for (int i = 0; i < nb_terms; ++i) {
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.println(terms[i]);
-    }
-    */
-
-    return nb_terms;
-}
-
-// https://stackoverflow.com/a/46711735
-constexpr unsigned int hash(const char *s, int off = 0) {                        
-    return !s[off] ? 5381 : (hash(s, off+1)*33) ^ s[off];                           
-}
-
-void interpret(String cmd, String rest) {
-  switch (hash(cmd.c_str())) {
-  case hash("print"):
-    unescape(rest);
-    display.print(rest);
-    display.display();
-    break;
-  case hash("clearDisplay"):
-    display.clearDisplay();
-    display.display();
-    break;
-  case hash("home"):
-    display.setCursor(0,0);
-    display.display();
-    break;
-  case hash("reset"):
-    display.clearDisplay();
-    display.setCursor(0,0);
-    display.display();
-    break;
-  case hash("drawPixel"):  // drawPixel 100 10 1
-    String x, y, color;
-    split(rest, x, rest); split(rest, y, color);
-    Serial.println(x);
-    Serial.println(y);
-    Serial.println(color);
-    display.drawPixel(x.toInt(), y.toInt(), color.toInt());
-    display.display();
-    break;
-  default:
-    Serial.println("UNKNOWN");
-    return;
-  }
-  Serial.println("OK");
-}
-
 void unescape(String &s) {
   s.replace("\\n", "\n");
   s.replace("\\t", "\t");
@@ -157,14 +91,114 @@ void split(String input, String &s1, String &s2) {
   }
 }
 
+// https://stackoverflow.com/a/46711735
+constexpr unsigned int hash(const char *s, int off = 0) {
+    return !s[off] ? 5381 : (hash(s, off+1)*33) ^ (s[off]|0x20);
+}
+
+const String OK = "OK";
+
+String interpret(String cmd, String rest) {
+
+  Serial.print(">>> <");
+  Serial.print(cmd);
+  Serial.print(",");
+  Serial.print(rest);
+  Serial.println(">");
+
+  unsigned int h = hash(cmd.c_str());
+  /*
+  Serial.print(hash("setRotation"));
+  Serial.print(" : ");
+  Serial.print(h==hash("setRotation"));
+  Serial.print(" : ");
+  Serial.println(h);
+
+  String x, y, color;*/
+
+  switch (h) {
+    case hash("print"): {  // print HELLO\n
+      unescape(rest);
+      display.print(rest);
+      display.display();
+      return(OK);
+    }
+    case hash("clearDisplay"): {
+      display.clearDisplay();
+      display.display();
+      return(OK);
+    }
+    case hash("home"): {
+      display.setCursor(0,0);
+      display.display();
+      return(OK);
+    }
+    case hash("reset"): {
+      display.clearDisplay();
+      display.setCursor(0,0);
+      display.display();
+      return(OK);
+    }
+    case hash("drawPixel"): {  // drawPixel 100 10 1
+      String x, y, color;
+      split(rest, x, rest); split(rest, y, color);
+      display.drawPixel(x.toInt(), y.toInt(), color.toInt());
+      display.display();
+      return(OK);
+    }
+    case hash("setRotation"): {  // setRotation 0 // ..3
+      Serial.println("setRotation");
+      String x = rest;
+      Serial.println(x);
+      display.setRotation(x.toInt());
+      display.display();
+      return(OK);
+    }
+/*
+    case hash("invertDisplay"):  // setRotation
+    case hash("drawFastVLine"):  // setRotation
+    case hash("drawFastHLine"):  // setRotation
+    case hash("fillRect"):  // setRotation
+    case hash("fillScreen"):  // setRotation
+    case hash("drawLine"):  // setRotation
+    case hash("drawRect"):  // setRotation
+    case hash("drawCircle"):  // setRotation
+    case hash("fillCircle"):  // setRotation
+    case hash("drawTriangle"):  // setRotation
+    case hash("fillTriangle"):  // setRotation
+    case hash("drawRoundRect"):  // setRotation
+    case hash("fillRoundRect"):  // setRotation
+    case hash("drawBitmap"):  // setRotation
+    case hash("drawXBitmap"):  // setRotation
+    case hash("drawGrayscaleBitmap"):  // setRotation
+    case hash("drawRGBBitmap"):  // setRotation
+    case hash("drawChar"):  // setRotation
+    case hash("getTextBounds"):  // setRotation
+    case hash("setTextSize"):  // setRotation
+    case hash("setFont"):  // setRotation
+    case hash("setCursor"):  // setRotation
+    case hash("setTextColor"):  // setRotation
+    case hash("setTextWrap"):  // setRotation
+    case hash("width"):  // setRotation
+    case hash("height"):  // setRotation
+    case hash("getRotation"):  // setRotation
+    case hash("getCursorX"):  // setRotation
+    case hash("getCursorY"):  // setRotation
+    */
+    default:
+      break;
+  }
+  return "UNKNOWN";
+}
+
 void loop() {
   if (Serial.available() > 0) {
     String input = Serial.readStringUntil('\n');
-    //char* line = input.c_str();
 
     String cmd, rest;
     split(input, cmd, rest);
-    interpret(cmd, rest);
+    String result = interpret(cmd, rest);
+    Serial.println(result);
   }
   else {
     delay(10);
