@@ -75,8 +75,8 @@ char* split(char* s) {
   return rest;
 } 
 
-const char* ERR_EXTRA_ARG = "ERROR extraneous argument";
-const char* ERR_MISSING_ARG = "ERROR extraneous argument";
+const char* ERR_EXTRA_ARG = "ERROR extra arg";
+const char* ERR_MISSING_ARG = "ERROR missing arg";
 const char* OK = "OK";
 
 void no_arg(char**rest_p, char** error_p) {
@@ -384,17 +384,17 @@ const char* interpret(char* input) {
       int every = interval < STEP ? 1 : interval / STEP;
       int counter = 0;
       do {
-        if (button1.pressed()) Serial.println("DOWN A");
-        if (button1.released()) Serial.println("UP A");
-        if (button2.pressed()) Serial.println("DOWN B");
-        if (button2.released()) Serial.println("UP B");
-        if (button3.pressed()) Serial.println("DOWN C");
-        if (button3.released()) Serial.println("UP C");
+        if (button1.pressed())  println("DOWN", 'A');
+        if (button1.released()) println("UP",   'A');
+        if (button2.pressed())  println("DOWN", 'B');
+        if (button2.released()) println("UP",   'B');
+        if (button3.pressed())  println("DOWN", 'C');
+        if (button3.released()) println("UP",   'C');
 
         if (counter % every == 0) {
-          if (button1.read() == Button::PRESSED) Serial.println("PRESSED A");
-          if (button2.read() == Button::PRESSED) Serial.println("PRESSED B");
-          if (button3.read() == Button::PRESSED) Serial.println("PRESSED C");
+          if (button1.read() == Button::PRESSED) println("PRESSED", 'A');
+          if (button2.read() == Button::PRESSED) println("PRESSED", 'B');
+          if (button3.read() == Button::PRESSED) println("PRESSED", 'C');
         }
         counter++;
 
@@ -421,6 +421,12 @@ const char* interpret(char* input) {
       break;
   }
   return "UNKNOWN";
+}
+
+void println(const char* prefix, char letter) {
+  Serial.print(prefix);
+  Serial.print(' ');
+  Serial.println(letter);
 }
 
 const char* handle_get(const char**rest, int val) {
