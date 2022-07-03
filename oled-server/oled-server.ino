@@ -33,6 +33,11 @@ Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
   #define BUTTON_C  5
 #endif
 
+const char* ERR_EXTRA_ARG = "ERROR extra arg";
+const char* ERR_MISSING_ARG = "ERROR missing arg";
+const char* OK = "OK";
+
+char buffer[100];  // used for input and output, so use with care!
 Button button1(BUTTON_A);
 Button button2(BUTTON_B);
 Button button3(BUTTON_C);
@@ -75,10 +80,6 @@ char* split(char* s) {
   return rest;
 } 
 
-const char* ERR_EXTRA_ARG = "ERROR extra arg";
-const char* ERR_MISSING_ARG = "ERROR missing arg";
-const char* OK = "OK";
-
 void no_arg(char**rest_p, char** error_p) {
   if (*rest_p != NULL)
     *error_p = ERR_EXTRA_ARG;
@@ -118,8 +119,6 @@ const char* read_last_str(char**rest_p, char** error_p) {
 constexpr unsigned int hash(const char *s, int off = 0) {
     return !s[off] ? 5381 : (hash(s, off+1)*33) ^ (s[off]|0x20);
 }
-
-char response[64];
 
 const char* interpret(char* input) {
   char* cmd = input;
@@ -326,8 +325,8 @@ const char* interpret(char* input) {
       uint16_t w;
       uint16_t h;
       display.getTextBounds(str, x, y, &x1, &y1, &w, &h);
-      snprintf(response, sizeof(response)-1, "%d %d %d %d", x1, y1, w, h);
-      return response;
+      snprintf(buffer, sizeof(buffer)-1, "%d %d %d %d", x1, y1, w, h);
+      return buffer;
     }
     case hash("setTextSize"): {  // setTextSize 3  / setTextSize 1 4
       int s = read_int(&rest, &error);
@@ -359,19 +358,19 @@ const char* interpret(char* input) {
       return(OK);
     }
     case hash("width"): {  // width
-      return handle_get(&rest, display.width());
+      return make_resp_buffer(&rest, display.width());
     }
     case hash("height"): {  // height
-      return handle_get(&rest, display.height());
+      return make_resp_buffer(&rest, display.height());
     }
     case hash("getRotation"): {  // getRotation
-      return handle_get(&rest, display.getRotation());
+      return make_resp_buffer(&rest, display.getRotation());
     }
     case hash("getCursorX"): {  // getCursorX
-      return handle_get(&rest, display.getCursorX());
+      return make_resp_buffer(&rest, display.getCursorX());
     }
     case hash("getCursorY"): {  // getCursorY
-      return handle_get(&rest, display.getCursorY());
+      return make_resp_buffer(&rest, display.getCursorY());
     }
     case hash("monitorButtons"): {  // monitorButtons 60000 / monitorButtons 60000 500
       unsigned int during = read_int(&rest, &error);
@@ -384,17 +383,17 @@ const char* interpret(char* input) {
       int every = interval < STEP ? 1 : interval / STEP;
       int counter = 0;
       do {
-        if (button1.pressed())  println("DOWN", 'A');
-        if (button1.released()) println("UP",   'A');
-        if (button2.pressed())  println("DOWN", 'B');
-        if (button2.released()) println("UP",   'B');
-        if (button3.pressed())  println("DOWN", 'C');
-        if (button3.released()) println("UP",   'C');
+        if (button1.pressed())  print_state("DOWN", 'A');
+        if (button1.released()) print_state("UP",   'A');
+        if (button2.pressed())  print_state("DOWN", 'B');
+        if (button2.released()) print_state("UP",   'B');
+        if (button3.pressed())  print_state("DOWN", 'C');
+        if (button3.released()) print_state("UP",   'C');
 
         if (counter % every == 0) {
-          if (button1.read() == Button::PRESSED) println("PRESSED", 'A');
-          if (button2.read() == Button::PRESSED) println("PRESSED", 'B');
-          if (button3.read() == Button::PRESSED) println("PRESSED", 'C');
+          if (button1.read() == Button::PRESSED) print_state("PRESSED", 'A');
+          if (button2.read() == Button::PRESSED) print_state("PRESSED", 'B');
+          if (button3.read() == Button::PRESSED) print_state("PRESSED", 'C');
         }
         counter++;
 
@@ -423,18 +422,18 @@ const char* interpret(char* input) {
   return "UNKNOWN";
 }
 
-void println(const char* prefix, char letter) {
+void print_state(const char* prefix, char letter) {
   Serial.print(prefix);
   Serial.print(' ');
   Serial.println(letter);
 }
 
-const char* handle_get(const char**rest, int val) {
+const char* make_resp_buffer(const char**rest, int val) {
   char* error;
   no_arg(rest, &error); 
   if (error) return error;
-  snprintf(response, sizeof(response)-1, "%d", val);
-  return response;
+  snprintf(buffer, sizeof(buffer)-1, "%d", val);
+  return buffer;
 }
 
 void unescape_inplace(char* input) {
@@ -469,14 +468,13 @@ char* get_input(char* input, size_t len) {
   return input;
 }
 
-
 void loop() {
   if (Serial.available() > 0) {
-    static char input[30];
-    get_input(input, sizeof(input));
-    unescape_inplace(input);
+    //static char input[30];
+    get_input(buffer, sizeof(buffer));
+    unescape_inplace(buffer);
 
-    const char* result = interpret(input);
+    const char* result = interpret(buffer);
     Serial.println(result);
   }
   else {
