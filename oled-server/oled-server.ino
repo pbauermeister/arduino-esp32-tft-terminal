@@ -3,6 +3,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 #include <Button.h>  // Button by Michael Adams https://github.com/madleech/Button
+#include "button.h"
 
 Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
 
@@ -33,9 +34,11 @@ Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
   #define BUTTON_C  5
 #endif
 
+
 Button button1(BUTTON_A); // Connect your button between pin 2 and GND
 Button button2(BUTTON_B); // Connect your button between pin 3 and GND
 Button button3(BUTTON_C); // Connect your button between pin 4 and GND
+
 
 void setup() {
   //Serial.begin(115200);
@@ -70,6 +73,7 @@ void setup() {
   button1.begin();
   button2.begin();
   button3.begin();
+
   Serial.println("READY");
 }
 /*
@@ -395,7 +399,45 @@ const char* interpret(char* input) {
     case hash("getCursorY"): {  // getCursorY
       return handle_get(&rest, display.getCursorY());
     }
+    case hash("monitorButtons"): {  // monitorButtons 60000 / monitorButtons 60000 1000
+      unsigned int during = read_int(&rest, &error);
+      unsigned int interval = read_int(&rest, &error, true, 100);
+      if (error) return error;
+
+      unsigned long start = millis();
+      unsigned int delta;
+      const unsigned long STEP = 10;
+      int every = interval < STEP ? 1 : interval / STEP;
+      int counter = 0;
+      do {
+        if (button1.pressed()) Serial.println("DOWN A");
+        if (button1.released()) Serial.println("UP A");
+//        if (button2.pressed()) Serial.println("DOWN B");
+//        if (button2.released()) Serial.println("UP B");
+//        if (button3.pressed()) Serial.println("DOWN C");
+//        if (button3.released()) Serial.println("UP C");
+
+        if (counter % every == 0) {
+          if (button1.read() == Button::PRESSED) Serial.println("PRESSED A");
+//          if (button2.read() == Button::PRESSED) Serial.println("PRESSED B");
+//          if (button3.read() == Button::PRESSED) Serial.println("PRESSED C");
+        }
+        counter++;
+
+        delay(STEP);
+        yield();
+        delta = millis() - start;
+      } while(delta < during && Serial.available() == 0);
+      return(OK);
+    }
   /*
+    monitorButtons()
+    readButtons()
+    readButtonsChanges()
+    awaitButtonsChanges(timeout)
+    sleep(timeout)
+
+
     case hash("drawBitmap"): {  // 
     case hash("drawXBitmap"): {  // 
     case hash("drawGrayscaleBitmap"): {  // 
@@ -418,7 +460,9 @@ const char* handle_get(const char**rest, int val) {
 
 void loop() {
   if (Serial.available() > 0) {
-    String input = Serial.readStringUntil('\n');
+    String input;  // String sucks, do lower-level
+    input.reserve(30);
+    input = Serial.readStringUntil('\n');
     const char* result = interpret(input.c_str());
     Serial.println(result);
   }
