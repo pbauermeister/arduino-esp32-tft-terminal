@@ -12,22 +12,27 @@ Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
   #define BUTTON_B 16
   #define BUTTON_C  2
 #elif defined(ESP32) && !defined(ARDUINO_ADAFRUIT_FEATHER_ESP32S2)
+  #define BOARD_NAME "ARDUINO_ADAFRUIT_FEATHER_ESP32S2"
   #define BUTTON_A 15
   #define BUTTON_B 32
   #define BUTTON_C 14
 #elif defined(ARDUINO_STM32_FEATHER)
+  #define BOARD_NAME "ARDUINO_STM32_FEATHER"
   #define BUTTON_A PA15
   #define BUTTON_B PC7
   #define BUTTON_C PC5
 #elif defined(TEENSYDUINO)
+  #define BOARD_NAME "TEENSYDUINO"
   #define BUTTON_A  4
   #define BUTTON_B  3
   #define BUTTON_C  8
 #elif defined(ARDUINO_NRF52832_FEATHER)
+  #define BOARD_NAME "ARDUINO_NRF52832_FEATHER"
   #define BUTTON_A 31
   #define BUTTON_B 30
   #define BUTTON_C 27
 #else // 32u4, M0, M4, nrf52840, esp32-s2 and 328p
+  #define BOARD_NAME "Any"
   #define BUTTON_A  9
   #define BUTTON_B  6
   #define BUTTON_C  5
@@ -44,12 +49,17 @@ Button button3(BUTTON_C);
 
 void setup() {
   //Serial.begin(115200);
-  Serial.begin(9600);
+  Serial.begin(57600);
 
-  //Serial.println("128x64 OLED FeatherWing test");
+  Serial.print("# Board: ");
+  Serial.println(BOARD_NAME);
+
   delay(250); // wait for the OLED to power up
   display.begin(0x3C, true); // Address 0x3C default
-  Serial.println("# OLED begun");
+  Serial.print("# OLED begun: ");
+  Serial.print(display.width());
+  Serial.print("x");
+  Serial.println(display.height());
 
   // Show image buffer on the display hardware.
   // Since the buffer is intialized with an Adafruit splashscreen
