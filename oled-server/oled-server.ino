@@ -403,12 +403,46 @@ const char* interpret(char* input) {
       } while(delta < during && Serial.available() == 0);
       return(OK);
     }
-  /*
-    readButtons()
-    readButtonsChanges()
-    awaitButtonsChanges(timeout)
-    sleep(timeout)
+    case hash("readButtons"): {  // readButtons
+      buffer[0] = 0;
+      if (button1.read() == Button::PRESSED) strcat(buffer, "A");
+      if (button2.read() == Button::PRESSED) strcat(buffer, "B");
+      if (button3.read() == Button::PRESSED) strcat(buffer, "C");
+      return strlen(buffer) ? buffer : "NONE";
+    }
+    case hash("waitButton"): { //  waitButton 60000 1
+      unsigned int during = read_int(&rest, &error);
+      unsigned int up = read_int(&rest, &error);
+      if (error) return error;
 
+      unsigned long start = millis();
+      unsigned int delta;
+      const unsigned long STEP = 10;
+
+      // flush
+      button1.released(); button1.pressed();
+      button2.released(); button2.pressed();
+      button3.released(); button3.pressed();
+
+      do {
+        if (up) {
+          if (button1.released()) return "A";
+          if (button2.released()) return "B";
+          if (button3.released()) return "C";
+        }
+        else {
+          if (button1.pressed()) return "A";
+          if (button2.pressed()) return "B";
+          if (button3.pressed()) return "C";
+        }
+        delay(STEP);
+        yield();
+        delta = millis() - start;
+      } while(delta < during && Serial.available() == 0);
+      return("NONE");
+    }
+  /*
+    sleep(timeout)
 
     case hash("drawBitmap"): {  // 
     case hash("drawXBitmap"): {  // 
@@ -475,7 +509,7 @@ void loop() {
     unescape_inplace(buffer);
 
     const char* result = interpret(buffer);
-    Serial.println(result);
+    if (result) Serial.println(result);
   }
   else {
     delay(10);
