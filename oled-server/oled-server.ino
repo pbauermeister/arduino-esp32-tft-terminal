@@ -3,7 +3,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SH110X.h>
 #include <Button.h>  // Button by Michael Adams https://github.com/madleech/Button
-#include "button.h"
 
 Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
 
@@ -34,11 +33,9 @@ Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
   #define BUTTON_C  5
 #endif
 
-
-Button button1(BUTTON_A); // Connect your button between pin 2 and GND
-Button button2(BUTTON_B); // Connect your button between pin 3 and GND
-Button button3(BUTTON_C); // Connect your button between pin 4 and GND
-
+Button button1(BUTTON_A);
+Button button2(BUTTON_B);
+Button button3(BUTTON_C);
 
 void setup() {
   //Serial.begin(115200);
@@ -59,32 +56,17 @@ void setup() {
   display.clearDisplay();
   display.display();
 
-  display.setRotation(1);
+  display.setRotation(3);  // horizontal, buttons right
   display.setTextSize(1);
   display.setTextColor(SH110X_WHITE);
   display.setCursor(0,0);
   display.display(); // actually display all of the above
 
-/*
-  pinMode(BUTTON_A, INPUT_PULLUP);
-  pinMode(BUTTON_B, INPUT_PULLUP);
-  pinMode(BUTTON_C, INPUT_PULLUP);
-*/
   button1.begin();
   button2.begin();
   button3.begin();
 
   Serial.println("READY");
-}
-/*
-void unescape(String &s) {
-  s.replace("\\n", "\n");
-  s.replace("\\t", "\t");
-  s.replace("\\\\", "\\");
-}
-*/
-void unescape(char*) {
-
 }
 
 char* split(char* s) {
@@ -143,17 +125,9 @@ const char* interpret(char* input) {
   char* cmd = input;
   char* rest = split(input);
   char* error = NULL;
-/*
-  Serial.print(">>> <");
-  Serial.print(cmd);
-  Serial.print(",");
-  Serial.print(rest);
-  Serial.println(">");
-*/
 
   switch (hash(cmd)) {
     case hash("print"): {  // print HELLO\n
-      unescape(rest);
       display.print(rest);
       display.display();
       return(OK);
@@ -399,7 +373,7 @@ const char* interpret(char* input) {
     case hash("getCursorY"): {  // getCursorY
       return handle_get(&rest, display.getCursorY());
     }
-    case hash("monitorButtons"): {  // monitorButtons 60000 / monitorButtons 60000 1000
+    case hash("monitorButtons"): {  // monitorButtons 60000 / monitorButtons 60000 500
       unsigned int during = read_int(&rest, &error);
       unsigned int interval = read_int(&rest, &error, true, 100);
       if (error) return error;
@@ -412,15 +386,15 @@ const char* interpret(char* input) {
       do {
         if (button1.pressed()) Serial.println("DOWN A");
         if (button1.released()) Serial.println("UP A");
-//        if (button2.pressed()) Serial.println("DOWN B");
-//        if (button2.released()) Serial.println("UP B");
-//        if (button3.pressed()) Serial.println("DOWN C");
-//        if (button3.released()) Serial.println("UP C");
+        if (button2.pressed()) Serial.println("DOWN B");
+        if (button2.released()) Serial.println("UP B");
+        if (button3.pressed()) Serial.println("DOWN C");
+        if (button3.released()) Serial.println("UP C");
 
         if (counter % every == 0) {
           if (button1.read() == Button::PRESSED) Serial.println("PRESSED A");
-//          if (button2.read() == Button::PRESSED) Serial.println("PRESSED B");
-//          if (button3.read() == Button::PRESSED) Serial.println("PRESSED C");
+          if (button2.read() == Button::PRESSED) Serial.println("PRESSED B");
+          if (button3.read() == Button::PRESSED) Serial.println("PRESSED C");
         }
         counter++;
 
@@ -431,7 +405,6 @@ const char* interpret(char* input) {
       return(OK);
     }
   /*
-    monitorButtons()
     readButtons()
     readButtonsChanges()
     awaitButtonsChanges(timeout)
@@ -458,12 +431,46 @@ const char* handle_get(const char**rest, int val) {
   return response;
 }
 
+void unescape_inplace(char* input) {
+  for (char *from = input, *to = input;;) {
+    if (*from != '\\') {
+      *to = *from;
+    } else {
+      ++from;
+      switch(*from) {
+        case 'n':
+          *to = '\n';
+          break;
+        case '\\':
+          *to = '\\';
+          break;
+        case 't':
+          *to = '\t';
+          break;
+        default:
+          *to = *from;
+      }
+    }
+    if (*from == 0) break;
+    ++from;
+    ++to;
+  }
+}
+
+char* get_input(char* input, size_t len) {
+  len = Serial.readBytesUntil('\n', input, len - 1);
+  input[len] = 0;
+  return input;
+}
+
+
 void loop() {
   if (Serial.available() > 0) {
-    String input;  // String sucks, do lower-level
-    input.reserve(30);
-    input = Serial.readStringUntil('\n');
-    const char* result = interpret(input.c_str());
+    static char input[30];
+    get_input(input, sizeof(input));
+    unescape_inplace(input);
+
+    const char* result = interpret(input);
     Serial.println(result);
   }
   else {
@@ -471,31 +478,4 @@ void loop() {
   }
 
   yield();
-  return;
-
-/***
-
-  Serial.print("?");
-  String incoming = Serial.readStringUntil('\n');
-  Serial.print("> ");
-  Serial.println(incoming);  
-
-  return;
-
-  if(!digitalRead(BUTTON_A)) display.print("A");
-  if(!digitalRead(BUTTON_B)) display.print("B");
-  if(!digitalRead(BUTTON_C)) display.print("C");
-
-  if (button1.pressed())
-    display.print("A");
-  if (button1.released())
-    display.print("a");
-
-  if (button1.read() == Button::PRESSED)
-    display.print("_");
-
-  delay(10);
-  yield();
-  display.display();
-***/
 }
