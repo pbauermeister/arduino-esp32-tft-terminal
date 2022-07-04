@@ -55,7 +55,7 @@ class Board:
     def __init__(self, channel):
         self.chan = channel
         self.chan.open()
-        self.chan.set_callback('READY', self.configure)
+        self.chan.set_callback('READY', self.on_ready)
         self.configured = False
         self.boots = 0
 
@@ -68,9 +68,13 @@ class Board:
                 print('>>>', response)
         return response
 
-    def configure(self, _):
-        # normally called by callback
+    def on_ready(self, _=None):
         time.sleep(0.2)
+        self.boots += 1
+        self.configure()
+
+    def configure(self):
+        # normally called by callback
         self.chan.clear()
         self.command(f'setRotation {config.ROTATION}')
         self.command('autoDisplay 0')
@@ -78,7 +82,6 @@ class Board:
         config.WIDTH = int(self.command(f'width'))
         config.HEIGHT = int(self.command(f'height'))
         self.configured = True
-        self.boots += 1
 
     def wait_configured(self):
         while True:
@@ -88,6 +91,7 @@ class Board:
             time.sleep(0.5)
 
     def title(self, txt):
+        self.configure()
         assert config.WIDTH and config.HEIGHT
         self.command(f'setTextSize 1 2')
         ans = self.command(f'getTextBounds 0 0 {txt}')
@@ -625,4 +629,5 @@ while True:
             board.quix()
             board.bumps()
     except RebootedException:
-        pass  # restart loop
+        pass
+        # restart loop
