@@ -71,7 +71,7 @@ void setup() {
   display.clearDisplay();
   display.display();
 
-  display.setRotation(3);  // horizontal, buttons right
+  display.setRotation(1);  // horizontal, buttons left
   display.setTextSize(1);
   display.setTextColor(SH110X_WHITE);
   display.setCursor(0,0);
@@ -88,7 +88,7 @@ char* split(char* s) {
   char* rest;
   strtok_r(s, " ", &rest);
   return rest;
-} 
+}
 
 void no_arg(char**rest_p, char** error_p) {
   if (*rest_p != NULL)
@@ -458,7 +458,7 @@ const char* interpret(char* input) {
     case hash("drawXBitmap"): {  // 
     case hash("drawGrayscaleBitmap"): {  // 
     case hash("drawRGBBitmap"): {  // 
-    case hash("setFont"): {  //  
+    case hash("setFont"): {  // 
   */
     default:
       break;
@@ -474,7 +474,7 @@ void print_state(const char* prefix, char letter) {
 
 const char* make_resp_buffer(const char**rest, int val) {
   char* error;
-  no_arg(rest, &error); 
+  no_arg(rest, &error);
   if (error) return error;
   snprintf(buffer, sizeof(buffer)-1, "%d", val);
   return buffer;
