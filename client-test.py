@@ -211,10 +211,10 @@ class Board:
             return x0, y0, x1, y1, x2, y2, x3, y3
 
         def draw(x0, y0, x1, y1, x2, y2, x3, y3, c):
-            self.command(f'drawLine {x0} {y0} {x1} {y1} {c}')
-#            self.command(f'drawLine {x1} {y1} {x2} {y2} {c}')
-            self.command(f'drawLine {x2} {y2} {x3} {y3} {c}')
-#            self.command(f'drawLine {x3} {y3} {x0} {y0} {c}')
+#            self.command(f'drawLine {x0} {y0} {x1} {y1} {c}')
+            self.command(f'drawLine {x1} {y1} {x2} {y2} {c}')
+#            self.command(f'drawLine {x2} {y2} {x3} {y3} {c}')
+            self.command(f'drawLine {x3} {y3} {x0} {y0} {c}')
 #            self.command(f'drawRect {0} {0} {config.WIDTH} {config.HEIGHT} 1')
 
         i = 0
@@ -350,7 +350,7 @@ class Board:
         SCALEX = SCALEY = SIZE // 4
 
         TRANSLATEX = (config.WIDTH - 4) // 2
-        TRANSLATEY = (config.HEIGHT - 4) // 2
+        TRANSLATEY = (config.HEIGHT - 4) // 2 + 4
 
         # (!) Try changing this to '#' or '*' or some other character:
         LINE_CHAR = chr(9608)  # Character 9608 is a solid block.
@@ -369,7 +369,7 @@ class Board:
         Z = 2
 
         def line(x1, y1, x2, y2, c):
-            self.command(f'drawLine {x1} {y1} {x2} {y2} {c}')
+            self.command(f'drawLine {x1+.5} {y1+.5} {x2+.5} {y2+.5} {c}')
 
         def rotatePoint(x, y, z, ax, ay, az):
             """Returns an (x, y, z) tuple of the x, y, z arguments rotated.
@@ -401,7 +401,11 @@ class Board:
             rotatedY = (x * math.sin(az)) + (y * math.cos(az))
             rotatedZ = z
 
-            return (rotatedX, rotatedY, rotatedZ)
+            # False perspective
+            #k = 1.5 ** z/4 * 2.5
+            k = 1
+
+            return (rotatedX*k, rotatedY*k, rotatedZ)
 
 
         def adjustPoint(point):
@@ -502,6 +506,10 @@ class Board:
 
 # Helper classes
 
+class RebootedException(Exception):
+    pass
+
+
 class KeyEscaper:
     def __init__(self, board, message="Hold a key to move on",
                  timeout=datetime.timedelta(seconds=60),
@@ -527,7 +535,8 @@ class KeyEscaper:
             if elapsed > self.timeout:
                 return True
         if self.boots != self.board.boots:
-            return True
+            self.boots = self.board.boots
+            raise RebootedException()
         if self.i % 10 == 1:
             if self.command('readButtons') != NONE:
                 return True
@@ -607,9 +616,13 @@ board = Board(chan)
 board.wait_configured()
 #board.monitor()
 while True:
-    board.cube()
-    board.road()
-    board.tunnel()
-    board.starfield()
-    board.quix()
-    board.bumps()
+    try:
+        while True:
+            board.cube()
+            board.road()
+            board.tunnel()
+            board.starfield()
+            board.quix()
+            board.bumps()
+    except RebootedException:
+        pass  # restart loop
