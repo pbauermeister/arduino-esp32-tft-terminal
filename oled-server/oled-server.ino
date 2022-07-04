@@ -46,6 +46,7 @@ char buffer[100];  // used for input and output, so use with care!
 Button button1(BUTTON_A);
 Button button2(BUTTON_B);
 Button button3(BUTTON_C);
+bool auto_display = true;
 
 void setup() {
   //Serial.begin(115200);
@@ -136,28 +137,39 @@ const char* interpret(char* input) {
   char* error = NULL;
 
   switch (hash(cmd)) {
+    case hash("autoDisplay"): {  // autoDisplay 1
+      bool on = read_int(&rest, &error);
+      if (error) return error;
+      auto_display = on;
+      return(OK);
+    }
+    case hash("display"): {  // autoDisplay 1
+      no_arg(&rest, &error); if (error) return error;
+      display.display();
+      return(OK);
+    }
     case hash("print"): {  // print HELLO\n
       display.print(rest);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("clearDisplay"): {
       no_arg(&rest, &error); if (error) return error;
       display.clearDisplay();
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("home"): {
       no_arg(&rest, &error); if (error) return error;
       display.setCursor(0,0);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("reset"): {
       no_arg(&rest, &error); if (error) return error;
       display.clearDisplay();
       display.setCursor(0,0);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("drawPixel"): {  // drawPixel 100 10 1
@@ -166,20 +178,20 @@ const char* interpret(char* input) {
       int color = read_int(&rest, &error);
       if (error) return error;
       display.drawPixel(x, y, color);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("setRotation"): {  // setRotation 0 // ..3
       int x = read_int(&rest, &error);
       if (error) return error;
       display.setRotation(x);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
 #if 0
     case hash("invertDisplay"): {  // invertDisplay
       display.invertDisplay();
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
 #endif
@@ -190,7 +202,7 @@ const char* interpret(char* input) {
       int color = read_int(&rest, &error);
       if (error) return error;
       display.drawFastVLine(x, y, h, color);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("drawFastHLine"): {  // drawFastHLine 20 20 50 1
@@ -200,7 +212,7 @@ const char* interpret(char* input) {
       int color = read_int(&rest, &error);
       if (error) return error;
       display.drawFastHLine(x, y, w, color);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
   }
     case hash("fillRect"): {  // fillRect 20 10 100 50 1
@@ -211,14 +223,14 @@ const char* interpret(char* input) {
       int color = read_int(&rest, &error);
       if (error) return error;
       display.fillRect(x, y, w, h, color);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("fillScreen"): {  // fillScreen 1
       int color = read_int(&rest, &error);
       if (error) return error;
       display.fillScreen(color);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("drawLine"): {  // drawLine 20 5 100 45 1
@@ -229,7 +241,7 @@ const char* interpret(char* input) {
       int color = read_int(&rest, &error);
       if (error) return error;
       display.drawLine(x0, y0, x1, y1, color);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("drawRect"): {  // drawRect 20 5 100 50 1
@@ -240,7 +252,7 @@ const char* interpret(char* input) {
       int color = read_int(&rest, &error);
       if (error) return error;
       display.drawRect(x, y, w, h, color);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("drawCircle"): {  // drawCircle 50 30 25 1
@@ -250,7 +262,7 @@ const char* interpret(char* input) {
       int color = read_int(&rest, &error);
       if (error) return error;
       display.drawCircle(x0, y0, r, color);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("fillCircle"): {  // fillCircle 50 30 25 1
@@ -260,7 +272,7 @@ const char* interpret(char* input) {
       int color = read_int(&rest, &error);
       if (error) return error;
       display.fillCircle(x0, y0, r, color);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("drawTriangle"): {  // drawTriangle 10 25 100 5 120 50 1
@@ -273,7 +285,7 @@ const char* interpret(char* input) {
       int color = read_int(&rest, &error);
       if (error) return error;
       display.drawTriangle(x0, y0, x1, y1, x2, y2, color);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("fillTriangle"): {  // fillTriangle 12 27 102 7 122 52 1
@@ -286,7 +298,7 @@ const char* interpret(char* input) {
       int color = read_int(&rest, &error);
       if (error) return error;
       display.fillTriangle(x0, y0, x1, y1, x2, y2, color);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("drawRoundRect"): {  // drawRoundRect 20 5 100 50 12 1
@@ -298,7 +310,7 @@ const char* interpret(char* input) {
       int color = read_int(&rest, &error);
       if (error) return error;
       display.drawRoundRect(x, y, w, h, r, color);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("fillRoundRect"): {  // fillRoundRect 20 5 100 50 12 1
@@ -310,7 +322,7 @@ const char* interpret(char* input) {
       int color = read_int(&rest, &error);
       if (error) return error;
       display.fillRoundRect(x, y, w, h, r, color);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("drawChar"): {  // drawChar 40 20 65 0 1 3
@@ -322,7 +334,7 @@ const char* interpret(char* input) {
       int size = read_int(&rest, &error);
       if (error) return error;
       display.drawChar(x, y, c, color, bg, size);
-      display.display();
+      if (auto_display) display.display();
       return(OK);
     }
     case hash("getTextBounds"): {  // getTextBounds 40 20 Hello world
