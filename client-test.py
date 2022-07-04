@@ -411,7 +411,6 @@ class Board:
             return (int(point[X] * SCALEX + TRANSLATEX),
                     int(point[Y] * SCALEY + TRANSLATEY))
 
-
         def cube(rotatedCorners, xRotation, yRotation, zRotation, c):
             for i in range(len(CUBE_CORNERS)):
                 x = CUBE_CORNERS[i][X]
@@ -420,24 +419,33 @@ class Board:
                 rotatedCorners[i] = rotatePoint(x, y, z, xRotation,
                     yRotation, zRotation)
 
+            # Find farthest point to omit hidden edges
+            minZ = 0
+            for fromCornerIndex, toCornerIndex in CUBE_EDGES:
+                fromPoint = rotatedCorners[fromCornerIndex]
+                toPoint = rotatedCorners[toCornerIndex]
+                minZ = min(minZ, fromPoint[Z])
+                minZ = min(minZ, toPoint[Z])
+
             # Get the points of the cube lines:
-            cubePoints = []
-            for fromCornerIndex, toCornerIndex in (
-                    (0, 1), (1, 3), (3, 2), (2, 0),
-                    (0, 4), (1, 5), (2, 6), (3, 7),
-                    (4, 5), (5, 7), (7, 6), (6, 4)):
-                fromX, fromY = adjustPoint(rotatedCorners[fromCornerIndex])
-                toX, toY = adjustPoint(rotatedCorners[toCornerIndex])
+            for fromCornerIndex, toCornerIndex in CUBE_EDGES:
+                fromPoint = rotatedCorners[fromCornerIndex]
+                toPoint = rotatedCorners[toCornerIndex]
+                fromX, fromY = adjustPoint(fromPoint)
+                toX, toY = adjustPoint(toPoint)
+                if fromPoint[Z] == minZ or toPoint[Z] == minZ:
+                    continue  # bound to farthest point: hidden edge
                 line(fromX, fromY, toX, toY, c)
 
         """CUBE_CORNERS stores the XYZ coordinates of the corners of a cube.
         The indexes for each corner in CUBE_CORNERS are marked in this diagram:
-              0---1
-             /|  /|
-            2---3 |
-            | 4-|-5
-            |/  |/
-            6---7"""
+              0------1
+             /|     /|
+            2------3 |
+            | 4----|-5
+            |/     |/
+            6------7
+        """
         CUBE_CORNERS = [[-1, -1, -1], # Point 0
                         [ 1, -1, -1], # Point 1
                         [-1, -1,  1], # Point 2
@@ -446,6 +454,12 @@ class Board:
                         [ 1,  1, -1], # Point 5
                         [-1,  1,  1], # Point 6
                         [ 1,  1,  1]] # Point 7
+        CUBE_EDGES = (
+            (0, 1), (1, 3), (3, 2), (2, 0),
+            (0, 4), (1, 5), (2, 6), (3, 7),
+            (4, 5), (5, 7), (7, 6), (6, 4),
+        )
+
         # rotatedCorners stores the XYZ coordinates from CUBE_CORNERS after
         # they've been rotated by rx, ry, and rz amounts:
         rotatedCorners = [None, None, None, None, None, None, None, None]
@@ -496,7 +510,7 @@ class KeyEscaper:
         self.message = message
         self.timeout = timeout
         self.steady_message = steady_message
-        self.i = -20
+        self.i = -30
         self.command = self.board.command
         self.boots = self.board.boots
         self.start = datetime.datetime.now()
@@ -517,7 +531,7 @@ class KeyEscaper:
         if self.i % 10 == 1:
             if self.command('readButtons') != NONE:
                 return True
-        if self.i % 80 < 8:
+        if self.i % 70 < 8:
             self.command('home')
             self.command(f'print {self.message}')
         return False
