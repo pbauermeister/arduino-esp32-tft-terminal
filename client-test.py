@@ -90,18 +90,23 @@ class Board:
             self.chan.read()
             time.sleep(0.5)
 
-    def title(self, txt):
-        self.configure()
+class App:
+    def __init__(self, board):
+        self.board = board
+        self.command = board.command
+
+        self.board.configure()
         assert config.WIDTH and config.HEIGHT
         self.command(f'setTextSize 1 2')
-        ans = self.command(f'getTextBounds 0 0 {txt}')
+        title = self.__class__.__name__.upper()
+        ans = self.command(f'getTextBounds 0 0 {title}')
         vals = [int(v) for v in ans.split()]
         w, h = vals[-2:]
         x = int(config.WIDTH/2 - w/2 +.5)
         y = int(config.HEIGHT/2 - h/2 +.5)
         self.command('reset')
         self.command(f'setCursor {x} {y}')
-        self.command(f'print {txt}')
+        self.command(f'print {title}')
         self.command('display')
 
         self.command('readButtons')
@@ -112,8 +117,10 @@ class Board:
         self.command('reset')
         self.command(f'setTextSize 1')
 
-    def bumps(self):
-        self.title('BUMPS')
+
+class Bumps(App):
+    def __init__(self, board):
+        super().__init__(board)
         sprites = [
             #Sprite(self, 4, -1, -1),
             Sprite(self, 7,  1 , 1),
@@ -122,7 +129,7 @@ class Board:
             Sprite(self, 2, -1, -1),
         ]
 
-        escaper = KeyEscaper(self, steady_message=False)
+        escaper = KeyEscaper(self.board, steady_message=False)
         while True:
             for s in sprites:
                 s.erase()
@@ -135,8 +142,11 @@ class Board:
             if escaper.check(): break
             self.command('display')
 
-    def quix(self):
-        self.title('QUIX')
+
+class Quix(App):
+    def __init__(self, board):
+        super().__init__(board)
+
         a = Bouncer(self, 2, -1, -1)
         b = Bouncer(self, 2,  1 , 1)
 
@@ -146,7 +156,7 @@ class Board:
         history = [None] * NB_LINES
         i = 0
 
-        escaper = KeyEscaper(self, steady_message=False)
+        escaper = KeyEscaper(self.board, steady_message=False)
         while True:
             a.advance()
             b.advance()
@@ -172,10 +182,12 @@ class Board:
             if escaper.check(): break
             self.command('display')
 
-    def tunnel(self):
-        self.title('TUNNEL')
+class Tunnel(App):
+    def __init__(self, board):
+        super().__init__(board)
+
         last = None
-        escaper = KeyEscaper(self, steady_message=False)
+        escaper = KeyEscaper(self.board, steady_message=False)
         K = 0.65
         NB = 12
         NB2 = 6
@@ -250,8 +262,9 @@ class Board:
             if escaper.check(): break
             self.command('display')
 
-    def starfield(self):
-        self.title('STAR FIELD')
+class Starfield(App):
+    def __init__(self, board):
+        super().__init__(board)
 
         class Star:
             def __init__(self):
@@ -276,7 +289,7 @@ class Board:
         stars = [Star() for i in range(NB_STARS)]
 
         t = 0
-        escaper = KeyEscaper(self, steady_message=False)
+        escaper = KeyEscaper(self.board, steady_message=False)
         while True:
             # erase
             for star in stars:
@@ -299,10 +312,13 @@ class Board:
             self.command('display')
             t += 1
 
-    def road(self):
-        self.title('ROAD')
+
+class Road(App):
+    def __init__(self, board):
+        super().__init__(board)
+
         last = None
-        escaper = KeyEscaper(self, steady_message=False)
+        escaper = KeyEscaper(self.board, steady_message=False)
         K = 0.65
         NB = 12
         NB2 = 4
@@ -338,8 +354,10 @@ class Board:
             if escaper.check(): break
             self.command('display')
 
-    def cube(self):
-        self.title('CUBE')
+class Cube(App):
+    def __init__(self, board):
+        super().__init__(board)
+
         """Rotating Cube, by Al Sweigart al@inventwithpython.com A rotating
         cube animation. Press Ctrl-C to stop.  This code is available
         at https://nostarch.com/big-book-small-python-programming
@@ -478,9 +496,8 @@ class Board:
 
         previous = None
         undraw = False
-        escaper = KeyEscaper(self, steady_message=False)
+        escaper = KeyEscaper(self.board, steady_message=False)
         start = datetime.datetime.now()
-        i = 0
         while True:  # Main program loop.
             if not undraw:
                 self.command('clearDisplay')
@@ -502,11 +519,6 @@ class Board:
 
             if escaper.check(): break
             self.command('display')
-            i += 1
-            if i == 30:
-                delta = (datetime.datetime.now() - start)
-                secs = delta.seconds + delta.microseconds/1000000
-                print('FPS:', 30 / secs)
 
 # Helper classes
 
@@ -523,6 +535,7 @@ class KeyEscaper:
         self.timeout = timeout
         self.steady_message = steady_message
         self.i = -30
+        self.n = 0
         self.command = self.board.command
         self.boots = self.board.boots
         self.start = datetime.datetime.now()
@@ -534,8 +547,12 @@ class KeyEscaper:
             self.command(f'fillRect 0 0 {config.WIDTH} 8 0')
 
     def check(self):
+        self.n += 1
+        elapsed = datetime.datetime.now() - self.start
+        if self.n == 30:
+            secs = elapsed.seconds + elapsed.microseconds/1000000
+            print('FPS:', 30 / secs)
         if self.timeout:
-            elapsed = datetime.datetime.now() - self.start
             if elapsed > self.timeout:
                 return True
         if self.boots != self.board.boots:
@@ -622,12 +639,12 @@ board.wait_configured()
 while True:
     try:
         while True:
-            board.cube()
-            board.road()
-            board.tunnel()
-            board.starfield()
-            board.quix()
-            board.bumps()
+            Cube(board)
+            Road(board)
+            Starfield(board)
+            Tunnel(board)
+            Quix(board)
+            Bumps(board)
     except RebootedException:
         pass
         # restart loop
