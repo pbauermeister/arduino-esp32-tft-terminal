@@ -54,6 +54,7 @@ class Channel:
 class Board:
     def __init__(self, channel):
         self.chan = channel
+        self.configure_callback = None
         self.chan.open()
         self.chan.set_callback('READY', self.on_ready)
         self.configured = False
@@ -73,6 +74,9 @@ class Board:
         self.boots += 1
         self.configure()
 
+    def set_configure_callback(self, configure_callback):
+        self.configure_callback = configure_callback
+
     def configure(self):
         # normally called by callback
         self.chan.clear()
@@ -81,6 +85,8 @@ class Board:
         self.command('reset')
         config.WIDTH = int(self.command(f'width'))
         config.HEIGHT = int(self.command(f'height'))
+        if self.configure_callback:
+            self.configure_callback()
         self.configured = True
 
     def wait_configured(self):
@@ -90,15 +96,17 @@ class Board:
             self.chan.read()
             time.sleep(0.5)
 
+
 class App:
     def __init__(self, board):
         self.board = board
         self.command = board.command
+        self.name = self.__class__.__name__
 
         self.board.configure()
         assert config.WIDTH and config.HEIGHT
         self.command(f'setTextSize 1 2')
-        title = self.__class__.__name__.upper()
+        title = self.name.upper()
         ans = self.command(f'getTextBounds 0 0 {title}')
         vals = [int(v) for v in ans.split()]
         w, h = vals[-2:]
@@ -129,7 +137,7 @@ class Bumps(App):
             Sprite(self, 2, -1, -1),
         ]
 
-        escaper = KeyEscaper(self.board, steady_message=False)
+        escaper = KeyEscaper(self, self.board, steady_message=False)
         while True:
             for s in sprites:
                 s.erase()
@@ -156,7 +164,7 @@ class Quix(App):
         history = [None] * NB_LINES
         i = 0
 
-        escaper = KeyEscaper(self.board, steady_message=False)
+        escaper = KeyEscaper(self, self.board, steady_message=False)
         while True:
             a.advance()
             b.advance()
@@ -187,7 +195,7 @@ class Tunnel(App):
         super().__init__(board)
 
         last = None
-        escaper = KeyEscaper(self.board, steady_message=False)
+        escaper = KeyEscaper(self, self.board, steady_message=False)
         K = 0.65
         NB = 12
         NB2 = 6
@@ -289,7 +297,7 @@ class Starfield(App):
         stars = [Star() for i in range(NB_STARS)]
 
         t = 0
-        escaper = KeyEscaper(self.board, steady_message=False)
+        escaper = KeyEscaper(self, self.board, steady_message=False)
         while True:
             # erase
             for star in stars:
@@ -318,7 +326,7 @@ class Road(App):
         super().__init__(board)
 
         last = None
-        escaper = KeyEscaper(self.board, steady_message=False)
+        escaper = KeyEscaper(self, self.board, steady_message=False)
         K = 0.65
         NB = 12
         NB2 = 4
@@ -390,6 +398,8 @@ class Cube(App):
         Y = 1
         Z = 2
 
+        i = 0
+
         def line(x1, y1, x2, y2, c):
             self.command(f'drawLine {x1+.5} {y1+.5} {x2+.5} {y2+.5} {c}')
 
@@ -424,8 +434,7 @@ class Cube(App):
             rotatedZ = z
 
             # False perspective
-            #k = 1.5 ** z/4 * 2.5
-            k = 1
+            k = 1 if alt else 1.5**z *.6 + .25
 
             return (rotatedX*k, rotatedY*k, rotatedZ)
 
@@ -459,8 +468,9 @@ class Cube(App):
                 toPoint = rotatedCorners[toCornerIndex]
                 fromX, fromY = adjustPoint(fromPoint)
                 toX, toY = adjustPoint(toPoint)
-                if fromPoint[Z] == minZ or toPoint[Z] == minZ:
-                    continue  # bound to farthest point: hidden edge
+                if alt:
+                    if fromPoint[Z] == minZ or toPoint[Z] == minZ:
+                        continue  # bound to farthest point: hidden edge
                 line(fromX, fromY, toX, toY, c)
 
         """CUBE_CORNERS stores the XYZ coordinates of the corners of a cube.
@@ -496,9 +506,10 @@ class Cube(App):
 
         previous = None
         undraw = False
-        escaper = KeyEscaper(self.board, steady_message=False)
+        escaper = KeyEscaper(self, self.board, steady_message=False)
         start = datetime.datetime.now()
         while True:  # Main program loop.
+            alt = (i%50) > 25
             if not undraw:
                 self.command('clearDisplay')
 
@@ -517,8 +528,11 @@ class Cube(App):
             if undraw:
                 previous = xRotation, yRotation, zRotation
 
-            if escaper.check(): break
+            if escaper.check():
+                break
             self.command('display')
+            i += 1
+
 
 # Helper classes
 
@@ -527,9 +541,10 @@ class RebootedException(Exception):
 
 
 class KeyEscaper:
-    def __init__(self, board, message="Hold a key to move on",
+    def __init__(self, app, board, message="Hold a key to move on",
                  timeout=datetime.timedelta(seconds=60),
                  steady_message=True):
+        self.app = app
         self.board = board
         self.message = message
         self.timeout = timeout
@@ -551,7 +566,7 @@ class KeyEscaper:
         elapsed = datetime.datetime.now() - self.start
         if self.n == 30:
             secs = elapsed.seconds + elapsed.microseconds/1000000
-            print('FPS:', 30 / secs)
+            print(self.app.name, 'FPS:', 30 / secs)
         if self.timeout:
             if elapsed > self.timeout:
                 return True
