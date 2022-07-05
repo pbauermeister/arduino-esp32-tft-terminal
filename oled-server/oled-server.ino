@@ -129,6 +129,7 @@ const char* read_last_str(char**rest_p, char** error_p) {
   }
   return v;
 }
+
 // https://stackoverflow.com/a/46711735
 constexpr unsigned int hash(const char *s, int off = 0) {
     return !s[off] ? 5381 : (hash(s, off+1)*33) ^ (s[off]|0x20);
@@ -403,6 +404,7 @@ const char* interpret(char* input) {
     case hash("getCursorY"): {  // getCursorY
       return make_resp_buffer(&rest, display.getCursorY());
     }
+/*
     case hash("monitorButtons"): {  // monitorButtons 60000 / monitorButtons 60000 500
       unsigned int during = read_int(&rest, &error);
       unsigned int interval = read_int(&rest, &error, true, 100);
@@ -452,6 +454,7 @@ const char* interpret(char* input) {
       } while((!during || delta < during) && Serial.available() == 0);
       return "";
     }
+*/
     case hash("readButtons"): {  // readButtons
       buffer[0] = 0;
       if (button1.read() == Button::PRESSED) strcat(buffer, "A");
@@ -528,11 +531,13 @@ const char* ok() {
   return buffer;
 }
 
+/*
 void print_state(const char* prefix, char letter) {
   Serial.print(prefix);
   Serial.print(' ');
   Serial.println(letter);
 }
+*/
 
 const char* make_resp_buffer(const char**rest, int val) {
   char* error;
