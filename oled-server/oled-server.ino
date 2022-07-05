@@ -40,13 +40,16 @@ Adafruit_SH1107 display = Adafruit_SH1107(64, 128, &Wire);
 
 const char* ERR_EXTRA_ARG = "ERROR extra arg";
 const char* ERR_MISSING_ARG = "ERROR missing arg";
+const char* ERR_UNKNOWN_CMD = "ERROR unknown cmd";
 const char* OK = "OK";
+const char* NONE = "NONE";
 
 char buffer[100];  // used for input and output, so use with care!
 Button button1(BUTTON_A);
 Button button2(BUTTON_B);
 Button button3(BUTTON_C);
 bool auto_display = true;
+bool auto_read_buttons = false;
 
 void setup() {
   //Serial.begin(115200);
@@ -141,36 +144,42 @@ const char* interpret(char* input) {
       bool on = read_int(&rest, &error);
       if (error) return error;
       auto_display = on;
-      return(OK);
+      return ok();
+    }
+    case hash("autoReadButtons"): {  // autoReadButtons 1
+      bool on = read_int(&rest, &error);
+      if (error) return error;
+      auto_read_buttons = on;
+      return ok();
     }
     case hash("display"): {  // autoDisplay 1
       no_arg(&rest, &error); if (error) return error;
       display.display();
-      return(OK);
+      return ok();
     }
     case hash("print"): {  // print HELLO\n
       display.print(rest);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("clearDisplay"): {
       no_arg(&rest, &error); if (error) return error;
       display.clearDisplay();
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("home"): {
       no_arg(&rest, &error); if (error) return error;
       display.setCursor(0,0);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("reset"): {
       no_arg(&rest, &error); if (error) return error;
       display.clearDisplay();
       display.setCursor(0,0);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("drawPixel"): {  // drawPixel 100 10 1
       int x = read_int(&rest, &error);
@@ -179,20 +188,20 @@ const char* interpret(char* input) {
       if (error) return error;
       display.drawPixel(x, y, color);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("setRotation"): {  // setRotation 0 // ..3
       int x = read_int(&rest, &error);
       if (error) return error;
       display.setRotation(x);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
 #if 0
     case hash("invertDisplay"): {  // invertDisplay
       display.invertDisplay();
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
 #endif
     case hash("drawFastVLine"): {  // drawFastVLine 20 20 50 1
@@ -203,7 +212,7 @@ const char* interpret(char* input) {
       if (error) return error;
       display.drawFastVLine(x, y, h, color);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("drawFastHLine"): {  // drawFastHLine 20 20 50 1
       int x = read_int(&rest, &error);
@@ -213,7 +222,7 @@ const char* interpret(char* input) {
       if (error) return error;
       display.drawFastHLine(x, y, w, color);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
   }
     case hash("fillRect"): {  // fillRect 20 10 100 50 1
       int x = read_int(&rest, &error);
@@ -224,14 +233,14 @@ const char* interpret(char* input) {
       if (error) return error;
       display.fillRect(x, y, w, h, color);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("fillScreen"): {  // fillScreen 1
       int color = read_int(&rest, &error);
       if (error) return error;
       display.fillScreen(color);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("drawLine"): {  // drawLine 20 5 100 45 1
       int x0 = read_int(&rest, &error);
@@ -242,7 +251,7 @@ const char* interpret(char* input) {
       if (error) return error;
       display.drawLine(x0, y0, x1, y1, color);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("drawRect"): {  // drawRect 20 5 100 50 1
       int x = read_int(&rest, &error);
@@ -253,7 +262,7 @@ const char* interpret(char* input) {
       if (error) return error;
       display.drawRect(x, y, w, h, color);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("drawCircle"): {  // drawCircle 50 30 25 1
       int x0 = read_int(&rest, &error);
@@ -263,7 +272,7 @@ const char* interpret(char* input) {
       if (error) return error;
       display.drawCircle(x0, y0, r, color);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("fillCircle"): {  // fillCircle 50 30 25 1
       int x0 = read_int(&rest, &error);
@@ -273,7 +282,7 @@ const char* interpret(char* input) {
       if (error) return error;
       display.fillCircle(x0, y0, r, color);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("drawTriangle"): {  // drawTriangle 10 25 100 5 120 50 1
       int x0 = read_int(&rest, &error);
@@ -286,7 +295,7 @@ const char* interpret(char* input) {
       if (error) return error;
       display.drawTriangle(x0, y0, x1, y1, x2, y2, color);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("fillTriangle"): {  // fillTriangle 12 27 102 7 122 52 1
       int x0 = read_int(&rest, &error);
@@ -299,7 +308,7 @@ const char* interpret(char* input) {
       if (error) return error;
       display.fillTriangle(x0, y0, x1, y1, x2, y2, color);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("drawRoundRect"): {  // drawRoundRect 20 5 100 50 12 1
       int x = read_int(&rest, &error);
@@ -311,7 +320,7 @@ const char* interpret(char* input) {
       if (error) return error;
       display.drawRoundRect(x, y, w, h, r, color);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("fillRoundRect"): {  // fillRoundRect 20 5 100 50 12 1
       int x = read_int(&rest, &error);
@@ -323,7 +332,7 @@ const char* interpret(char* input) {
       if (error) return error;
       display.fillRoundRect(x, y, w, h, r, color);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("drawChar"): {  // drawChar 40 20 65 0 1 3
       int x = read_int(&rest, &error);
@@ -335,7 +344,7 @@ const char* interpret(char* input) {
       if (error) return error;
       display.drawChar(x, y, c, color, bg, size);
       if (auto_display) display.display();
-      return(OK);
+      return ok();
     }
     case hash("getTextBounds"): {  // getTextBounds 40 20 Hello world
       int x = read_int(&rest, &error);
@@ -358,26 +367,26 @@ const char* interpret(char* input) {
         display.setTextSize(s);
       else
         display.setTextSize(s, sy);
-      return(OK);
+      return ok();
     }
     case hash("setCursor"): {  // setCursor 50 5
       int x = read_int(&rest, &error);
       int y = read_int(&rest, &error);
       if (error) return error;
       display.setCursor(x, y);
-      return(OK);
+      return ok();
     }
     case hash("setTextColor"): {  // fillScreen 1  /  setTextColor 1  /  print HELLO
       int c = read_int(&rest, &error);
       if (error) return error;
       display.setTextColor(c);
-      return(OK);
+      return ok();
     }
     case hash("setTextWrap"): {  // setTextWrap 0
       int w = read_int(&rest, &error);
       if (error) return error;
       display.setTextWrap((bool)w);
-      return(OK);
+      return ok();
     }
     case hash("width"): {  // width
       return make_resp_buffer(&rest, display.width());
@@ -423,14 +432,32 @@ const char* interpret(char* input) {
         yield();
         delta = millis() - start;
       } while(delta < during && Serial.available() == 0);
-      return(OK);
+      return ok();
+    }
+    case hash("watchButtons"): {  // watchButtons / watchButtons 60000 / watchButtons 60000 500
+      unsigned int during = read_int(&rest, &error, true, 0);
+      unsigned int interval = read_int(&rest, &error, true, 100);
+      if (error) return error;
+
+      unsigned long start = millis();
+      unsigned int delta;
+      do {
+        if (button1.read() == Button::PRESSED) Serial.print('A');
+        if (button2.read() == Button::PRESSED) Serial.print('B');
+        if (button3.read() == Button::PRESSED) Serial.print('C');
+
+        delay(interval);
+        yield();
+        delta = millis() - start;
+      } while((!during || delta < during) && Serial.available() == 0);
+      return "";
     }
     case hash("readButtons"): {  // readButtons
       buffer[0] = 0;
       if (button1.read() == Button::PRESSED) strcat(buffer, "A");
       if (button2.read() == Button::PRESSED) strcat(buffer, "B");
       if (button3.read() == Button::PRESSED) strcat(buffer, "C");
-      return strlen(buffer) ? buffer : "NONE";
+      return strlen(buffer) ? buffer : NONE;
     }
     case hash("waitButton"): { //  waitButton 60000 1
       unsigned int during = read_int(&rest, &error);
@@ -461,7 +488,7 @@ const char* interpret(char* input) {
         yield();
         delta = millis() - start;
       } while(delta < during && Serial.available() == 0);
-      return("NONE");
+      return(NONE);
     }
   /*
     sleep(timeout)
@@ -475,7 +502,30 @@ const char* interpret(char* input) {
     default:
       break;
   }
-  return "UNKNOWN";
+  return ERR_UNKNOWN_CMD;
+}
+
+const char* ok() {
+  strcpy(buffer, OK);
+  if (auto_read_buttons) {
+    strcat(buffer, " ");
+    bool any = false;
+    if (button1.pressed()) {
+      strcat(buffer, "A");
+      any = true;
+    }
+    if (button2.pressed()) {
+      strcat(buffer, "B");
+      any = true;
+    }
+    if (button3.pressed()) {
+      strcat(buffer, "C");
+      any = true;
+    }
+    if (!any)
+      strcat(buffer, NONE);
+  }
+  return buffer;
 }
 
 void print_state(const char* prefix, char letter) {
