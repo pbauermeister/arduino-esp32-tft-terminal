@@ -513,15 +513,16 @@ const char* ok() {
   if (auto_read_buttons) {
     strcat(buffer, " ");
     bool any = false;
-    if (button1.pressed()) {
+
+    if (button1.read() == Button::PRESSED) {
       strcat(buffer, "A");
       any = true;
     }
-    if (button2.pressed()) {
+    if (button2.read() == Button::PRESSED) {
       strcat(buffer, "B");
       any = true;
     }
-    if (button3.pressed()) {
+    if (button3.read() == Button::PRESSED) {
       strcat(buffer, "C");
       any = true;
     }
