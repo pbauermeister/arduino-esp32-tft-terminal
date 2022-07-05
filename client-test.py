@@ -534,6 +534,186 @@ class Cube(App):
             i += 1
 
 
+class Asteriods(App):
+    def custom_configure(self):
+        self.board.command('autoReadButtons 1')
+        print("* custom_configure")
+
+    def __init__(self, board):
+        super().__init__(board)
+        board.set_configure_callback(self.custom_configure)
+        self.custom_configure()
+        x_ship = config.WIDTH / 2
+        y_ship = config.HEIGHT / 2
+        a_ship = 0
+        r_ship = 6
+        v_ship = 2
+        rot_ship = .2
+        v_shot = 5
+        r_aster = 2, 10
+
+        class Shot:
+            def __init__(self, x, y, vx, vy):
+                self.x, self.y, self.vx, self.vy = x, y, vx, vy
+
+            def move(self):
+                self.x += self.vx
+                self.y += self.vy
+
+            def valid(self):
+                return \
+                    self.x >=0 and self.x < config.WIDTH and \
+                    self.y >=0 and self.y <config.HEIGHT
+
+        class Asteroid:
+            def __init__(self, ship_x, ship_y):
+                r = random.random()
+                if r > .5:
+                    x = config.WIDTH
+                    y = config.HEIGHT * random.random()
+                elif r < .25:
+                    y = 0
+                    x = config.WIDTH * (.75 + random.random() * .25)
+                else:
+                    y = config.HEIGHT
+                    x = config.WIDTH * (.75 + random.random() * .25)
+
+                r = random.randrange(*r_aster)
+                a = random.random() * math.pi + math.pi/2
+
+                if ship_x > config.WIDTH / 2:
+                    x = config.WIDTH - x
+                    a += math.pi/2
+
+
+                self.xx = self.x = int(x+.5)
+                self.yy = self.y = int(y+.5)
+                self.r = int(r+.5)
+                self.a = a
+
+            def move(self):
+                v = (r_aster[1] - self.r + 2) / 4
+                vx = math.cos(self.a) * v
+                vy = math.sin(self.a) * v
+
+                self.xx += vx
+                self.yy += vy
+
+                # wrap around
+                if self.xx < -self.r:
+                    self.xx = config.WIDTH + self.r
+                if self.xx > config.WIDTH + self.r:
+                    self.xx = -self.r
+                if self.yy < -self.r:
+                    self.yy = config.HEIGHT + self.r
+                if self.yy > config.HEIGHT + self.r:
+                    self.yy = -self.r
+                self.x = int(self.xx+.5)
+                self.y = int(self.yy+.5)
+
+        shots = []
+        asteroids = []
+        last_ship = None
+        last_keys = set()
+        shot_reload = 0
+        shot_delay = 2
+        shot_max = 3
+        asteroids_max = 3
+
+        while True:
+            keys = set()
+
+            for a in asteroids:
+                self.k_command(keys, f'drawCircle {a.x} {a.y} {a.r} 0')
+
+            for shot in shots:
+                self.k_command(keys, f'drawPixel {shot.x} {shot.y} 0')
+
+            if last_ship:
+                x0, y0, x1, y1, x2, y2 = last_ship
+                self.k_command(keys,
+                               f'drawTriangle {x0} {y0} {x1} {y1} {x2} {y2} 0')
+
+
+            for a in asteroids:
+                a.move()
+            if random.random() < .05 and len(asteroids) < asteroids_max:
+                asteroids.append(Asteroid(x_ship, y_ship))
+
+            ca, sa = math.cos(a_ship), math.sin(a_ship)
+            x0 = int(r_ship*ca + x_ship +.5)
+            y0 = int(r_ship*sa + y_ship +.5)
+
+            b = a_ship + math.pi * .8
+            x1 = int(r_ship*math.cos(b) + x_ship +.5)
+            y1 = int(r_ship*math.sin(b) + y_ship +.5)
+
+            b = a_ship + math.pi * 1.2
+            x2 = int(r_ship*math.cos(b) + x_ship +.5)
+            y2 = int(r_ship*math.sin(b) + y_ship +.5)
+
+            self.k_command(keys,
+                           f'drawTriangle {x0} {y0} {x1} {y1} {x2} {y2} 1')
+
+            for a in asteroids:
+                self.k_command(keys, f'drawCircle {a.x} {a.y} {a.r} 1')
+
+            v = v_ship
+            if 'C' in keys:
+                v = v/4
+                if shot_reload > shot_delay and len(shots) < shot_max:
+                    shot = Shot(x0, y0, ca*v_shot, sa*v_shot)
+                    shots.append(shot)
+                    shot_reload = 0
+            shot_reload += 1
+
+            for shot in shots:
+                shot.move()
+                if not shot.valid(): shots.remove(shot)
+
+            for shot in shots:
+                self.k_command(keys, f'drawPixel {shot.x} {shot.y} 1')
+
+            self.k_command(keys, 'display')
+
+            last_ship = x0, y0, x1, y1, x2, y2
+            last_keys = keys
+
+            # rotate & advance
+            if 'B' in keys:
+                a_ship += rot_ship
+                v = v/2
+            if 'A' in keys:
+                a_ship -= rot_ship
+                v = v/2
+            x_ship += ca * v
+            y_ship += sa * v
+
+            # wrap around
+            if x_ship < -r_ship:
+                x_ship = config.WIDTH + r_ship
+            if x_ship > config.WIDTH + r_ship:
+                x_ship = -r_ship
+            if y_ship < -r_ship:
+                y_ship = config.HEIGHT + r_ship
+            if y_ship > config.HEIGHT + r_ship:
+                y_ship = -r_ship
+
+        board.set_configure_callback(None)
+
+    def k_command(self, keys, cmd):
+        answer = self.command(cmd)
+        self.extract_keys(answer, keys)
+
+    def extract_keys(self, answer, keys):
+        parts = answer.split(' ', 1)
+        if len(parts) < 2 or parts[0] != 'OK':
+            return
+        k = parts[1]
+        if 'A' in k: keys.add('A')
+        if 'B' in k: keys.add('B')
+        if 'C' in k: keys.add('C')
+
 # Helper classes
 
 class RebootedException(Exception):
@@ -654,6 +834,7 @@ board.wait_configured()
 while True:
     try:
         while True:
+            Asteriods(board)
             Cube(board)
             Road(board)
             Starfield(board)
