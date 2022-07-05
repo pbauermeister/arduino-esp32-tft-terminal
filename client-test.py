@@ -543,14 +543,68 @@ class Asteriods(App):
         super().__init__(board)
         board.set_configure_callback(self.custom_configure)
         self.custom_configure()
-        x_ship = config.WIDTH / 2
-        y_ship = config.HEIGHT / 2
-        a_ship = 0
-        r_ship = 6
-        v_ship = 2
-        rot_ship = .2
-        v_shot = 5
-        r_aster = 2, 10
+        SHIP_R = 6
+        SHIP_V = 2
+        SHIP_ROT = .2
+
+        SHOT_V = 5
+
+        SHOT_DELAY = 2
+        SHOT_MAX = 6
+        ASTEROIDS_MAX = 3
+
+        ASTER_R = 2, 10
+
+        class Ship:
+            def __init__(self):
+                self.x = config.WIDTH / 2
+                self.y = config.HEIGHT / 2
+                self.a = 0
+                self.r = SHIP_R
+                self.v = SHIP_V
+
+            def move(self, keys):
+                v = self.v
+                # rotate & advance
+                if 'A' in keys and 'B' in keys:
+                    v = self.v * 2
+                elif 'B' in keys:
+                    self.a += SHIP_ROT
+                    v = self.v/2
+                elif 'A' in keys:
+                    self.a -= SHIP_ROT
+                    v = self.v/2
+                if 'C' in keys:
+                    v = self.v/4
+
+                self.ca, self.sa = math.cos(self.a), math.sin(self.a)
+                self.x += self.ca * v
+                self.y += self.sa * v
+
+                # wrap around
+                if self.x < -self.r:
+                    self.x = config.WIDTH + self.r
+                if self.x > config.WIDTH + self.r:
+                    self.x = -self.r
+                if self.y < -self.r:
+                    self.y = config.HEIGHT + self.r
+                if self.y > config.HEIGHT + self.r:
+                    self.y = -self.r
+
+            def points(self):
+                self.ca, self.sa = math.cos(self.a), math.sin(self.a)
+                x0 = int(self.r*self.ca + self.x +.5)
+                y0 = int(self.r*self.sa + self.y +.5)
+
+                b = self.a + math.pi * .8
+                x1 = int(self.r*math.cos(b) + self.x +.5)
+                y1 = int(self.r*math.sin(b) + self.y +.5)
+
+                b = self.a + math.pi * 1.2
+                x2 = int(self.r*math.cos(b) + self.x +.5)
+                y2 = int(self.r*math.sin(b) + self.y +.5)
+
+                return x0, y0, x1, y1, x2, y2
 
         class Shot:
             def __init__(self, x, y, vx, vy):
@@ -578,13 +632,12 @@ class Asteriods(App):
                     y = config.HEIGHT
                     x = config.WIDTH * (.75 + random.random() * .25)
 
-                r = random.randrange(*r_aster)
+                r = random.randrange(*ASTER_R)
                 a = random.random() * math.pi + math.pi/2
 
                 if ship_x > config.WIDTH / 2:
                     x = config.WIDTH - x
                     a += math.pi/2
-
 
                 self.xx = self.x = int(x+.5)
                 self.yy = self.y = int(y+.5)
@@ -592,7 +645,7 @@ class Asteriods(App):
                 self.a = a
 
             def move(self):
-                v = (r_aster[1] - self.r + 2) / 4
+                v = (ASTER_R[1] - self.r)**1.5 / 6
                 vx = math.cos(self.a) * v
                 vy = math.sin(self.a) * v
 
@@ -613,15 +666,13 @@ class Asteriods(App):
 
         shots = []
         asteroids = []
-        last_ship = None
-        last_keys = set()
+        ship = Ship()
         shot_reload = 0
-        shot_delay = 2
-        shot_max = 3
-        asteroids_max = 3
 
         while True:
             keys = set()
+
+            # Erase
 
             for a in asteroids:
                 self.k_command(keys, f'drawCircle {a.x} {a.y} {a.r} 0')
@@ -629,75 +680,42 @@ class Asteriods(App):
             for shot in shots:
                 self.k_command(keys, f'drawPixel {shot.x} {shot.y} 0')
 
-            if last_ship:
-                x0, y0, x1, y1, x2, y2 = last_ship
-                self.k_command(keys,
-                               f'drawTriangle {x0} {y0} {x1} {y1} {x2} {y2} 0')
+            x0, y0, x1, y1, x2, y2 = ship.points()
+            self.k_command(keys,
+                           f'drawTriangle {x0} {y0} {x1} {y1} {x2} {y2} 0')
 
+            # Move / create
 
             for a in asteroids:
                 a.move()
-            if random.random() < .05 and len(asteroids) < asteroids_max:
-                asteroids.append(Asteroid(x_ship, y_ship))
+            if random.random() < .05 and len(asteroids) < ASTEROIDS_MAX:
+                asteroids.append(Asteroid(ship.x, ship.y))
 
-            ca, sa = math.cos(a_ship), math.sin(a_ship)
-            x0 = int(r_ship*ca + x_ship +.5)
-            y0 = int(r_ship*sa + y_ship +.5)
+            ship.move(keys)
 
-            b = a_ship + math.pi * .8
-            x1 = int(r_ship*math.cos(b) + x_ship +.5)
-            y1 = int(r_ship*math.sin(b) + y_ship +.5)
+            if 'C' in keys:
+                if shot_reload > SHOT_DELAY and len(shots) < SHOT_MAX:
+                    shot = Shot(x0, y0, ship.ca*SHOT_V, ship.sa*SHOT_V)
+                    shots.append(shot)
+                    shot_reload = 0
+            shot_reload += 1
+            for shot in shots:
+                shot.move()
+                if not shot.valid(): shots.remove(shot)
 
-            b = a_ship + math.pi * 1.2
-            x2 = int(r_ship*math.cos(b) + x_ship +.5)
-            y2 = int(r_ship*math.sin(b) + y_ship +.5)
+            # Draw
 
+            x0, y0, x1, y1, x2, y2 = ship.points()
             self.k_command(keys,
                            f'drawTriangle {x0} {y0} {x1} {y1} {x2} {y2} 1')
 
             for a in asteroids:
                 self.k_command(keys, f'drawCircle {a.x} {a.y} {a.r} 1')
 
-            v = v_ship
-            if 'C' in keys:
-                v = v/4
-                if shot_reload > shot_delay and len(shots) < shot_max:
-                    shot = Shot(x0, y0, ca*v_shot, sa*v_shot)
-                    shots.append(shot)
-                    shot_reload = 0
-            shot_reload += 1
-
-            for shot in shots:
-                shot.move()
-                if not shot.valid(): shots.remove(shot)
-
             for shot in shots:
                 self.k_command(keys, f'drawPixel {shot.x} {shot.y} 1')
 
             self.k_command(keys, 'display')
-
-            last_ship = x0, y0, x1, y1, x2, y2
-            last_keys = keys
-
-            # rotate & advance
-            if 'B' in keys:
-                a_ship += rot_ship
-                v = v/2
-            if 'A' in keys:
-                a_ship -= rot_ship
-                v = v/2
-            x_ship += ca * v
-            y_ship += sa * v
-
-            # wrap around
-            if x_ship < -r_ship:
-                x_ship = config.WIDTH + r_ship
-            if x_ship > config.WIDTH + r_ship:
-                x_ship = -r_ship
-            if y_ship < -r_ship:
-                y_ship = config.HEIGHT + r_ship
-            if y_ship > config.HEIGHT + r_ship:
-                y_ship = -r_ship
 
         board.set_configure_callback(None)
 
