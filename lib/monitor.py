@@ -40,6 +40,9 @@ class Monitor(App):
         start = datetime.datetime.now()
         until = start + datetime.timedelta(seconds=timeout)
 
+        while self.command('readButtons') != NONE:
+            pass
+
         while True:
             ans = self.command('readButtons')
             if ans == 'C':
