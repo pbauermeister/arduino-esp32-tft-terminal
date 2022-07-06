@@ -9,6 +9,7 @@ import random
 import serial  # pip3 install pyserial
 import sys
 import time
+import traceback
 
 
 READY = 'READY'
@@ -107,11 +108,7 @@ class App:
         assert config.WIDTH and config.HEIGHT
         self.command(f'setTextSize 1 2')
         title = self.name.upper()
-        ans = self.command(f'getTextBounds 0 0 {title}')
-        vals = [int(v) for v in ans.split()]
-        w, h = vals[-2:]
-        x = int(config.WIDTH/2 - w/2 +.5)
-        y = int(config.HEIGHT/2 - h/2 +.5)
+        x, y = self.get_title_pos(title)
         self.command('reset')
         self.command(f'setCursor {x} {y}')
         self.command(f'print {title}')
@@ -125,6 +122,13 @@ class App:
         self.command('reset')
         self.command(f'setTextSize 1')
 
+    def get_title_pos(self, title):
+        ans = self.command(f'getTextBounds 0 0 {title}')
+        vals = [int(v) for v in ans.split()]
+        w, h = vals[-2:]
+        x = int(config.WIDTH/2 - w/2 +.5)
+        y = int(config.HEIGHT/2 - h/2 +.5)
+        return x, y
 
 class Bumps(App):
     def __init__(self, board):
@@ -536,6 +540,8 @@ class Cube(App):
 
 class Asteriods(App):
     def custom_configure(self):
+        self.board.command('setTextWrap 0')
+        return
         self.board.command('autoReadButtons 1')
         print("* custom_configure")
 
@@ -550,10 +556,140 @@ class Asteriods(App):
         SHOT_V = 5
 
         SHOT_DELAY = 2
-        SHOT_MAX = 6
-        ASTEROIDS_MAX = 3
+        SHOT_MAX = 8
+        ASTEROIDS_MAX = 5
 
         ASTER_R = 2, 10
+        ASTER_SPLIT_A = .4
+
+        SHIELD_DURATION = 12
+        PROTECT_DURATION = 16
+        SHIELD_RELOAD = 20
+        SHIELD_R = SHIP_R + 4
+
+        SCORE_DEC = 20
+
+        GOVER_TITLE = "GAME OVER"
+        GOVER_POS = self.get_title_pos(GOVER_TITLE)
+
+        LIVES = 3
+
+        class Game:
+            def __init__(self, board):
+                self.board = board
+
+                self.player = Player()
+                self.shots = []
+                self.asteroids = []
+                self.player = Player()
+
+            def update_asteroids(self):
+                for a in self.asteroids:
+                    a.move()
+                    if a.hit:
+                        a.hit = False
+                        a.shrink()
+                        if a.r == 0:
+                            self.asteroids.remove(a)
+
+            def create_asteroid(self):
+                if random.random() > .05: return
+                if len(self.asteroids) >= ASTEROIDS_MAX: return
+                self.asteroids.append(Asteroid(ship=self.player.ship))
+
+            def autoplay(self, keys):
+                p = random.random()
+                if p < .1:
+                    if len(self.asteroids):
+                        keys.add('C')
+                elif p < .2:
+                    keys.add('A')
+                elif p < .4:
+                    keys.add('B')
+                x, y, r = self.player.ship.x, self.player.ship.y, SHIELD_R
+                for a in self.asteroids:
+                    if detect_touch(x, y, a.x, a.y, r, a.r):
+                        # try shield
+                        keys.add('B')
+                        keys.add('C')
+
+            def update_ship(self, keys):
+                shoot = 'C' in keys
+                self.player.ship.move(keys)
+                if shoot:
+                    self.player.ship.shoot(self.shots)
+
+            def update_shots(self):
+                for shot in self.shots:
+                    shot.move()
+                    if not shot.valid():
+                        self.shots.remove(shot)
+
+            def do_detections(self):
+                self.player.score += detect_hits(self.shots, self.asteroids)
+                detect_collisions(self.asteroids)
+                detect_crash(self.player.ship, self.asteroids)
+
+            def add_renders(self, l):
+                self.player.ship.add_renders(l)
+                for a in self.asteroids:
+                    a.add_renders(l)
+                for shot in self.shots:
+                    shot.add_renders(l)
+
+            def add_renders_overlays(self, l):
+                if self.player.lives:
+                    x = config.WIDTH - 12
+                    l.append(f'setCursor {x} {0}')
+                    l.append(f'print L{self.player.lives}')
+                else:
+                    x, y = GOVER_POS
+                    l.append(f'setCursor {x} {y}')
+                    l.append(f'print GAME OVER')
+
+                if self.player.ship.aster_crash:
+                    return
+
+                if self.player.ship.reloading:
+                    r = self.player.ship.reloading
+                    l.append(f'home')
+                    l.append(f'print Reload {r}')
+                else:
+                    l.append(f'home')
+                    l.append(f'print {self.player.score:04d}')
+
+
+            def handle_crash(self):
+                if not self.player.ship.aster_crash:
+                    return False
+                self.boom(self.player.ship, self.player.ship.aster_crash)
+                self.player.ship.aster_crash = None
+                self.player.score = max(self.player.score - SCORE_DEC, 0)
+                if self.player.lives:
+                    self.player.lives -= 1
+                return True
+
+            def boom(self, ship, asteroid):
+                command = self.board.command
+                command(f'home')
+                command(f'print Boom! -{SCORE_DEC}')
+                i = 0
+                for i in range(4):
+                    i += 1
+                    renders = []
+                    ship.add_renders_boom(i, renders)
+                    asteroid.add_renders_boom(i, renders)
+                    for r in renders:
+                        command(r)
+                    command('display')
+                ship.protect = PROTECT_DURATION
+                ship.shield = SHIELD_DURATION
+
+        class Player:
+            def __init__(self):
+                self.ship = Ship()
+                self.lives = LIVES
+                self.score = 0
 
         class Ship:
             def __init__(self):
@@ -562,24 +698,37 @@ class Asteriods(App):
                 self.a = 0
                 self.r = SHIP_R
                 self.v = SHIP_V
+                self.shield = -SHIELD_RELOAD
+                self.i = 0
+                self.compute()
+                self.shot_reload = 0
+                self.protect = 0
+                self.aster_crash = None
+                self.reloading = 0
 
             def move(self, keys):
                 v = self.v
                 # rotate & advance
                 if 'A' in keys and 'B' in keys:
-                    v = self.v * 2
+                    if self.shield < -SHIELD_RELOAD:
+                        self.shield = SHIELD_DURATION
                 elif 'B' in keys:
-                    self.a += SHIP_ROT
-                    v = self.v/2
-                elif 'A' in keys:
                     self.a -= SHIP_ROT
                     v = self.v/2
+                elif 'A' in keys:
+                    self.a += SHIP_ROT
+                    v = self.v/2
                 if 'C' in keys:
-                    v = self.v/4
+                    pass #v = self.v/4
 
                 self.ca, self.sa = math.cos(self.a), math.sin(self.a)
                 self.x += self.ca * v
                 self.y += self.sa * v
+                self.i += 1
+                self.shot_reload += 1
+                self.shield -= 1
+                if self.protect:
+                    self.protect -= 1
 
                 # wrap around
                 if self.x < -self.r:
@@ -590,21 +739,58 @@ class Asteriods(App):
                     self.y = config.HEIGHT + self.r
                 if self.y > config.HEIGHT + self.r:
                     self.y = -self.r
+                self.compute()
 
-            def points(self):
+                if self.shield <=0 and self.shield > -SHIELD_RELOAD:
+                    self.reloading = SHIELD_RELOAD + self.shield
+                else:
+                    self.reloading = 0
+
+            def compute(self):
                 self.ca, self.sa = math.cos(self.a), math.sin(self.a)
-                x0 = int(self.r*self.ca + self.x +.5)
-                y0 = int(self.r*self.sa + self.y +.5)
+                self.x0 = int(self.r*self.ca + self.x +.5)
+                self.y0 = int(self.r*self.sa + self.y +.5)
 
                 b = self.a + math.pi * .8
-                x1 = int(self.r*math.cos(b) + self.x +.5)
-                y1 = int(self.r*math.sin(b) + self.y +.5)
+                self.x1 = int(self.r*math.cos(b) + self.x +.5)
+                self.y1 = int(self.r*math.sin(b) + self.y +.5)
 
                 b = self.a + math.pi * 1.2
-                x2 = int(self.r*math.cos(b) + self.x +.5)
-                y2 = int(self.r*math.sin(b) + self.y +.5)
+                self.x2 = int(self.r*math.cos(b) + self.x +.5)
+                self.y2 = int(self.r*math.sin(b) + self.y +.5)
 
-                return x0, y0, x1, y1, x2, y2
+            def shoot(self, shots):
+                if self.shield > 0:
+                    return
+                if self.shot_reload <= SHOT_DELAY:
+                    return
+                if len(shots) >= SHOT_MAX:
+                    return
+                vx, vy = self.ca*SHOT_V, self.sa*SHOT_V
+                shot = Shot(self.x0, self.y0, vx, vy)
+                shots.append(shot)
+                shot = Shot(self.x0+vx, self.y0+vy, vx, vy)
+                shots.append(shot)
+                self.shot_reload = 0
+
+            def add_renders(self, l):
+                if self.protect and self.i & 1:
+                    l.append(f'fillTriangle {self.x0} {self.y0} '
+                             f'{self.x1} {self.y1} {self.x2} {self.y2} 1')
+                else:
+                    l.append(f'drawTriangle {self.x0} {self.y0} '
+                             f'{self.x1} {self.y1} {self.x2} {self.y2} 1')
+
+                if self.shield > 0:
+                    r = SHIELD_R -3 + (self.i%3)*3
+                    l.append(f'drawCircle {self.x} {self.y} {r} 1')
+
+            def add_renders_boom(self, i, l):
+                c = i % 2
+                l.append(f'fillTriangle {self.x0} {self.y0} '
+                         f'{self.x1} {self.y1} {self.x2} {self.y2} {c}')
+                l.append(f'drawTriangle {self.x0} {self.y0} '
+                         f'{self.x1} {self.y1} {self.x2} {self.y2} 1')
 
         class Shot:
             def __init__(self, x, y, vx, vy):
@@ -619,21 +805,36 @@ class Asteriods(App):
                     self.x >=0 and self.x < config.WIDTH and \
                     self.y >=0 and self.y <config.HEIGHT
 
-        class Asteroid:
-            def __init__(self, ship_x, ship_y):
-                r = random.random()
-                if r > .5:
-                    x = config.WIDTH
-                    y = config.HEIGHT * random.random()
-                elif r < .25:
-                    y = 0
-                    x = config.WIDTH * (.75 + random.random() * .25)
-                else:
-                    y = config.HEIGHT
-                    x = config.WIDTH * (.75 + random.random() * .25)
+            def add_renders(self, l):
+                l.append(f'drawPixel {self.x} {self.y} 1')
 
+        class Asteroid:
+            def __init__(self, ship=None, other=None):
+                if ship is not None:
+                    self.init(ship.x, ship.y)
+                elif other is not None:
+                    self.xx, self.x = other.xx, other.x
+                    self.yy, self.y = other.yy, other.y
+                    self.r = other.r
+                    self.a = other.a
+                    self.hit = other.hit
+                else:
+                    self.init(0, 0)
+
+            def init(self, ship_x, ship_y):
                 r = random.randrange(*ASTER_R)
                 a = random.random() * math.pi + math.pi/2
+
+                p = random.random()
+                if p > .5:
+                    x = config.WIDTH + r
+                    y = config.HEIGHT * random.random()
+                elif p < .25:
+                    y = -r
+                    x = config.WIDTH * (.75 + random.random() * .25)
+                else:
+                    y = config.HEIGHT + r
+                    x = config.WIDTH * (.75 + random.random() * .25)
 
                 if ship_x > config.WIDTH / 2:
                     x = config.WIDTH - x
@@ -643,11 +844,14 @@ class Asteriods(App):
                 self.yy = self.y = int(y+.5)
                 self.r = int(r+.5)
                 self.a = a
+                self.hit = False
 
-            def move(self):
-                v = (ASTER_R[1] - self.r)**1.5 / 6
-                vx = math.cos(self.a) * v
-                vy = math.sin(self.a) * v
+            def move(self, dist=None):
+                if not dist:
+                    v = max((ASTER_R[1] - self.r)**1.5 / 6, .5)
+                    dist = v
+                vx = math.cos(self.a) * dist
+                vy = math.sin(self.a) * dist
 
                 self.xx += vx
                 self.yy += vy
@@ -664,58 +868,145 @@ class Asteriods(App):
                 self.x = int(self.xx+.5)
                 self.y = int(self.yy+.5)
 
-        shots = []
-        asteroids = []
-        ship = Ship()
-        shot_reload = 0
+            def shrink(self):
+                self.r -= 1
+                if self.r < 4:
+                    self.r = 0
+
+            def add_renders(self, l):
+                if self.hit:
+                    l.append(f'fillCircle {self.x} {self.y} {self.r} 1')
+                else:
+                    l.append(f'drawCircle {self.x} {self.y} {self.r} 1')
+
+            def add_renders_boom(self, i, l):
+                c = i%2
+                l.append(f'fillCircle {self.x} {self.y} {self.r} {c}')
+                l.append(f'drawCircle {self.x} {self.y} {self.r} 1')
+
+        def detect_hits(shots, asteroids):
+            score = 0
+            if not shots or not asteroids:
+                return 0
+            for a in asteroids:
+                for s in shots:
+                    if detect_hit(s.x, s.y, a, .75):
+                        shots.remove(s)
+                        a.hit = True
+                        score += int(a.r)
+
+                        if a.r >= sum(ASTER_R)/2:
+                            # split in two
+                            a.r -= 1
+                            a1 = Asteroid(other=a)
+                            a1.a += ASTER_SPLIT_A
+                            a1.move(a1.r+1)
+                            asteroids.append(a1)
+
+                            a2 = Asteroid(other=a)
+                            a2.a -= ASTER_SPLIT_A
+                            a2.move(a2.r+1)
+                            asteroids.append(a2)
+
+                            if a in asteroids:
+                                asteroids.remove(a)
+                        continue
+            return score
+
+        def detect_crash(ship, asteroids):
+            if ship.protect:
+                return
+
+            if ship.shield > 0:
+                for a in asteroids:
+                    if detect_touch(ship.x, ship.y, a.x, a.y, SHIELD_R, a.r):
+                        a.hit = True
+                return
+
+            for a in asteroids:
+                if (detect_hit(ship.x0, ship.y0, a,  .9) or
+                    detect_hit(ship.x1, ship.y1, a,  .9) or
+                    detect_hit(ship.x2, ship.y2, a,  .9) or
+                    detect_hit(ship.x,  ship.y,  a, 1.1) ):
+                    a.hit = True
+                    ship.aster_crash = a
+            return
+
+        def detect_collisions(asteroids):
+            pairs = {}
+            for a in asteroids:
+                for b in asteroids:
+                    if a is b: continue
+                    if (a, b) in pairs: continue
+                    pairs[(a, b)] = True
+                    if detect_touch(a.x, a.y, b.x, b.y, a.r, b.r):
+                        a.hit=True
+                        b.hit=True
+
+        def detect_touch(x0, y0, x1, y1, r0, r1):
+            dx = (x0 - x1)**2
+            dy = (y0 - y1)**2
+            rr = (dx + dy)
+            return rr < (r0 + r1)**2
+
+        def detect_hit(x, y, asteroid, factor):
+            a = asteroid
+            dx = (a.x - x)**2
+            dy = (a.y - y)**2
+            r2 = (dx + dy) * factor
+            return r2 < a.r**2
+
+        def read_keys():
+            ans = self.command('readButtons')
+            if ans != NONE:
+                return set(ans)
+            else:
+                return set()
+
+        def run(game):
+            overs = 0
+            while True:
+                keys = read_keys()
+                if game.player.lives == 0 and keys:
+                    break
+
+                # Erase
+                self.command(f'reset')
+
+                # Update / create
+                game.update_asteroids()
+                game.create_asteroid()
+                if game.player.lives == 0:
+                    game.autoplay(keys)
+                game.update_ship(keys)
+                game.update_shots()
+
+                # Hits
+                game.do_detections()
+
+                # Draw
+                renders = []
+                game.add_renders(renders)
+
+                # indicators
+                game.add_renders_overlays(renders)
+
+                # show
+                for render in renders:
+                    self.command(render)
+                self.command('display')
+
+                # crash
+                game.handle_crash()
+
+                if overs == 1:
+                    time.sleep(1)
+                if game.player.lives == 0:
+                    overs += 1
 
         while True:
-            keys = set()
-
-            # Erase
-
-            for a in asteroids:
-                self.k_command(keys, f'drawCircle {a.x} {a.y} {a.r} 0')
-
-            for shot in shots:
-                self.k_command(keys, f'drawPixel {shot.x} {shot.y} 0')
-
-            x0, y0, x1, y1, x2, y2 = ship.points()
-            self.k_command(keys,
-                           f'drawTriangle {x0} {y0} {x1} {y1} {x2} {y2} 0')
-
-            # Move / create
-
-            for a in asteroids:
-                a.move()
-            if random.random() < .05 and len(asteroids) < ASTEROIDS_MAX:
-                asteroids.append(Asteroid(ship.x, ship.y))
-
-            ship.move(keys)
-
-            if 'C' in keys:
-                if shot_reload > SHOT_DELAY and len(shots) < SHOT_MAX:
-                    shot = Shot(x0, y0, ship.ca*SHOT_V, ship.sa*SHOT_V)
-                    shots.append(shot)
-                    shot_reload = 0
-            shot_reload += 1
-            for shot in shots:
-                shot.move()
-                if not shot.valid(): shots.remove(shot)
-
-            # Draw
-
-            x0, y0, x1, y1, x2, y2 = ship.points()
-            self.k_command(keys,
-                           f'drawTriangle {x0} {y0} {x1} {y1} {x2} {y2} 1')
-
-            for a in asteroids:
-                self.k_command(keys, f'drawCircle {a.x} {a.y} {a.r} 1')
-
-            for shot in shots:
-                self.k_command(keys, f'drawPixel {shot.x} {shot.y} 1')
-
-            self.k_command(keys, 'display')
+            game = Game(self.board)
+            run(game)
 
         board.set_configure_callback(None)
 
@@ -732,6 +1023,7 @@ class Asteriods(App):
         if 'B' in k: keys.add('B')
         if 'C' in k: keys.add('C')
 
+################################################################################
 # Helper classes
 
 class RebootedException(Exception):
@@ -844,6 +1136,25 @@ class Sprite(Bouncer):
         self.was_filled = self.bumped
 
 
+def chunkize(str, n):
+    return [str[i:i+n] for i in range(0, len(str), n)]
+
+def fatal(msg):
+    print(msg)
+    board.command('home')
+    board.command('setTextSize 1')
+    board.command('setTextWrap 1')
+    board.command(f'fillRect 0, 0, {config.WIDTH} 8 0')
+    board.command('reset')
+
+    msg = ' '.join(msg.split())
+    msg = msg[-20*8:]
+    for chunk in chunkize(msg.replace('\n', ' '), 20):
+        board.command(f'print {chunk}')
+    board.command('display')
+    sys.exit(1)
+
+
 # Here it goes
 chan = Channel()
 board = Board(chan)
@@ -860,5 +1171,11 @@ while True:
             Quix(board)
             Bumps(board)
     except RebootedException:
-        pass
         # restart loop
+        pass
+    except KeyboardInterrupt:
+        print()
+        fatal('Keyboard interrupt')
+    except Exception as e:
+        msg = traceback.format_exc()
+        fatal(msg)
