@@ -41,7 +41,12 @@ class Channel:
         self.ser.write(s.encode(ASCII) + b'\n')
 
     def read(self):
-        message = self.ser.readline().strip().decode(ASCII)
+        try:
+            bytes = self.ser.readline()
+            message = bytes.decode(ASCII).strip()
+        except Exception as e:
+            print(">>>", bytes, ' ###', e)
+            return f'ERROR {e}'
         if config.DEBUG: print(">>>", message)
         if message == self.on_message:
             self.on_fn(message)
