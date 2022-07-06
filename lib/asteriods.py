@@ -84,12 +84,12 @@ class Asteriods(App):
         self.command('reset')
         self.command('setTextSize 1')
         self.command(f'print Play {self.name.upper()}:\\n')
-        self.command(f'print   C     fire\\n')
-        self.command(f'print   B     cntr-clkwise\\n')
-        self.command(f'print   A     clockwise\\n')
-        self.command(f'print   A+B   shield\\n')
-        self.command(f'print   RESET menu\\n\\n')
-        self.command(f'print RESET:exit  any:start')
+        self.command(f'print   C   fire\\n')
+        self.command(f'print   B   cntr-clockwise\\n')
+        self.command(f'print   A   clockwise\\n')
+        self.command(f'print   A+B shield\\n')
+        self.command(f'print   R   back to menu\\n\\n')
+        self.command(f'print R:exit  any:start')
         self.command(f'display')
         while self.read_keys():
             pass
