@@ -524,7 +524,7 @@ class RebootedException(Exception):
 
 
 class KeyEscaper:
-    def __init__(self, app, board, message="Hold a key to move on",
+    def __init__(self, app, board, message="Hold a key: next demo",
                  timeout=datetime.timedelta(seconds=60),
                  steady_message=True):
         self.app = app
