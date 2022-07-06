@@ -86,9 +86,14 @@ class Board:
         self.command(f'setRotation {config.ROTATION}')
         self.command('autoDisplay 0')
         self.command('reset')
-        config.WIDTH = int(self.command(f'width'))
-        config.HEIGHT = int(self.command(f'height'))
-        print(f'{config.WIDTH} x {config.HEIGHT}')
+
+        w = int(self.command(f'width'))
+        h = int(self.command(f'height'))
+        if not config.WIDTH:
+            config.WIDTH = w
+            config.HEIGHT = h
+            print(f'OLED resolution: {w} x {h}')
+
         if self.configure_callback:
             self.configure_callback()
         self.configured = True

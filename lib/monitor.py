@@ -96,7 +96,6 @@ class Monitor(App):
                 self.command(f'print {l}\\n')
             self.command(f'display')
             choice = self.wait_button(PAGE_REFRESH)
-            print('s', choice)
             if choice:
                 return choice
         return None
