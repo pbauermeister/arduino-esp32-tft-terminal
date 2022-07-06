@@ -166,6 +166,7 @@ class Asteriods(App):
                 autoplay = True
                 autoplay_start = datetime.datetime.now()
                 game.player.autoplay =True
+                game.player.score = 0
                 game.player.lives = LIVES
                 overs = 0
             if game.player.lives == 0:
