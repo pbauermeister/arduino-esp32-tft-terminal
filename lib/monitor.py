@@ -19,11 +19,11 @@ CHOICE_NEXT = 2
 class Monitor(App):
 
     def __init__(self, board):
+        self.boots = board.boots
         super().__init__(board)
         self.chars_per_line = int(config.WIDTH / 6.4)
         self.lines = int(config.WIDTH / 8)
         self.command = self.board.command
-        self.boots = self.board.boots
 
         while True:
             ans =self.show_host()
@@ -33,22 +33,8 @@ class Monitor(App):
             if ans == CHOICE_EXIT: return
             if ans == None: return
 
-    def make_header(self, title):
-        self.command(f'waitButton 100 1')
-        self.command(f'reset')
-        self.command(f'fillRect 0 0 {config.WIDTH} 8 1')
-        self.command(f'setTextColor 0')
-        self.command(f'setCursor 1 0')
-        self.command(f'print {title}')
-        txt = 'C:next R:exit'
-        w, h = self.get_text_size(txt)
-        x = config.WIDTH - w - 3
-        self.command(f'setCursor {x} 0')
-        self.command(f'print {txt}')
-
-        self.command(f'setTextColor 1')
-        self.command(f'home')
-        self.command(f'print \\n')
+    def show_header(self, title):
+        super().show_header(title, 'C:next R:exit')
 
     def wait_button(self, timeout):
         start = datetime.datetime.now()
@@ -65,7 +51,7 @@ class Monitor(App):
                 return None
 
     def show_host(self):
-        self.make_header('Host')
+        self.show_header('Host')
         self.command(f'display')
         users = self.get_nb_users()
         users = f'{users or "???"} user' + ('' if users==1 else 's')
@@ -82,7 +68,7 @@ class Monitor(App):
 
     def show_cpu(self):
         for i in range(int(PAGE_CPU_TIMEOUT/PAGE_REFRESH)):
-            self.make_header('CPU %')
+            self.show_header('CPU %')
             if i==0: self.command(f'display')
             lines = self.get_cpus_pcents()
 

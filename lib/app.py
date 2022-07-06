@@ -37,3 +37,18 @@ class App:
         vals = [int(v) for v in ans.split()]
         w, h = vals[-2:]
         return w, h
+
+    def show_header(self, title, menu):
+        self.command(f'reset')
+        self.command(f'fillRect 0 0 {config.WIDTH} 8 1')
+        self.command(f'setTextColor 0')
+        self.command(f'setCursor 1 0')
+        self.command(f'print {title}')
+        w, h = self.get_text_size(menu)
+        x = config.WIDTH - w - 3
+        self.command(f'setCursor {x} 0')
+        self.command(f'print {menu}')
+
+        self.command(f'setTextColor 1')
+        self.command(f'home')
+        self.command(f'print \\n')
