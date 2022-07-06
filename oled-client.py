@@ -14,6 +14,7 @@ import traceback
 from lib import *
 from lib.app import App
 from lib.asteriods import Asteriods
+from lib.monitor import Monitor
 
 class Channel:
     def __init__(self, port=config.SERIALPORT, baudrate=config.BAUDRATE):
@@ -87,6 +88,7 @@ class Board:
         self.command('reset')
         config.WIDTH = int(self.command(f'width'))
         config.HEIGHT = int(self.command(f'height'))
+        print(f'{config.WIDTH} x {config.HEIGHT}')
         if self.configure_callback:
             self.configure_callback()
         self.configured = True
@@ -649,6 +651,7 @@ board.wait_configured()
 while True:
     try:
         while True:
+            Monitor(board)
             Asteriods(board)
             Cube(board)
             Road(board)

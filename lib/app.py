@@ -27,9 +27,13 @@ class App:
         self.command(f'setTextSize 1')
 
     def get_title_pos(self, title):
-        ans = self.command(f'getTextBounds 0 0 {title}')
-        vals = [int(v) for v in ans.split()]
-        w, h = vals[-2:]
+        w, h = self.get_text_size(title)
         x = int(config.WIDTH/2 - w/2 +.5)
         y = int(config.HEIGHT/2 - h/2 +.5)
         return x, y
+
+    def get_text_size(self, text):
+        ans = self.command(f'getTextBounds 0 0 {text}')
+        vals = [int(v) for v in ans.split()]
+        w, h = vals[-2:]
+        return w, h
