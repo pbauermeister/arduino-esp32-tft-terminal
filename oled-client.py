@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Program communicating with Arduino running oled-server.ino."""
 
-import argparse
 import config
 import datetime
 import math
@@ -12,13 +11,17 @@ import sys
 import time
 import traceback
 
+
 from lib import *
+from lib.args import get_args
 from lib.app import App
 from lib.asteriods import Asteriods
 from lib.monitor import Monitor
 
 class Channel:
-    def __init__(self, port=config.SERIALPORT, baudrate=config.BAUDRATE):
+    def __init__(self,
+                 port=config.SERIAL_PORT,
+                 baudrate=config.SERIAL_BAUDRATE):
         self.port = port
         self.baudrate = baudrate
         self.ser = None
@@ -109,7 +112,7 @@ class Board:
     def configure(self):
         # normally called by callback
         self.chan.clear()
-        self.command(f'setRotation {config.ROTATION}')
+        self.command(f'setRotation {config.SCREEN_ROTATION}')
         self.command('autoDisplay 0')
         self.command('reset')
 
@@ -700,26 +703,20 @@ def fatal(msg):
     sys.exit(1)
 
 
-def get_args():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--ssh-authority', metavar='[USER@]HOST',
-                        help='if specified, monitor host via ssh')
-    args = parser.parse_args()
-    return args
-
 # Here it goes
 args = get_args()
-if args.ssh_authority:
-    config.REMOTE_SSH_AUTHORITY = args.ssh_authority
 
 chan = Channel()
 board = Board(chan)
 board.wait_configured()
-#board.monitor()
+
 while True:
     try:
         while True:
-            Monitor(board)
+            if not config.MONITOR_SKIP:
+                Monitor(board)
+            if config.MONITOR_ONLY:
+                continue
             Asteriods(board)
             Cube(board)
             Road(board)

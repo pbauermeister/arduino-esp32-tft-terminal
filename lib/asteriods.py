@@ -57,17 +57,22 @@ class Asteriods(App):
         board.set_configure_callback(None)
 
     def run(self):
+        first = True
         while True:
-            menu = self.menu()
-            auto = False
-            if menu == MENU_QUIT:
-                return
-            elif menu == MENU_PLAY:
-                pass
-            elif menu == MENU_AUTO:
+            if config.APP_ASTERIODS_AUTOPLAY and first:
                 auto = True
             else:
-                return
+                menu = self.menu()
+                auto = False
+                if menu == MENU_QUIT:
+                    return
+                elif menu == MENU_PLAY:
+                    pass
+                elif menu == MENU_AUTO:
+                    auto = True
+                else:
+                    return
+            first = False
 
             while True:
                 self.boots = self.board.boots

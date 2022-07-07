@@ -25,12 +25,16 @@ class Monitor(App):
         self.mutex = threading.Lock()
 
         while True:
-            ans = self.show_host()
-            if ans == CHOICE_EXIT: return
+            if config.MONITOR_HOST_TIMEOUT:
+                ans = self.show_host()
+                if ans == CHOICE_EXIT: return
 
-            ans = self.show_cpu()
-            if ans == CHOICE_EXIT: return
-            if ans == None: return
+            if config.MONITOR_CPU_TIMEOUT:
+                ans = self.show_cpu()
+                if ans == CHOICE_EXIT: return
+
+            if ans is not None: continue
+            if not config.MONITOR_ONLY: return
 
     def show_header(self, title, with_banner=False):
         super().show_header(title, 'C:next R:exit', with_banner)
@@ -66,11 +70,15 @@ class Monitor(App):
 
         users = self.get_nb_users()
         users = f'{users or "???"} user' + ('' if users==1 else 's')
+
+        date = self.get_date()
+
         lines = [
             self.get_hostname(),
             self.get_ip(),
-            self.get_uptime(),
             users,
+            date,
+            self.get_uptime(),
             ] + self.get_mem()
 
         if 'C' in self.board.end_read_buttons():
@@ -113,8 +121,7 @@ class Monitor(App):
                 # Mem
                 if len(lines) <= 4:
                     self.command(f'setCursor 0 {6*8}')
-                    lines = mem
-                    for l in lines[1:]:
+                    for l in mem:
                         self.command(f'print {l}\\n')
                 self.command(f'display')
 
@@ -175,6 +182,13 @@ class Monitor(App):
         except:
             return None
 
+    def get_date(self):
+        try:
+            out = command(['date', '--rfc-3339=seconds'])
+            return out.split('+')[0]
+        except:
+            return '<date unavail>'
+
     def get_uptime(self):
         try:
             uptime = command(['uptime', '-p'])
@@ -194,7 +208,7 @@ class Monitor(App):
             cols = 'Ttl Usd Fre Sha Buf Avg'.split()
             head = '  ' + ''.join([f'{s:3}' for s in cols])
             vals = '   ' + ' '.join([f'{int(v):2}' for v in stats])
-            return ['mem [GB]:', head, vals]
+            return [head, vals]
         except:
             return ['mem unavailable']
 
@@ -234,6 +248,4 @@ def command(cmd, force_local=False, check=True):
 
 def shorten(txt):
     txt = txt.rstrip()
-    if len(txt) <= config.COLUMNS:
-        return txt
-    return txt[:config.COLUMNS] + '>'
+    return txt[:config.COLUMNS]
