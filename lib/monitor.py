@@ -10,10 +10,6 @@ import subprocess
 import json
 import threading
 
-PAGE_HOST_TIMEOUT = 8
-PAGE_CPU_TIMEOUT = 60*3 - PAGE_HOST_TIMEOUT
-CPU_STAT_INTERVAL = 2
-
 CHOICE_EXIT = 1
 CHOICE_NEXT = 2
 
@@ -84,11 +80,11 @@ class Monitor(App):
             self.command(f'print {l}\\n')
         self.command(f'display')
 
-        return self.wait_button(PAGE_HOST_TIMEOUT)
+        return self.wait_button(config.MONITOR_HOST_TIMEOUT)
 
     def show_cpu(self):
         start = datetime.datetime.now()
-        until = start + datetime.timedelta(seconds=PAGE_CPU_TIMEOUT)
+        until = start + datetime.timedelta(seconds=config.MONITOR_CPU_TIMEOUT)
 
         th = threading.Thread(target=self.task)
         self.stop = False
@@ -142,13 +138,13 @@ class Monitor(App):
                 self.cpus, self.mem = cpus, mem
                 self.changed = True
 
-    def get_hostname(self):
+    def get_hostname(self):  # FIXME: via ssh
         try:
             return socket.gethostname()
         except:
             return '<hostname unavail>'
 
-    def get_ip(self):
+    def get_ip(self):  # FIXME: via ssh
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
@@ -188,7 +184,8 @@ class Monitor(App):
 
     def get_cpus_pcents(self):
         try:
-            out = command(f'mpstat -P ALL {CPU_STAT_INTERVAL} 1 -o JSON'.split())
+            out = command((f'mpstat -P ALL {config.MONITOR_CPU_INTERVAL} 1 '
+                           f'-o JSON').split())
             data = json.loads(out)
             loads = data['sysstat']['hosts'][0]['statistics'][0]['cpu-load']
             cpus = [l for l in loads if l['cpu'] != 'all']
@@ -210,7 +207,8 @@ class Monitor(App):
 
 
 def command(cmd):
-    cmd = ['ssh', 'infrastructure-development'] + cmd
+    if config.REMOTE_SSH_AUTHORITY:
+        cmd = ['ssh', config.REMOTE_SSH_AUTHORITY] + cmd
     try:
         return subprocess.check_output(cmd, encoding='utf-8').strip()
     except Exception as e:

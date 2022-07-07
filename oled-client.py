@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Demo program communicating with Arduino running oled-server.ino."""
+"""Program communicating with Arduino running oled-server.ino."""
 
+import argparse
 import config
 import datetime
 import math
@@ -671,7 +672,18 @@ def fatal(msg):
     sys.exit(1)
 
 
+def get_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--ssh-authority', metavar='USER@HOST',
+                        help='if specified, monitor host via ssh')
+    args = parser.parse_args()
+    return args
+
 # Here it goes
+args = get_args()
+if args.ssh_authority:
+    config.REMOTE_SSH_AUTHORITY = args.ssh_authority
+
 chan = Channel()
 board = Board(chan)
 board.wait_configured()
