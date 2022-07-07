@@ -38,8 +38,9 @@ class App:
         w, h = vals[-2:]
         return w, h
 
-    def show_header(self, title, menu):
+    def show_header(self, title, menu, with_banner=False):
         self.command(f'reset')
+        self.command(f'setTextSize 1 1')
         self.command(f'fillRect 0 0 {config.WIDTH} 8 1')
         self.command(f'setTextColor 0')
         self.command(f'setCursor 1 0')
@@ -48,7 +49,19 @@ class App:
         x = config.WIDTH - w - 3
         self.command(f'setCursor {x} 0')
         self.command(f'print {menu}')
-
         self.command(f'setTextColor 1')
-        self.command(f'home')
-        self.command(f'print \\n')
+
+        if with_banner:
+            self.command(f'setTextSize 1 2')
+            self.show_title(title)
+            self.command(f'display')
+            self.command(f'setTextSize 1 1')
+        else:
+            self.command(f'home')
+            self.command(f'print \\n')
+
+    def show_title(self, title):
+        x, y = self.get_title_pos(title)
+        self.command(f'setCursor {x} {y}')
+        self.command(f'print {title}')
+

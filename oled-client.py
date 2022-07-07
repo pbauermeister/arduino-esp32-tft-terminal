@@ -62,15 +62,25 @@ class Board:
         self.chan.set_callback('READY', self.on_ready)
         self.configured = False
         self.boots = 0
+        self.last_command = None
+        self.reading_buttons = False
 
-    def command(self, cmd):
+    def command_send(self, cmd):
+        assert not self.reading_buttons
         self.chan.write(cmd)
+        self.last_command = cmd
+
+    def command_response(self):
         response = self.chan.read()
         if not config.DEBUG:
             if response.startswith(ERROR) or response.startswith(UNKNOWN):
-                print('<<<', cmd)
+                print('<<<', self.last_command)
                 print('>>>', response)
         return response
+
+    def command(self, cmd):
+        self.command_send(cmd)
+        return self.command_response()
 
     def on_ready(self, _=None):
         time.sleep(0.2)
@@ -105,7 +115,20 @@ class Board:
             self.chan.read()
             time.sleep(0.5)
 
+    def begin_read_buttons(self):
+        assert not self.reading_buttons
+        self.command_send('waitButton -1 0')
+        self.reading_buttons = True
 
+    def end_read_buttons(self):
+        assert self.reading_buttons
+        self.reading_buttons = False
+        self.command_send('width')
+        resp = self.command_response()
+        self.command_response()  # TODO: with a timeout
+        self.chan.clear()
+        if resp == NONE: return set()
+        return set(resp)
 
 class Bumps(App):
     def __init__(self, board):

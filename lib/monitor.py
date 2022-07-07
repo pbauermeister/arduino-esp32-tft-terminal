@@ -8,10 +8,11 @@ import config
 import socket
 import subprocess
 import json
+import threading
 
 PAGE_HOST_TIMEOUT = 8
-PAGE_CPU_TIMEOUT = 60 - PAGE_HOST_TIMEOUT
-PAGE_REFRESH = 2
+PAGE_CPU_TIMEOUT = 60*3 - PAGE_HOST_TIMEOUT
+CPU_STAT_INTERVAL = 2
 
 CHOICE_EXIT = 1
 CHOICE_NEXT = 2
@@ -24,24 +25,27 @@ class Monitor(App):
         self.chars_per_line = int(config.WIDTH / 6.4)
         self.lines = int(config.WIDTH / 8)
         self.command = self.board.command
+        self.mutex = threading.Lock()
 
         while True:
-            ans =self.show_host()
+            ans = self.show_host()
             if ans == CHOICE_EXIT: return
 
             ans = self.show_cpu()
             if ans == CHOICE_EXIT: return
             if ans == None: return
 
-    def show_header(self, title):
-        super().show_header(title, 'C:next R:exit')
+    def show_header(self, title, with_banner=False):
+        super().show_header(title, 'C:next R:exit', with_banner)
 
-    def wait_button(self, timeout):
-        start = datetime.datetime.now()
-        until = start + datetime.timedelta(seconds=timeout)
-
+    def wait_no_button(self):  # TODO: move to base class
         while self.command('readButtons') != NONE:
             pass
+
+    def wait_button(self, timeout):  # TODO: move to parent, also read_buttons
+        if timeout is not None:
+            start = datetime.datetime.now()
+            until = start + datetime.timedelta(seconds=timeout)
 
         while True:
             ans = self.command('readButtons')
@@ -49,13 +53,20 @@ class Monitor(App):
                 return CHOICE_NEXT
             if self.boots != self.board.boots:
                 return CHOICE_EXIT
+            if timeout is None:
+                return None
             now = datetime.datetime.now()
-            if now > until:
+            if now >= until:
                 return None
 
     def show_host(self):
-        self.show_header('Host')
+        title = 'Host'
+        self.show_header(title, with_banner=True)
         self.command(f'display')
+
+        self.wait_no_button()
+        self.board.begin_read_buttons()
+
         users = self.get_nb_users()
         users = f'{users or "???"} user' + ('' if users==1 else 's')
         lines = [
@@ -64,30 +75,72 @@ class Monitor(App):
             self.get_uptime(),
             users,
             ] + self.get_mem()
+
+        if 'C' in self.board.end_read_buttons():
+            return CHOICE_NEXT
+
+        self.show_header(title)
         for l in lines:
             self.command(f'print {l}\\n')
         self.command(f'display')
+
         return self.wait_button(PAGE_HOST_TIMEOUT)
 
     def show_cpu(self):
-        for i in range(int(PAGE_CPU_TIMEOUT/PAGE_REFRESH)):
-            self.show_header('CPU %')
-            if i==0: self.command(f'display')
-            lines = self.get_cpus_pcents()
+        start = datetime.datetime.now()
+        until = start + datetime.timedelta(seconds=PAGE_CPU_TIMEOUT)
 
-            if len(lines) < 3:
-                lines.append('')
-                lines += self.get_mem()[1:]
+        th = threading.Thread(target=self.task)
+        self.stop = False
+        th.start()
 
-            if len(lines) < 7:
-                self.command(f'print \\n')
-            for l in lines:
-                self.command(f'print {l}\\n')
-            self.command(f'display')
-            choice = self.wait_button(PAGE_REFRESH)
+        title = 'CPU %'
+        self.show_header(title, with_banner=True)
+        self.command(f'display')
+        self.wait_no_button()
+
+        while True:
+            cpus, mem = None, None
+            with self.mutex:
+                if self.changed:
+                    cpus, mem = self.cpus, self.mem
+                    self.changed = False
+            if cpus is not None:
+                self.show_header(title)
+                # CPUs
+                self.command(f'setCursor 0 12')
+                lines = cpus
+                for l in lines:
+                    self.command(f'print {l}\\n')
+                # Mem
+                if len(lines) <= 4:
+                    self.command(f'setCursor 0 {6*8}')
+                    lines = mem
+                    for l in lines[1:]:
+                        self.command(f'print {l}\\n')
+                self.command(f'display')
+
+            choice = self.wait_button(timeout=None)
             if choice:
+                self.stop = True
+                #th.join()
                 return choice
-        return None
+
+            now = datetime.datetime.now()
+            if now >= until:
+                self.stop = True
+                #th.join()
+                return None
+
+    def task(self):
+        self.changed = False
+        while not self.stop:
+            cpus = self.get_cpus_pcents()
+            mem = self.get_mem()
+            if self.stop: break
+            with self.mutex:
+                self.cpus, self.mem = cpus, mem
+                self.changed = True
 
     def get_hostname(self):
         try:
@@ -105,24 +158,25 @@ class Monitor(App):
 
     def get_nb_users(self):
         try:
-            out = subprocess.check_output(['who'], encoding='utf-8').strip()
+            out = command(['who'])
             return len(out.splitlines())
         except:
             return None
 
     def get_uptime(self):
         try:
-            uptime = subprocess.check_output(['uptime', '-p'], encoding='utf-8').strip()
+            uptime = command(['uptime', '-p'])
         except:
             return '<uptime unavail>'
-        uptime = uptime.replace(' hours', 'h').replace(' hour', 'h')
-        uptime = uptime.replace(' minutes', 'm').replace(' minute', 'm')
-        uptime = uptime.replace(' days', 'd').replace(' day', 'd')
+        for unit in 'hour', 'minute', 'day', 'week', 'month', 'year':
+            initial = unit[0]
+            what = ' ' + unit
+            uptime = uptime.replace(what+'s', initial).replace(what, initial)
         return uptime
 
     def get_mem(self):
         try:
-            out = subprocess.check_output(['free', '--giga'], encoding='utf-8').strip()
+            out = command(['free', '--giga'])
             stats = out.splitlines()[1].split()[1:]
 
             cols = 'Ttl Usd Fre Sha Buf Avg'.split()
@@ -134,14 +188,13 @@ class Monitor(App):
 
     def get_cpus_pcents(self):
         try:
-            out = subprocess.check_output('mpstat -P ALL 1 1 -o JSON'.split(),
-                                          encoding='utf-8')
+            out = command(f'mpstat -P ALL {CPU_STAT_INTERVAL} 1 -o JSON'.split())
             data = json.loads(out)
             loads = data['sysstat']['hosts'][0]['statistics'][0]['cpu-load']
             cpus = [l for l in loads if l['cpu'] != 'all']
             pcents = [int(c['usr']+.5) for c in cpus]
         except:
-            return ['<cpus: mpstat error>']
+            return ['<CPUs: mpstat error>']
         lines = []
         items_per_line = int(self.chars_per_line/4)
         line = ''
@@ -154,3 +207,12 @@ class Monitor(App):
                 line += ' '
         if line: lines.append(line)
         return lines
+
+
+def command(cmd):
+    cmd = ['ssh', 'infrastructure-development'] + cmd
+    try:
+        return subprocess.check_output(cmd, encoding='utf-8').strip()
+    except Exception as e:
+        print(f'Error >>> {cmd}')
+        raise
