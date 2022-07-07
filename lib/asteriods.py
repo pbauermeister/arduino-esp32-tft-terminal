@@ -22,7 +22,7 @@ ASTER_SPLIT_A = .4
 SHIELD_DURATION = 12
 PROTECT_DURATION = 16
 SHIELD_RELOAD = 20
-SHIELD_R = SHIP_R + 4
+SHIELD_R = SHIP_R + 6
 
 GOVER_TITLE = "GAME OVER"
 GOVER_POS = 0
@@ -221,6 +221,7 @@ class Game:
             keys.add('A')
         elif p < .4:
             keys.add('B')
+
         x, y, r = self.player.ship.x, self.player.ship.y, SHIELD_R
         for a in self.asteroids:
             if detect_touch(x, y, a.x, a.y, r, a.r):
