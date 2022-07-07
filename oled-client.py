@@ -47,13 +47,27 @@ class Channel:
             bytes = self.ser.readline()
             message = bytes.decode(ASCII).strip()
         except Exception as e:
-            print(">>>", bytes, ' ###', e)
+            print('>>>', bytes, ' ###', e)
             return f'ERROR {e}'
         if config.DEBUG: print(">>>", message)
         if message == self.on_message:
             self.on_fn(message)
         return message
 
+    def flush_in(self):
+        if config.DEBUG:
+            print('>flush> ', end='')
+        while True:
+            if self.ser.inWaiting():
+                c = self.ser.read()
+                if config.DEBUG:
+                    print(c, end='')
+            else:
+                time.sleep(0.1)
+                if not self.ser.inWaiting():
+                    if config.DEBUG:
+                        print()
+                    return
 
 class Board:
     def __init__(self, channel):
@@ -77,6 +91,7 @@ class Board:
             if response.startswith(ERROR) or response.startswith(UNKNOWN):
                 print('<<<', self.last_command)
                 print('>>>', response)
+        assert not response.startswith('ERROR')
         return response
 
     def command(self, cmd):
@@ -103,7 +118,11 @@ class Board:
         if not config.WIDTH:
             config.WIDTH = w
             config.HEIGHT = h
-            print(f'OLED resolution: {w} x {h}')
+            config.COLUMNS = int(w / 6.4)
+            config.ROWS = int(h / 8)
+            print(f'OLED resolution:')
+            print(f'  pixels: {w} x {h}')
+            print(f'  chars:  {config.COLUMNS} x {config.ROWS}')
 
         if self.configure_callback:
             self.configure_callback()
@@ -118,18 +137,27 @@ class Board:
 
     def begin_read_buttons(self):
         assert not self.reading_buttons
+        if config.DEBUG:
+            print('* begin_read_buttons')
         self.command_send('waitButton -1 0')
         self.reading_buttons = True
 
     def end_read_buttons(self):
         assert self.reading_buttons
+        if config.DEBUG:
+            print('* end_read_buttons')
         self.reading_buttons = False
         self.command_send('width')
         resp = self.command_response()
-        self.command_response()  # TODO: with a timeout
-        self.chan.clear()
-        if resp == NONE: return set()
-        return set(resp)
+        self.chan.flush_in()
+        #self.command_response()  # TODO: with a timeout
+        #self.chan.clear()
+        if resp == NONE: val = set()
+        else: val = set(resp)
+        if config.DEBUG:
+            print('* end_read_buttons done:', val)
+        return val
+
 
 class Bumps(App):
     def __init__(self, board):
@@ -674,7 +702,7 @@ def fatal(msg):
 
 def get_args():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--ssh-authority', metavar='USER@HOST',
+    parser.add_argument('--ssh-authority', metavar='[USER@]HOST',
                         help='if specified, monitor host via ssh')
     args = parser.parse_args()
     return args

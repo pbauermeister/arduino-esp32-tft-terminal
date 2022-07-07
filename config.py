@@ -6,6 +6,9 @@ ROTATION = 3
 WIDTH = None
 HEIGHT = None
 
+COLUMNS = None
+ROWS = None
+
 # Communication setup
 SERIALPORT = "/dev/ttyUSB0"  # adapt dep on your OS
 BAUDRATE = 57600  # default baudrate of oled-server.ino
@@ -17,4 +20,4 @@ MONITOR_HOST_TIMEOUT = 8
 MONITOR_CPU_TIMEOUT  = 60*60
 MONITOR_CPU_INTERVAL = 2
 
-REMOTE_SSH_AUTHORITY = None
+REMOTE_SSH_AUTHORITY = ''

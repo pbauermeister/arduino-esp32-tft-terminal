@@ -7,6 +7,7 @@ import datetime
 import config
 import socket
 import subprocess
+import textwrap
 import json
 import threading
 
@@ -77,6 +78,7 @@ class Monitor(App):
 
         self.show_header(title)
         for l in lines:
+            l = shorten(l)
             self.command(f'print {l}\\n')
         self.command(f'display')
 
@@ -138,13 +140,27 @@ class Monitor(App):
                 self.cpus, self.mem = cpus, mem
                 self.changed = True
 
-    def get_hostname(self):  # FIXME: via ssh
+    def get_hostname(self):
         try:
-            return socket.gethostname()
+            return command(['hostname'])
         except:
             return '<hostname unavail>'
 
-    def get_ip(self):  # FIXME: via ssh
+    def get_ip(self):
+        if config.REMOTE_SSH_AUTHORITY:
+            return self.get_remote_ip()
+        else:
+            return self.get_local_ip()
+
+    def get_remote_ip(self):
+        try:
+            host = config.REMOTE_SSH_AUTHORITY.split('@')[-1]
+            out = command(['host', host], force_local=True, check=False)
+            return out.splitlines()[0].split(' ')[-1]
+        except:
+            return '<rmt ip addr unavail>'
+
+    def get_local_ip(self):
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
@@ -206,11 +222,18 @@ class Monitor(App):
         return lines
 
 
-def command(cmd):
-    if config.REMOTE_SSH_AUTHORITY:
+def command(cmd, force_local=False, check=True):
+    if config.REMOTE_SSH_AUTHORITY and not force_local:
         cmd = ['ssh', config.REMOTE_SSH_AUTHORITY] + cmd
     try:
-        return subprocess.check_output(cmd, encoding='utf-8').strip()
+        return subprocess.run(cmd, encoding='utf-8',
+                              check=check, stdout=subprocess.PIPE).stdout
     except Exception as e:
         print(f'Error >>> {cmd}')
         raise
+
+def shorten(txt):
+    txt = txt.rstrip()
+    if len(txt) <= config.COLUMNS:
+        return txt
+    return txt[:config.COLUMNS] + '>'
