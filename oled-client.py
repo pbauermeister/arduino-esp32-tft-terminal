@@ -2,6 +2,7 @@
 """Program communicating with Arduino running oled-server.ino."""
 
 import config
+import contextlib
 import datetime
 import math
 import os
@@ -11,12 +12,23 @@ import sys
 import time
 import traceback
 
-
 from lib import *
 from lib.args import get_args
-from lib.app import App
-from lib.asteriods import Asteriods
-from lib.monitor import Monitor
+from app import App
+from app.asteriods import Asteriods
+from app.monitor import Monitor
+from app.cube import Cube
+
+@contextlib.contextmanager
+def until(timeout=None):
+    start = datetime.datetime.now()
+    until = timeout and start + datetime.timedelta(seconds=timeout)
+    def done():
+        if timeout is None:
+            return False
+        return datetime.datetime.now() >= until
+    yield done
+
 
 class Channel:
     def __init__(self,
@@ -36,6 +48,7 @@ class Channel:
         self.ser.flushOutput()
         self.ser.reset_input_buffer()
         self.ser.reset_output_buffer()
+        self.flush_in()
 
     def set_callback(self, message, fn):
         self.on_message = message
@@ -82,6 +95,9 @@ class Board:
         self.boots = 0
         self.last_command = None
         self.reading_buttons = False
+        self.auto_buttons = set()
+        self.auto_buttons_boots = 0
+        self.read_buttons_boots = 0
 
     def command_send(self, cmd):
         assert not self.reading_buttons
@@ -95,11 +111,20 @@ class Board:
                 print('<<<', self.last_command)
                 print('>>>', response)
         assert not response.startswith('ERROR')
+        if response.startswith('OK '):
+            b = response.split(' ', 1)[1].strip()
+            if b != NONE:
+                self.auto_buttons |= set(b)
         return response
 
-    def command(self, cmd):
+    def command(self, cmd, ignore_error=False):
         self.command_send(cmd)
-        return self.command_response()
+        try:
+            return self.command_response()
+        except:
+            if ignore_error:
+                return ''
+            raise
 
     def on_ready(self, _=None):
         time.sleep(0.2)
@@ -111,6 +136,7 @@ class Board:
 
     def configure(self):
         # normally called by callback
+        time.sleep(0.2)
         self.chan.clear()
         self.command(f'setRotation {config.SCREEN_ROTATION}')
         self.command('autoDisplay 0')
@@ -144,6 +170,7 @@ class Board:
             print('* begin_read_buttons')
         self.command_send('waitButton -1 0')
         self.reading_buttons = True
+        self.auto_buttons_boots = self.boots
 
     def end_read_buttons(self):
         assert self.reading_buttons
@@ -155,12 +182,89 @@ class Board:
         self.chan.flush_in()
         #self.command_response()  # TODO: with a timeout
         #self.chan.clear()
-        if resp == NONE: val = set()
-        else: val = set(resp)
+        if resp == NONE:
+            val = set()
+        else:
+            val = set(resp)
+        if self.boots > self.auto_buttons_boots:
+            val.add('R')
         if config.DEBUG:
             print('* end_read_buttons done:', val)
         return val
 
+    def wait_no_button(self, timeout=None):
+        if timeout is None:
+            while self.command('readButtons', ignore_error=True) != NONE:
+                pass
+        else:
+            start = datetime.datetime.now()
+            until = start + datetime.timedelta(seconds=timeout)
+            while datetime.datetime.now() < until:
+                if self.command('readButtons', ignore_error=True) != NONE:
+                    break
+
+    def begin_auto_read_buttons(self):
+        self.command('autoReadButtons 1')
+        if config.DEBUG:
+            print('* begin_auto_read_buttons')
+        self.auto_buttons = set()
+        self.auto_buttons_boots = self.boots
+
+    def auto_read_buttons(self):
+        if self.boots > self.auto_buttons_boots:
+            self.auto_buttons.add('R')
+        b = self.auto_buttons
+        self.auto_buttons = set()
+        return b
+
+    def end_auto_read_buttons(self):
+        self.command('autoReadButtons 0')
+        self.chan.flush_in()
+        if config.DEBUG:
+            print('* end_auto_read_buttons')
+        if self.boots > self.auto_buttons_boots:
+            self.auto_buttons.add('R')
+        return self.auto_buttons
+
+    def clear_buttons(self):
+        self.chan.flush_in()
+        self.read_buttons_boots = self.boots
+
+    def wait_button_up(self, timeout=None):
+        return self.wait_button(timeout, wait_released=True)
+
+    def wait_button(self, timeout=None, wait_released=False):
+        self.wait_no_button()
+        b = set()
+        with until(timeout) as done:
+            while not done():
+                b = self.read_buttons()
+                if b: break
+        if wait_released:
+            while True:
+                b2 = self.read_buttons()
+                if not b2: break
+                b |= b2
+        return b
+
+    def read_buttons(self, flush=False):
+        if flush:
+            self.chan.flush_in()
+            self.read_buttons_boots = self.boots
+
+        ans = self.command('readButtons', ignore_error=True)
+        b = set()
+        if ans != NONE:
+            for c in ans:
+                if c in 'ABC':
+                    b.add(c)
+                else:
+                    b = set()
+                    break
+        if self.boots > self.read_buttons_boots:
+            b.add('R')
+            self.read_buttons_boots = self.boots
+        return b
 
 class Bumps(App):
     def __init__(self, board):
@@ -398,178 +502,6 @@ class Road(App):
             if escaper.check(): break
             self.command('display')
 
-class Cube(App):
-    def __init__(self, board):
-        super().__init__(board)
-
-        """Rotating Cube, by Al Sweigart al@inventwithpython.com A rotating
-        cube animation. Press Ctrl-C to stop.  This code is available
-        at https://nostarch.com/big-book-small-python-programming
-        Tags: large, artistic, math
-
-        https://inventwithpython.com/bigbookpython/project62.html"""
-
-        # Set up the constants:
-        SIZE = min(config.WIDTH, config.HEIGHT)
-        OFFSET_X = (config.WIDTH-SIZE) // 2
-        OFFSET_Y = (config.HEIGHT-SIZE) // 2
-        SCALEX = SCALEY = SIZE // 4
-
-        TRANSLATEX = (config.WIDTH - 4) // 2
-        TRANSLATEY = (config.HEIGHT - 4) // 2 + 4
-
-        # (!) Try changing this to '#' or '*' or some other character:
-        LINE_CHAR = chr(9608)  # Character 9608 is a solid block.
-
-        # (!) Try setting two of these values to zero to rotate the cube only
-        # along a single axis:
-        X_ROTATE_SPEED = 0.03
-        Y_ROTATE_SPEED = 0.08
-        Z_ROTATE_SPEED = 0.13
-
-        # This program stores XYZ coordinates in lists, with the X coordinate
-        # at index 0, Y at 1, and Z at 2. These constants make our code more
-        # readable when accessing the coordinates in these lists.
-        X = 0
-        Y = 1
-        Z = 2
-
-        i = 0
-
-        def line(x1, y1, x2, y2, c):
-            self.command(f'drawLine {x1+.5} {y1+.5} {x2+.5} {y2+.5} {c}')
-
-        def rotatePoint(x, y, z, ax, ay, az):
-            """Returns an (x, y, z) tuple of the x, y, z arguments rotated.
-
-            The rotation happens around the 0, 0, 0 origin by angles
-            ax, ay, az (in radians).
-                Directions of each axis:
-                 -y
-                  |
-                  +-- +x
-                 /
-                +z
-            """
-
-            # Rotate around x axis:
-            rotatedX = x
-            rotatedY = (y * math.cos(ax)) - (z * math.sin(ax))
-            rotatedZ = (y * math.sin(ax)) + (z * math.cos(ax))
-            x, y, z = rotatedX, rotatedY, rotatedZ
-
-            # Rotate around y axis:
-            rotatedX = (z * math.sin(ay)) + (x * math.cos(ay))
-            rotatedY = y
-            rotatedZ = (z * math.cos(ay)) - (x * math.sin(ay))
-            x, y, z = rotatedX, rotatedY, rotatedZ
-
-            # Rotate around z axis:
-            rotatedX = (x * math.cos(az)) - (y * math.sin(az))
-            rotatedY = (x * math.sin(az)) + (y * math.cos(az))
-            rotatedZ = z
-
-            # False perspective
-            k = 1 if alt else 1.5**z *.6 + .25
-
-            return (rotatedX*k, rotatedY*k, rotatedZ)
-
-
-        def adjustPoint(point):
-            """Adjusts the 3D XYZ point to a 2D XY point fit for displaying on
-            the screen. This resizes this 2D point by a scale of SCALEX and
-            SCALEY, then moves the point by TRANSLATEX and TRANSLATEY."""
-            return (int(point[X] * SCALEX + TRANSLATEX),
-                    int(point[Y] * SCALEY + TRANSLATEY))
-
-        def cube(rotatedCorners, xRotation, yRotation, zRotation, c):
-            for i in range(len(CUBE_CORNERS)):
-                x = CUBE_CORNERS[i][X]
-                y = CUBE_CORNERS[i][Y]
-                z = CUBE_CORNERS[i][Z]
-                rotatedCorners[i] = rotatePoint(x, y, z, xRotation,
-                    yRotation, zRotation)
-
-            # Find farthest point to omit hidden edges
-            minZ = 0
-            for fromCornerIndex, toCornerIndex in CUBE_EDGES:
-                fromPoint = rotatedCorners[fromCornerIndex]
-                toPoint = rotatedCorners[toCornerIndex]
-                minZ = min(minZ, fromPoint[Z])
-                minZ = min(minZ, toPoint[Z])
-
-            # Get the points of the cube lines:
-            for fromCornerIndex, toCornerIndex in CUBE_EDGES:
-                fromPoint = rotatedCorners[fromCornerIndex]
-                toPoint = rotatedCorners[toCornerIndex]
-                fromX, fromY = adjustPoint(fromPoint)
-                toX, toY = adjustPoint(toPoint)
-                if alt:
-                    if fromPoint[Z] == minZ or toPoint[Z] == minZ:
-                        continue  # bound to farthest point: hidden edge
-                line(fromX, fromY, toX, toY, c)
-
-        """CUBE_CORNERS stores the XYZ coordinates of the corners of a cube.
-        The indexes for each corner in CUBE_CORNERS are marked in this diagram:
-              0------1
-             /|     /|
-            2------3 |
-            | 4----|-5
-            |/     |/
-            6------7
-        """
-        CUBE_CORNERS = [[-1, -1, -1], # Point 0
-                        [ 1, -1, -1], # Point 1
-                        [-1, -1,  1], # Point 2
-                        [ 1, -1,  1], # Point 3
-                        [-1,  1, -1], # Point 4
-                        [ 1,  1, -1], # Point 5
-                        [-1,  1,  1], # Point 6
-                        [ 1,  1,  1]] # Point 7
-        CUBE_EDGES = (
-            (0, 1), (1, 3), (3, 2), (2, 0),
-            (0, 4), (1, 5), (2, 6), (3, 7),
-            (4, 5), (5, 7), (7, 6), (6, 4),
-        )
-
-        # rotatedCorners stores the XYZ coordinates from CUBE_CORNERS after
-        # they've been rotated by rx, ry, and rz amounts:
-        rotatedCorners = [None, None, None, None, None, None, None, None]
-        # Rotation amounts for each axis:
-        xRotation = 0.0
-        yRotation = 0.0
-        zRotation = 0.0
-
-        previous = None
-        undraw = False
-        escaper = KeyEscaper(self, self.board, steady_message=False)
-        start = datetime.datetime.now()
-        while True:  # Main program loop.
-            alt = (i%50) > 25
-            if not undraw:
-                self.command('clearDisplay')
-
-            if previous and undraw:
-                xRotation, yRotation, zRotation = previous
-                cube(rotatedCorners, xRotation, yRotation, zRotation, 0)
-
-            escaper.pre_check()
-
-            # Rotate the cube along different axes by different amounts:
-            xRotation += X_ROTATE_SPEED
-            yRotation += Y_ROTATE_SPEED
-            zRotation += Z_ROTATE_SPEED
-            cube(rotatedCorners, xRotation, yRotation, zRotation, 1)
-
-            if undraw:
-                previous = xRotation, yRotation, zRotation
-
-            if escaper.check():
-                break
-            self.command('display')
-            i += 1
-
-
 
 ################################################################################
 # Helper classes
@@ -612,7 +544,7 @@ class KeyEscaper:
             self.boots = self.board.boots
             raise RebootedException()
         if self.i % 10 == 1:
-            if self.command('readButtons') != NONE:
+            if self.command('readButtons', ignore_error=True) != NONE:
                 return True
         if self.i % 70 < 8:
             self.command('home')
@@ -709,6 +641,7 @@ args = get_args()
 chan = Channel()
 board = Board(chan)
 board.wait_configured()
+board.clear_buttons()
 
 while True:
     try:
@@ -730,6 +663,7 @@ while True:
     except KeyboardInterrupt:
         print()
         fatal('Keyboard interrupt')
+        raise
     except Exception as e:
         msg = traceback.format_exc()
         fatal(msg)

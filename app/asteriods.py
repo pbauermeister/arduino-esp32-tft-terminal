@@ -1,5 +1,5 @@
 from lib import *
-from lib.app import App
+from app import App
 import time
 import random
 import math
@@ -29,7 +29,7 @@ GOVER_POS = 0
 
 LIVES = 3
 
-MENU_TIMEOUT = datetime.timedelta(seconds=30)
+MENU_TIMEOUT = 30
 MENU_PLAY = 1
 MENU_QUIT = 2
 MENU_AUTO = 3
@@ -42,9 +42,6 @@ GOTO_QUIT = 3
 class Asteriods(App):
     def custom_configure(self):
         self.board.command('setTextWrap 0')
-        return
-        self.board.command('autoReadButtons 1')
-        print("* custom_configure")
 
     def __init__(self, board):
         super().__init__(board)
@@ -75,7 +72,6 @@ class Asteriods(App):
             first = False
 
             while True:
-                self.boots = self.board.boots
                 go = self.run_once(auto)
                 if go == GOTO_MENU:
                     break
@@ -96,42 +92,22 @@ class Asteriods(App):
         self.command(f'print   R   back to menu\\n\\n')
         #self.command(f'print R:exit  any:start')
         self.command(f'display')
-        while self.read_keys():
-            pass
 
-        boots = self.board.boots
-        start = datetime.datetime.now()
-        while True:
-            if self.read_keys():
-                while self.read_keys():
-                    pass
-                return MENU_PLAY
-            if self.board.boots > boots:
-                return MENU_QUIT
-            delta = datetime.datetime.now() - start
-            if delta > MENU_TIMEOUT:
-                return MENU_AUTO
-
-    def read_keys(self):
-        ans = self.command('readButtons')
-        if ans.startswith(ERROR):
-            return set()
-        if ans == NONE:
-            return set()
-        for c in ans:
-            if c not in 'ABC':
-                return set()  # garbage
-        return set(ans)
+        k = self.board.wait_button_up(MENU_TIMEOUT)
+        if 'R' in k:
+            return MENU_QUIT
+        if k:
+            return MENU_PLAY
+        return MENU_AUTO
 
     def run_once(self, autoplay):
         game = Game(self.board, autoplay)
         overs = 0
         autoplay_start = None
         while True:
-            if self.boots != self.board.boots:
+            keys = self.board.read_buttons()
+            if 'R' in keys:
                 return GOTO_MENU
-
-            keys = self.read_keys()
             if autoplay and keys:
                 return GOTO_MENU
 
@@ -176,19 +152,6 @@ class Asteriods(App):
                 overs = 0
             if game.player.lives == 0:
                 overs += 1
-
-    def k_command(self, keys, cmd):
-        answer = self.command(cmd)
-        self.extract_keys(answer, keys)
-
-    def extract_keys(self, answer, keys):
-        parts = answer.split(' ', 1)
-        if len(parts) < 2 or parts[0] != 'OK':
-            return
-        k = parts[1]
-        if 'A' in k: keys.add('A')
-        if 'B' in k: keys.add('B')
-        if 'C' in k: keys.add('C')
 
 
 class Game:

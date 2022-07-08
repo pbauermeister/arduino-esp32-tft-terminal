@@ -1,5 +1,5 @@
 from lib import *
-from lib.app import App
+from app import App
 import time
 import random
 import math
@@ -39,10 +39,6 @@ class Monitor(App):
     def show_header(self, title, with_banner=False):
         super().show_header(title, 'C:next R:exit', with_banner)
 
-    def wait_no_button(self):  # TODO: move to base class
-        while self.command('readButtons') != NONE:
-            pass
-
     def wait_button(self, timeout):  # TODO: move to parent, also read_buttons
         if timeout is not None:
             start = datetime.datetime.now()
@@ -65,7 +61,7 @@ class Monitor(App):
         self.show_header(title, with_banner=True)
         self.command(f'display')
 
-        self.wait_no_button()
+        self.board.wait_no_button()
         self.board.begin_read_buttons()
 
         users = self.get_nb_users()
@@ -103,7 +99,7 @@ class Monitor(App):
         title = 'CPU %'
         self.show_header(title, with_banner=True)
         self.command(f'display')
-        self.wait_no_button()
+        self.board.wait_no_button()
 
         while True:
             cpus, mem = None, None
