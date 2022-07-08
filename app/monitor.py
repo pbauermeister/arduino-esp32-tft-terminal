@@ -17,7 +17,6 @@ CHOICE_NEXT = 2
 class Monitor(App):
 
     def __init__(self, board):
-        self.boots = board.boots
         super().__init__(board)
         self.chars_per_line = int(config.WIDTH / 6.4)
         self.lines = int(config.WIDTH / 8)
@@ -39,22 +38,16 @@ class Monitor(App):
     def show_header(self, title, with_banner=False):
         super().show_header(title, 'C:next R:exit', with_banner)
 
-    def wait_button(self, timeout):  # TODO: move to parent, also read_buttons
-        if timeout is not None:
-            start = datetime.datetime.now()
-            until = start + datetime.timedelta(seconds=timeout)
-
-        while True:
-            ans = self.command('readButtons')
-            if ans == 'C':
-                return CHOICE_NEXT
-            if self.boots != self.board.boots:
-                return CHOICE_EXIT
-            if timeout is None:
-                return None
-            now = datetime.datetime.now()
-            if now >= until:
-                return None
+    def wait_button(self, timeout):
+        if timeout == 0:
+            ans = self.board.read_buttons()
+        else:
+            ans = self.board.wait_button_up(timeout)
+        if 'C' in ans:
+            return CHOICE_NEXT
+        if 'R' in ans:
+            return CHOICE_EXIT
+        return None
 
     def show_host(self):
         title = 'Host'
@@ -121,7 +114,7 @@ class Monitor(App):
                         self.command(f'print {l}\\n')
                 self.command(f'display')
 
-            choice = self.wait_button(timeout=None)
+            choice = self.wait_button(timeout=0)
             if choice:
                 self.stop = True
                 #th.join()

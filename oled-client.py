@@ -22,7 +22,8 @@ from app.cube import Cube
 @contextlib.contextmanager
 def until(timeout=None):
     start = datetime.datetime.now()
-    until = timeout and start + datetime.timedelta(seconds=timeout)
+    if timeout is not None:
+        until = start + datetime.timedelta(seconds=timeout)
     def done():
         if timeout is None:
             return False
