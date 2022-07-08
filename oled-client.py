@@ -14,10 +14,13 @@ import traceback
 
 from lib import *
 from lib.args import get_args
+
 from app import App
 from app.asteriods import Asteriods
 from app.monitor import Monitor
 from app.cube import Cube
+from app.road import Road
+from app.starfield import Starfield
 
 @contextlib.contextmanager
 def until(timeout=None):
@@ -409,98 +412,6 @@ class Tunnel(App):
             w, h = make(j)
             x0, y0, x1, y1, x2, y2, x3, y3 = compute(w, h, j)
             draw(x0, y0, x1, y1, x2, y2, x3, y3, 1);
-
-            i += 1
-
-            if escaper.check(): break
-            self.command('display')
-
-class Starfield(App):
-    def __init__(self, board):
-        super().__init__(board)
-
-        class Star:
-            def __init__(self):
-                self.reset(0)
-
-            def reset(self, t):
-                self.vx = random.random()-.5
-                self.vy = random.random()-.5
-                self.t0 = t
-                self.k = random.random() + 1.75
-
-            def compute(self, t, check=False):
-                dt = t - self.t0
-                x = int(self.vx * self.k**dt +.5 + config.WIDTH/2)
-                y = int(self.vy * self.k**dt +.5 + config.HEIGHT/2)
-                if check:
-                    if x > config.WIDTH or x < 0 or y > config.HEIGHT or y < 0:
-                        return None, None
-                return x, y
-
-        NB_STARS = 6
-        stars = [Star() for i in range(NB_STARS)]
-
-        t = 0
-        escaper = KeyEscaper(self, self.board, steady_message=False)
-        while True:
-            # erase
-            for star in stars:
-                x0, y0 = star.compute(t)
-                x1, y1 = star.compute(t+1)
-                self.command(f'drawLine {x0} {y0} {x1} {y1} 0')
-
-            escaper.pre_check()
-
-            # draw
-            for star in stars:
-                x0, y0 = star.compute(t+1, True)
-                x1, y1 = star.compute(t+2)
-                if x0 is None:
-                    star.reset(t)
-                else:
-                    self.command(f'drawLine {x0} {y0} {x1} {y1} 1')
-
-            if escaper.check(): break
-            self.command('display')
-            t += 1
-
-
-class Road(App):
-    def __init__(self, board):
-        super().__init__(board)
-
-        last = None
-        escaper = KeyEscaper(self, self.board, steady_message=False)
-        K = 0.65
-        NB = 12
-        NB2 = 4
-        NB3 = 8
-
-        def draw(i, c):
-            i = NB - (i%NB)
-            w = config.WIDTH  * K**i *2
-            h = config.HEIGHT * K**i *2
-            x, y =  w/2,  h/2
-
-            x0 = int(config.WIDTH/2 -w/2)
-            x1 = int(config.WIDTH/2 +w/2)
-            y = int(config.HEIGHT/2 -h/2)
-
-            self.command(f'drawFastVLine {x0} {y} {h} {c}')
-            self.command(f'drawFastVLine {x1} {y} {h} {c}')
-
-        i = 0
-        while True:
-            draw(i, 0)
-            draw(i + NB2, 0)
-            draw(i + NB3, 0)
-
-            escaper.pre_check()
-
-            draw(i+1, 1)
-            draw(i+1 + NB2, 1)
-            draw(i+1 + NB3, 1)
 
             i += 1
 
