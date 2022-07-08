@@ -10,10 +10,16 @@ class Starfield(App):
 
     def __init__(self, board):
         super().__init__(board)
+        if self.board.wait_no_button(2): return
+        self.board.begin_auto_read_buttons()
+
+    def run(self):
         stars = [Star() for i in range(self.NB_STARS)]
         t = 0
         escaper = TimeEscaper(self)
         while True:
+            if self.board.auto_read_buttons(): break
+
             # erase
             for star in stars:
                 x0, y0 = star.compute(t)
@@ -32,6 +38,8 @@ class Starfield(App):
             if escaper.check(): break
             self.command('display')
             t += 1
+
+        if 'R' in self.board.end_auto_read_buttons(): return True
 
 
 class Star:

@@ -8,9 +8,10 @@ from app import App, TimeEscaper
 class Cube(App):
     def __init__(self, board):
         super().__init__(board)
-        self.board.wait_no_button(2)
+        if self.board.wait_no_button(2): return
         self.board.begin_auto_read_buttons()
 
+    def run(self):
         """Rotating Cube, by Al Sweigart al@inventwithpython.com A rotating
         cube animation. Press Ctrl-C to stop.  This code is available
         at https://nostarch.com/big-book-small-python-programming
@@ -154,8 +155,8 @@ class Cube(App):
         escaper = TimeEscaper(self)
         start = datetime.datetime.now()
         while True:  # Main program loop.
-            if self.board.auto_read_buttons():
-                break
+            if self.board.auto_read_buttons(): break
+
             alt = (i%50) > 25
             if not undraw:
                 self.command('clearDisplay')
@@ -173,9 +174,8 @@ class Cube(App):
             if undraw:
                 previous = xRotation, yRotation, zRotation
 
-            if escaper.check():
-                break
+            if escaper.check(): break
             self.command('display')
             i += 1
 
-        self.board.end_auto_read_buttons()
+        if 'R' in self.board.end_auto_read_buttons(): return True

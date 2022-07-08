@@ -12,7 +12,10 @@ REDRAW = False  # True looks cleaner but is slower
 class Quix(App):
     def __init__(self, board):
         super().__init__(board)
+        if self.board.wait_no_button(2): return
+        self.board.begin_auto_read_buttons()
 
+    def run(self):
         a = Bouncer(self, 2, -1, -1)
         b = Bouncer(self, 2,  1 , 1)
 
@@ -21,6 +24,8 @@ class Quix(App):
 
         escaper = TimeEscaper(self)
         while True:
+            if self.board.auto_read_buttons(): break
+
             a.advance()
             b.advance()
 
@@ -42,3 +47,5 @@ class Quix(App):
 
             if escaper.check(): break
             self.command('display')
+
+        if 'R' in self.board.end_auto_read_buttons(): return True

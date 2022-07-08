@@ -34,11 +34,12 @@ MENU_TIMEOUT     = 30
 
 # Enums
 MENU_PLAY        = 1
-MENU_QUIT        = 2
+MENU_NEXT        = 2
 MENU_AUTO        = 3
+MENU_QUIT        = 4
 
 GOTO_MENU        = 1
-GOTO_REPLAY      = 2
+GOTO_NEXT        = 2
 GOTO_QUIT        = 3
 
 
@@ -64,28 +65,28 @@ class Asteriods(App):
             else:
                 menu = self.menu()
                 auto = False
-                if menu == MENU_QUIT:
-                    return
+                if menu == MENU_NEXT:
+                    return False
+                elif menu == MENU_QUIT:
+                    return True
                 elif menu == MENU_PLAY:
                     pass
                 elif menu == MENU_AUTO:
                     auto = True
                 else:
-                    return
+                    return False
             first = False
 
-            while True:
-                go = self.run_once(auto)
-                if go == GOTO_MENU:
-                    break
-                elif go == GOTO_REPLAY:
-                    auto = False
-                    continue
-                elif go == GOTO_QUIT:
-                    return
+            go = self.run_once(auto)
+            if go == GOTO_MENU:
+                pass
+            elif go == GOTO_NEXT:
+                return False
+            elif go == GOTO_QUIT:
+                return True
 
     def menu(self):
-        self.show_header('', 'R:exit  any:start')
+        self.show_header('', 'C:next B:start A:auto')
         self.command(f'print \\n')
         self.command(f'print {self.name.upper()} keys:\\n')
         self.command(f'print   C   fire\\n')
@@ -99,7 +100,11 @@ class Asteriods(App):
         k = self.board.wait_button_up(MENU_TIMEOUT)
         if 'R' in k:
             return MENU_QUIT
-        if k:
+        elif 'C' in k:
+            return MENU_NEXT
+        elif 'A' in k:
+            return MENU_AUTO
+        elif k:
             return MENU_PLAY
         return MENU_AUTO
 
@@ -110,7 +115,7 @@ class Asteriods(App):
         while True:
             keys = self.board.read_buttons()
             if 'R' in keys:
-                return GOTO_MENU
+                return GOTO_QUIT
             if autoplay and keys:
                 return GOTO_MENU
 
@@ -146,7 +151,7 @@ class Asteriods(App):
             if overs == 1:
                 time.sleep(3)
                 if autoplay:
-                    return GOTO_QUIT
+                    return GOTO_NEXT
                 autoplay = True
                 autoplay_start = datetime.datetime.now()
                 game.player.autoplay =True

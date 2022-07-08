@@ -24,5 +24,6 @@ MONITOR_CPU_INTERVAL = 2
 MONITOR_ONLY = False  # if False, will show demos after monitors
 
 APP_ASTERIODS_AUTOPLAY = False
+APP_ASTERIODS_SKIP = False
 
 REMOTE_SSH_AUTHORITY = ''
