@@ -137,7 +137,13 @@ class Board:
 
     def configure(self):
         # normally called by callback
-        time.sleep(0.2)
+        try:
+            self._configure()
+        except:
+            self._configure()
+
+    def _configure(self):
+        time.sleep(0.1)
         self.chan.clear()
         self.command(f'setRotation {config.SCREEN_ROTATION}')
         self.command('autoDisplay 0')
