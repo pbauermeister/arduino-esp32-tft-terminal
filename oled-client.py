@@ -21,6 +21,8 @@ from app.monitor import Monitor
 from app.cube import Cube
 from app.road import Road
 from app.starfield import Starfield
+from app.tunnel import Tunnel
+from app.quix import Quix
 
 @contextlib.contextmanager
 def until(timeout=None):
@@ -299,125 +301,6 @@ class Bumps(App):
             self.command('display')
 
 
-class Quix(App):
-    def __init__(self, board):
-        super().__init__(board)
-
-        a = Bouncer(self, 2, -1, -1)
-        b = Bouncer(self, 2,  1 , 1)
-
-        NB_LINES = 6
-        REDRAW = False  # True looks cleaner but is slower
-
-        history = [None] * NB_LINES
-        i = 0
-
-        escaper = KeyEscaper(self, self.board, steady_message=False)
-        while True:
-            a.advance()
-            b.advance()
-
-            history[i] = (a.x, a.y, b.x, b.y)
-            i = (i+1) % NB_LINES
-            last = history[i]
-            if last:
-                ax, ay, bx, by = last
-                self.command(f'drawLine {ax} {ay} {bx} {by} 0')
-
-            escaper.pre_check()
-
-            if REDRAW:
-                for j in range(NB_LINES-1):
-                    last = history[(i-1-j) % NB_LINES]
-                    if last:
-                        ax, ay, bx, by = last
-                        self.command(f'drawLine {ax} {ay} {bx} {by} 1')
-            else:
-                self.command(f'drawLine {a.x} {a.y} {b.x} {b.y} 1')
-
-            if escaper.check(): break
-            self.command('display')
-
-class Tunnel(App):
-    def __init__(self, board):
-        super().__init__(board)
-
-        last = None
-        escaper = KeyEscaper(self, self.board, steady_message=False)
-        K = 0.65
-        NB = 12
-        NB2 = 6
-
-        def make(i):
-            i = NB - 1 - (i%NB)
-            w = config.WIDTH  * K**i *2
-            h = config.HEIGHT * K**i *2
-
-            return w, h
-
-        def compute(w, h, t):
-            a = math.sin(t/100)
-            a = a*a
-            cos, sin = math.cos(a), math.sin(a)
-
-            x, y =  w/2,  h/2
-            x, y = cos*x - sin*y, sin*x + cos*y
-            x0 = int(config.WIDTH/2 + x)
-            y0 = int(config.HEIGHT/2 + y)
-
-            x, y =  w/2, -h/2
-            x, y = cos*x - sin*y, sin*x + cos*y
-            x1 = int(config.WIDTH/2 + x)
-            y1 = int(config.HEIGHT/2 + y)
-
-            x, y = -w/2, -h/2
-            x, y = cos*x - sin*y, sin*x + cos*y
-            x2 = int(config.WIDTH/2 + x)
-            y2 = int(config.HEIGHT/2 + y)
-
-            x, y = -w/2,  h/2
-            x, y = cos*x - sin*y, sin*x + cos*y
-            x3 = int(config.WIDTH/2 + x)
-            y3 = int(config.HEIGHT/2 + y)
-
-            return x0, y0, x1, y1, x2, y2, x3, y3
-
-        def draw(x0, y0, x1, y1, x2, y2, x3, y3, c):
-#            self.command(f'drawLine {x0} {y0} {x1} {y1} {c}')
-            self.command(f'drawLine {x1} {y1} {x2} {y2} {c}')
-#            self.command(f'drawLine {x2} {y2} {x3} {y3} {c}')
-            self.command(f'drawLine {x3} {y3} {x0} {y0} {c}')
-#            self.command(f'drawRect {0} {0} {config.WIDTH} {config.HEIGHT} 1')
-
-        i = 0
-        while True:
-            j = i
-            w, h = make(j)
-            x0, y0, x1, y1, x2, y2, x3, y3 = compute(w, h, j)
-            draw(x0, y0, x1, y1, x2, y2, x3, y3, 0);
-
-            j = i + NB2
-            w, h = make(j)
-            x0, y0, x1, y1, x2, y2, x3, y3 = compute(w, h, j)
-            draw(x0, y0, x1, y1, x2, y2, x3, y3, 0);
-
-            escaper.pre_check()
-
-            j = i+1
-            w, h = make(j)
-            x0, y0, x1, y1, x2, y2, x3, y3 = compute(w, h, j)
-            draw(x0, y0, x1, y1, x2, y2, x3, y3, 1);
-
-            j = i+1 + NB2
-            w, h = make(j)
-            x0, y0, x1, y1, x2, y2, x3, y3 = compute(w, h, j)
-            draw(x0, y0, x1, y1, x2, y2, x3, y3, 1);
-
-            i += 1
-
-            if escaper.check(): break
-            self.command('display')
-
 
 ################################################################################
 # Helper classes
@@ -467,69 +350,6 @@ class KeyEscaper:
             self.command(f'print {self.message}')
         return False
 
-
-class Bouncer:
-    def __init__(self, board, size, vx, vy):
-        self.board = board
-        self.size = size
-        k = .5
-        v = (4 + 7**1.25 - size**1.25) * k
-        self.xx = size if vx > 0 else config.WIDTH-size
-        self.yy = size if vy > 0 else config.HEIGHT-size
-
-        self.x, self.y = int(self.xx +.5), int(self.yy +.5)
-
-        self.vx, self.vy = vx*v, vy*v
-        self.vx0, self.vy0 = abs(vx*v), abs(vy*v)
-
-        self.bumped = False
-
-    @staticmethod
-    def bump(v, v0):
-        nv = (1 + (random.random()-.5)/2)*v0
-        return nv if v < 0 else -nv
-
-    def advance(self):
-        self.bumped = False
-        self.xx += self.vx
-        self.yy += self.vy
-        if self.xx >= config.WIDTH - self.size:
-            self.xx = config.WIDTH - self.size - 1
-            self.vx = self.bump(self.vx, self.vx0)
-            self.bumped = True
-        elif self.xx < self.size:
-            self.xx = self.size
-            self.vx = self.bump(self.vx, self.vx0)
-            self.bumped = True
-        if self.yy >= config.HEIGHT - self.size:
-            self.yy = config.HEIGHT - self.size - 1
-            self.vy = self.bump(self.vy, self.vy0)
-            self.bumped = True
-        elif self.yy < self.size:
-            self.yy = self.size
-            self.vy = self.bump(self.vy, self.vy0)
-            self.bumped = True
-        self.x, self.y = int(self.xx +.5), int(self.yy +.5)
-
-
-class Sprite(Bouncer):
-    def __init__(self, board, size, vx, vy):
-        super().__init__(board, size, vx, vy)
-        self.was_filled = False
-
-    def erase(self):
-        if self.was_filled:
-            self.board.command(f'fillCircle {self.x} {self.y} {self.size} 0')
-        else:
-            self.board.command(f'drawCircle {self.x} {self.y} {self.size} 0')
-
-    def advance(self):
-        super().advance()
-        if self.bumped:
-            self.board.command(f'fillCircle {self.x} {self.y} {self.size} 1')
-        else:
-            self.board.command(f'drawCircle {self.x} {self.y} {self.size} 1')
-        self.was_filled = self.bumped
 
 
 def chunkize(str, n):

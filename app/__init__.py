@@ -1,4 +1,5 @@
 import datetime
+import random
 import time
 
 import config
@@ -86,3 +87,67 @@ class TimeEscaper:
             if elapsed > self.timeout:
                 return True
         return False
+
+
+class Bouncer:
+    def __init__(self, board, size, vx, vy):
+        self.board = board
+        self.size = size
+        k = .5
+        v = (4 + 7**1.25 - size**1.25) * k
+        self.xx = size if vx > 0 else config.WIDTH-size
+        self.yy = size if vy > 0 else config.HEIGHT-size
+
+        self.x, self.y = int(self.xx +.5), int(self.yy +.5)
+
+        self.vx, self.vy = vx*v, vy*v
+        self.vx0, self.vy0 = abs(vx*v), abs(vy*v)
+
+        self.bumped = False
+
+    @staticmethod
+    def bump(v, v0):
+        nv = (1 + (random.random()-.5)/2)*v0
+        return nv if v < 0 else -nv
+
+    def advance(self):
+        self.bumped = False
+        self.xx += self.vx
+        self.yy += self.vy
+        if self.xx >= config.WIDTH - self.size:
+            self.xx = config.WIDTH - self.size - 1
+            self.vx = self.bump(self.vx, self.vx0)
+            self.bumped = True
+        elif self.xx < self.size:
+            self.xx = self.size
+            self.vx = self.bump(self.vx, self.vx0)
+            self.bumped = True
+        if self.yy >= config.HEIGHT - self.size:
+            self.yy = config.HEIGHT - self.size - 1
+            self.vy = self.bump(self.vy, self.vy0)
+            self.bumped = True
+        elif self.yy < self.size:
+            self.yy = self.size
+            self.vy = self.bump(self.vy, self.vy0)
+            self.bumped = True
+        self.x, self.y = int(self.xx +.5), int(self.yy +.5)
+
+
+class Sprite(Bouncer):
+    def __init__(self, board, size, vx, vy):
+        super().__init__(board, size, vx, vy)
+        self.was_filled = False
+
+    def erase(self):
+        if self.was_filled:
+            self.board.command(f'fillCircle {self.x} {self.y} {self.size} 0')
+        else:
+            self.board.command(f'drawCircle {self.x} {self.y} {self.size} 0')
+
+    def advance(self):
+        super().advance()
+        if self.bumped:
+            self.board.command(f'fillCircle {self.x} {self.y} {self.size} 1')
+        else:
+            self.board.command(f'drawCircle {self.x} {self.y} {self.size} 1')
+        self.was_filled = self.bumped
