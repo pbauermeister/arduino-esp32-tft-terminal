@@ -1,6 +1,8 @@
-from lib import *
-import config
+import datetime
 import time
+
+import config
+from lib import *
 
 class App:
     def __init__(self, board):
@@ -65,3 +67,22 @@ class App:
         self.command(f'setCursor {x} {y}')
         self.command(f'print {title}')
 
+
+class TimeEscaper:
+    def __init__(self, app, timeout=60):
+        self.app = app
+        self.timeout = None if timeout is None \
+                       else datetime.timedelta(seconds=timeout)
+        self.n = 0
+        self.start = datetime.datetime.now()
+
+    def check(self):
+        self.n += 1
+        elapsed = datetime.datetime.now() - self.start
+        if self.n == 30:
+            secs = elapsed.seconds + elapsed.microseconds/1000000
+            print(self.app.name, 'FPS:', 30 / secs)
+        if self.timeout:
+            if elapsed > self.timeout:
+                return True
+        return False

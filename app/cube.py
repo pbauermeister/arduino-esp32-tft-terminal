@@ -3,7 +3,7 @@ import math
 
 from lib import *
 import config
-from app import App
+from app import App, TimeEscaper
 
 class Cube(App):
     def __init__(self, board):
@@ -179,21 +179,3 @@ class Cube(App):
             i += 1
 
         self.board.end_auto_read_buttons()
-
-class TimeEscaper:
-    def __init__(self, app, timeout=datetime.timedelta(seconds=60)):
-        self.app = app
-        self.timeout = timeout
-        self.n = 0
-        self.start = datetime.datetime.now()
-
-    def check(self):
-        self.n += 1
-        elapsed = datetime.datetime.now() - self.start
-        if self.n == 30:
-            secs = elapsed.seconds + elapsed.microseconds/1000000
-            print(self.app.name, 'FPS:', 30 / secs)
-        if self.timeout:
-            if elapsed > self.timeout:
-                return True
-        return False
