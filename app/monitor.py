@@ -15,6 +15,8 @@ CHOICE_EXIT = 1
 CHOICE_NEXT = 2
 
 class Monitor(App):
+    CHOICE_EXIT = 1
+    CHOICE_NEXT = 2
 
     def __init__(self, board):
         super().__init__(board)
