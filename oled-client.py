@@ -187,8 +187,6 @@ class Board:
         self.command_send('width')
         resp = self.command_response()
         self.chan.flush_in()
-        #self.command_response()  # TODO: with a timeout
-        #self.chan.clear()
         if resp == NONE:
             val = set()
         else:
