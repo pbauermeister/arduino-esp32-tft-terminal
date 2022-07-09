@@ -7,9 +7,10 @@ import config
 from lib import *
 
 class App:
-    def __init__(self, board, auto_read, extra_configurator=None):
+    def __init__(self, board, auto_read, extra_configurator=None,
+                 name=None):
         self.board = board
-        self.name = self.__class__.__name__
+        self.name = name or self.__class__.__name__
         self.board.set_comm_error_handler(self.init)
         self.auto_read = auto_read
         self.extra_configurator = extra_configurator

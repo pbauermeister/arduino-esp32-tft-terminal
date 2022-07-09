@@ -28,6 +28,13 @@ def get_args():
     specs = get_config_args_specs()
 
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--demo',
+                        help='run in demo mode',
+                        action='store_true')
+    parser.add_argument('--demo-once',
+                        help='run in demo mode, only once',
+                        action='store_true')
+
     for spec in specs:
         if spec.type==bool:
             parser.add_argument(spec.as_flag,
@@ -39,8 +46,19 @@ def get_args():
                                 help=f'default: {spec.value}')
 
     args = parser.parse_args()
+
+    if args.demo_once:
+        args.demo = True
+    if args.demo or args.demo_once:
+        args.monitor_host_timeout = 4
+        args.monitor_cpu_timeout = 4
+        args.apps_timeout = 4
+        args.app_asteriods_autoplay = True
+        args.app_asteriods_autoplay_timeout = 10
+
     for	spec in	specs:
         val = args.__dict__[spec.as_arg]
         if val is not None:
             config.__setattr__(spec.name, val)
+
     return args

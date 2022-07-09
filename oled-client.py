@@ -24,6 +24,7 @@ from app.starfield import Starfield
 from app.tunnel import Tunnel
 from app.quix import Quix
 from app.bumps import Bumps
+from app.thats_all import ThatsAll
 
 
 def make_board(chan):
@@ -62,7 +63,6 @@ while True:
                 Monitor(board).run()
             if config.MONITOR_ONLY:
                 continue
-
             if not config.APP_ASTERIODS_SKIP:
                 if Asteriods(board).run(): break
 
@@ -72,6 +72,9 @@ while True:
             if Tunnel(board).run(): break
             if Quix(board).run(): break
             if Bumps(board).run(): break
+
+            if args.demo_once: break
+
     except RebootedException:
         # restart loop
         pass
@@ -82,3 +85,8 @@ while True:
     except Exception as e:
         msg = traceback.format_exc()
         fatal(board, msg)
+
+    if args.demo_once: break
+
+if args.demo:
+    ThatsAll(board).run()
