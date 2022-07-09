@@ -1,6 +1,8 @@
 import contextlib
 import datetime
+import serial  # pip3 install pyserial
 import sys
+import termios
 
 READY   = 'READY'
 ASCII   = 'ASCII'
@@ -43,3 +45,11 @@ def fatal(board, msg):
         board.command(f'print {chunk}')
     board.command('display')
     sys.exit(1)
+
+
+ArduinoCommExceptions = (
+    serial.serialutil.SerialException,
+    OSError,
+    termios.error,
+    UnicodeDecodeError,
+)

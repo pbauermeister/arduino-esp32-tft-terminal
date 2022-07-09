@@ -25,17 +25,41 @@ from app.tunnel import Tunnel
 from app.quix import Quix
 from app.bumps import Bumps
 
-args = get_args()
-chan = Channel()
-board = Board(chan)
-board.wait_configured()
-board.clear_buttons()
 
+def make_board(chan):
+    try:
+        board = Board(chan)
+        board.wait_configured()
+        board.clear_buttons()
+        return board
+    except ArduinoCommExceptions as e:
+        try: board.close()
+        except: pass
+        raise
+
+def make_all():
+    while True:
+        try:
+            chan = Channel()
+            board = make_board(chan)
+            return chan, board
+        except ArduinoCommExceptions as e:
+            print('Serial error:', e)
+            print('-- will retry in', config.SERIAL_ERROR_RETRY_DELAY)
+            time.sleep(config.SERIAL_ERROR_RETRY_DELAY)
+
+### Here we go ###
+
+# Init
+args = get_args()
+chan, board = make_all()
+
+# Cycle through apps
 while True:
     try:
         while True:
             if not config.MONITOR_SKIP:
-                Monitor(board)
+                Monitor(board).run()
             if config.MONITOR_ONLY:
                 continue
 

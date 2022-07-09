@@ -18,6 +18,9 @@ class Channel:
         self.ser = serial.Serial(self.port, self.baudrate)
         self.clear()
 
+    def close(self):
+        self.ser.close()
+
     def clear(self):
         self.ser.flushInput()
         self.ser.flushOutput()
@@ -34,9 +37,12 @@ class Channel:
         self.ser.write(s.encode(ASCII) + b'\n')
 
     def read(self):
+        bytes = None
         try:
             bytes = self.ser.readline()
             message = bytes.decode(ASCII).strip()
+        except ArduinoCommExceptions:
+            raise
         except Exception as e:
             print('>>>', bytes, ' ###', e)
             return f'ERROR {e}'
@@ -46,16 +52,13 @@ class Channel:
         return message
 
     def flush_in(self):
-        if config.DEBUG:
-            print('>flush> ', end='')
+        if config.DEBUG: print('>flush> ', end='')
         while True:
             if self.ser.inWaiting():
                 c = self.ser.read()
-                if config.DEBUG:
-                    print(c, end='')
+                if config.DEBUG: print(c, end='')
             else:
                 time.sleep(0.1)
                 if not self.ser.inWaiting():
-                    if config.DEBUG:
-                        print()
+                    if config.DEBUG: print()
                     return

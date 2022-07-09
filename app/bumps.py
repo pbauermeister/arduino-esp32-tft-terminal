@@ -4,11 +4,9 @@ from app import App, TimeEscaper, Sprite
 
 class Bumps(App):
     def __init__(self, board):
-        super().__init__(board)
-        if self.board.wait_no_button(2): return
-        self.board.begin_auto_read_buttons()
+        super().__init__(board, auto_read=True)
 
-    def run(self):
+    def _run(self):
         sprites = [
             Sprite(self, 7,  1 , 1),
             Sprite(self, 2,  1, -1),
@@ -29,4 +27,4 @@ class Bumps(App):
             if escaper.check(): break
             self.command('display')
 
-        if 'R' in self.board.end_auto_read_buttons(): return True
+        return

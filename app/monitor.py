@@ -19,23 +19,25 @@ class Monitor(App):
     CHOICE_NEXT = 2
 
     def __init__(self, board):
-        super().__init__(board)
+        super().__init__(board, auto_read=False)
         self.chars_per_line = int(config.WIDTH / 6.4)
         self.lines = int(config.WIDTH / 8)
-        self.command = self.board.command
         self.mutex = threading.Lock()
 
+    def _run(self):
         while True:
             if config.MONITOR_HOST_TIMEOUT:
                 ans = self.show_host()
-                if ans == CHOICE_EXIT: return
+                if ans == CHOICE_EXIT: break
 
             if config.MONITOR_CPU_TIMEOUT:
                 ans = self.show_cpu()
-                if ans == CHOICE_EXIT: return
+                if ans == CHOICE_EXIT: break
 
             if ans is not None: continue
-            if not config.MONITOR_ONLY: return
+            if not config.MONITOR_ONLY: break
+
+        return False
 
     def show_header(self, title, with_banner=False):
         super().show_header(title, 'C:next R:exit', with_banner)
@@ -44,7 +46,7 @@ class Monitor(App):
         if timeout == 0:
             ans = self.board.read_buttons()
         else:
-            ans = self.board.wait_button_up(timeout)
+            ans = self.board.wait_button(timeout)
         if 'C' in ans:
             return CHOICE_NEXT
         if 'R' in ans:
@@ -55,8 +57,9 @@ class Monitor(App):
         title = 'Host'
         self.show_header(title, with_banner=True)
         self.command(f'display')
-
-        self.board.wait_no_button()
+        self.board.wait_no_button(timeout=1)
+        if self.board.read_buttons(flush=True):
+            return CHOICE_NEXT
         self.board.begin_read_buttons()
 
         users = self.get_nb_users()
@@ -94,7 +97,9 @@ class Monitor(App):
         title = 'CPU %'
         self.show_header(title, with_banner=True)
         self.command(f'display')
-        self.board.wait_no_button()
+        self.board.wait_no_button(timeout=1)
+        if self.board.read_buttons(flush=True):
+            return CHOICE_NEXT
 
         while True:
             cpus, mem = None, None
@@ -145,14 +150,14 @@ class Monitor(App):
             return '<hostname unavail>'
 
     def get_ip(self):
-        if config.REMOTE_SSH_AUTHORITY:
+        if config.MONITOR_SSH_AUTHORITY:
             return self.get_remote_ip()
         else:
             return self.get_local_ip()
 
     def get_remote_ip(self):
         try:
-            host = config.REMOTE_SSH_AUTHORITY.split('@')[-1]
+            host = config.MONITOR_SSH_AUTHORITY.split('@')[-1]
             out = command(['host', host], force_local=True, check=False)
             return out.splitlines()[0].split(' ')[-1]
         except:
@@ -228,8 +233,8 @@ class Monitor(App):
 
 
 def command(cmd, force_local=False, check=True):
-    if config.REMOTE_SSH_AUTHORITY and not force_local:
-        cmd = ['ssh', config.REMOTE_SSH_AUTHORITY] + cmd
+    if config.MONITOR_SSH_AUTHORITY and not force_local:
+        cmd = ['ssh', config.MONITOR_SSH_AUTHORITY] + cmd
     try:
         return subprocess.run(cmd, encoding='utf-8',
                               check=check, stdout=subprocess.PIPE).stdout

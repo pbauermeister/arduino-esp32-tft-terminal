@@ -12,11 +12,9 @@ NB2 = 6
 
 class Tunnel(App):
     def __init__(self, board):
-        super().__init__(board)
-        if self.board.wait_no_button(2): return
-        self.board.begin_auto_read_buttons()
+        super().__init__(board, auto_read=True)
 
-    def run(self):
+    def _run(self):
         escaper = TimeEscaper(self)
 
         i = 0
@@ -46,7 +44,7 @@ class Tunnel(App):
             self.command('display')
             i += 1
 
-        if 'R' in self.board.end_auto_read_buttons(): return True
+        return
 
     def make(self, i):
         i = NB - 1 - (i%NB)

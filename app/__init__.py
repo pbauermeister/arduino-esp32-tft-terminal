@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 import random
 import time
@@ -6,28 +7,67 @@ import config
 from lib import *
 
 class App:
-    def __init__(self, board):
+    def __init__(self, board, auto_read, extra_configurator=None):
         self.board = board
-        self.command = board.command
         self.name = self.__class__.__name__
+        self.board.set_comm_error_handler(self.init)
+        self.auto_read = auto_read
+        self.extra_configurator = extra_configurator
+        board.set_configure_callback(extra_configurator)
+        self.init()
 
+    def run(self):
+        if self.board.read_buttons(flush=True):
+            return False
+
+        reset = False
+        if not self.board.wait_no_button(2):
+            reset = self._run()
+            if self.auto_read:
+                reset = reset or 'R' in self.board.end_auto_read_buttons()
+        self.board.set_comm_error_handler(self.init)
+        self.board.set_configure_callback(None)
+        return reset
+
+    def init(self):
+        self.board.set_comm_error_handler(self.init)
         self.board.configure()
         assert config.WIDTH and config.HEIGHT
         self.command(f'setTextSize 1 2')
         title = self.name.upper()
         x, y = self.get_title_pos(title)
+
+        # title
         self.command('reset')
         self.command(f'setCursor {x} {y}')
         self.command(f'print {title}')
         self.command('display')
 
-        self.command('readButtons')
-        time.sleep(0.5)
-        if self.command('readButtons') == NONE:
-            time.sleep(0.5)
-
+        # ready for run()
         self.command('reset')
         self.command(f'setTextSize 1')
+        self.board.clear_buttons()
+        if self.auto_read:
+            self.board.begin_auto_read_buttons()
+
+    def command(self, cmd, **kw):
+        delay = config.SERIAL_ERROR_RETRY_DELAY
+        while True:
+            try:
+                return self.board.command(cmd, **kw)
+            except ArduinoCommExceptions as e:
+                print('Serial error:', e)
+                self.board.close()
+                while True:
+                    print('-- will retry in', delay)
+                    time.sleep(delay)
+                    try:
+                        self.board.reopen()
+                        self.init()
+                        print('Re-init OK.')
+                        break
+                    except Exception as e:
+                        print('Error:', e)
 
     def get_title_pos(self, title):
         w, h = self.get_text_size(title)
@@ -70,19 +110,23 @@ class App:
 
 
 class TimeEscaper:
-    def __init__(self, app, timeout=60):
+    def __init__(self, app, timeout=-1):
         self.app = app
-        self.timeout = None if timeout is None \
-                       else datetime.timedelta(seconds=timeout)
-        self.n = 0
+        if timeout == -1:
+            timeout = config.APPS_TIMEOUT  # config is patched, so not in ctor
+        if timeout is not None:
+            timeout = datetime.timedelta(seconds=timeout)
+        self.timeout = timeout
+        self.frames = 0
         self.start = datetime.datetime.now()
 
     def check(self):
-        self.n += 1
+        self.frames += 1
         elapsed = datetime.datetime.now() - self.start
-        if self.n == 30:
+        nf = 30
+        if self.frames == nf:
             secs = elapsed.seconds + elapsed.microseconds/1000000
-            print(self.app.name, 'FPS:', 30 / secs)
+            print(self.app.name, 'FPS:', nf / secs)
         if self.timeout:
             if elapsed > self.timeout:
                 return True
@@ -90,8 +134,7 @@ class TimeEscaper:
 
 
 class Bouncer:
-    def __init__(self, board, size, vx, vy):
-        self.board = board
+    def __init__(self, size, vx, vy):
         self.size = size
         k = .5
         v = (4 + 7**1.25 - size**1.25) * k
@@ -134,20 +177,21 @@ class Bouncer:
 
 
 class Sprite(Bouncer):
-    def __init__(self, board, size, vx, vy):
-        super().__init__(board, size, vx, vy)
+    def __init__(self, app, size, vx, vy):
+        super().__init__(size, vx, vy)
+        self.app = app
         self.was_filled = False
 
     def erase(self):
         if self.was_filled:
-            self.board.command(f'fillCircle {self.x} {self.y} {self.size} 0')
+            self.app.command(f'fillCircle {self.x} {self.y} {self.size} 0')
         else:
-            self.board.command(f'drawCircle {self.x} {self.y} {self.size} 0')
+            self.app.command(f'drawCircle {self.x} {self.y} {self.size} 0')
 
     def advance(self):
         super().advance()
         if self.bumped:
-            self.board.command(f'fillCircle {self.x} {self.y} {self.size} 1')
+            self.app.command(f'fillCircle {self.x} {self.y} {self.size} 1')
         else:
-            self.board.command(f'drawCircle {self.x} {self.y} {self.size} 1')
+            self.app.command(f'drawCircle {self.x} {self.y} {self.size} 1')
         self.was_filled = self.bumped

@@ -44,20 +44,16 @@ GOTO_QUIT        = 3
 
 
 class Asteriods(App):
-    def custom_configure(self):
-        self.board.command('setTextWrap 0')
+    def extra_configurator(self):
+        self.command('setTextWrap 0')
 
     def __init__(self, board):
-        super().__init__(board)
-        board.set_configure_callback(self.custom_configure)
-        self.custom_configure()
+        super().__init__(board, auto_read=False,
+                         extra_configurator=self.extra_configurator)
         global GAME_OVER_POS
         GAME_OVER_POS = self.get_title_pos(GAME_OVER_TITLE)
 
-        self.run()
-        board.set_configure_callback(None)
-
-    def run(self):
+    def _run(self):
         first = True
         while True:
             if config.APP_ASTERIODS_AUTOPLAY and first:
@@ -83,7 +79,9 @@ class Asteriods(App):
             elif go == GOTO_NEXT:
                 return False
             elif go == GOTO_QUIT:
-                return True
+                if auto: return True
+                else: continue  # reset during playing returns to menu
+
 
     def menu(self):
         self.show_header('', 'C:next B:start A:auto')
@@ -109,7 +107,7 @@ class Asteriods(App):
         return MENU_AUTO
 
     def run_once(self, autoplay):
-        game = Game(self.board, autoplay)
+        game = Game(self, autoplay)
         overs = 0
         autoplay_start = None
         while True:
@@ -163,8 +161,8 @@ class Asteriods(App):
 
 
 class Game:
-    def __init__(self, board, autoplay):
-        self.board = board
+    def __init__(self, app, autoplay):
+        self.app = app
         self.player = Player(autoplay)
         self.shots = []
         self.asteroids = []
@@ -258,7 +256,7 @@ class Game:
         return True
 
     def boom(self, ship, asteroid):
-        command = self.board.command
+        command = self.app.command
         command(f'home')
         command(f'print Boom!')
         i = 0

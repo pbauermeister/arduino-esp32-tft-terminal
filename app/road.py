@@ -10,11 +10,9 @@ NB3 = 8
 
 class Road(App):
     def __init__(self, board):
-        super().__init__(board)
-        if self.board.wait_no_button(2): return
-        self.board.begin_auto_read_buttons()
+        super().__init__(board, auto_read=True)
 
-    def run(self):
+    def _run(self):
         last = None
         escaper = TimeEscaper(self)
 
@@ -34,7 +32,7 @@ class Road(App):
             self.command('display')
             i += 1
 
-        if 'R' in self.board.end_auto_read_buttons(): return True
+        return
 
     def draw(self, i, c):
         i = NB - (i%NB)

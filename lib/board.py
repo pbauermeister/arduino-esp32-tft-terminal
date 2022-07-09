@@ -9,8 +9,7 @@ class Board:
     def __init__(self, channel):
         self.chan = channel
         self.configure_callback = None
-        self.chan.open()
-        self.chan.set_callback('READY', self.on_ready)
+        self.comm_error_handler = None
         self.configured = False
         self.boots = 0
         self.last_command = None
@@ -18,6 +17,21 @@ class Board:
         self.auto_buttons = set()
         self.auto_buttons_boots = 0
         self.read_buttons_boots = 0
+
+        self.chan.open()
+        self.chan.set_callback('READY', self.on_ready)
+
+    def set_configure_callback(self, configure_callback):
+        self.configure_callback = configure_callback
+
+    def set_comm_error_handler(self, handler):
+        self.comm_error_handler = handler
+
+    def close(self):
+        self.chan.close()
+
+    def reopen(self):
+        self.chan.open()
 
     def command(self, cmd, ignore_error=False):
         # Since the board may be rebooted in the middle of a command,
@@ -27,6 +41,28 @@ class Board:
         except:
             self.chan.clear()
             return self._command(cmd, ignore_error)
+
+    def command(self, cmd, ignore_error=False):
+        delay = config.SERIAL_ERROR_RETRY_DELAY
+        while True:
+            try:
+                return self._command(cmd, ignore_error)
+            except ArduinoCommExceptions as e:
+                print('Serial error:', e)
+                self.close()
+                while True:
+                    print('-- will retry in', delay)
+                    time.sleep(delay)
+                    try:
+                        self.reopen()
+                        if not self.comm_error_handler:
+                            print('Re-open OK.')
+                        else:
+                            self.comm_error_handler()
+                            print('Re-init OK.')
+                        break
+                    except ArduinoCommExceptions as e:
+                        print('Error:', e)
 
     def _command(self, cmd, ignore_error=False):
         self._command_send(cmd)
@@ -59,9 +95,6 @@ class Board:
         time.sleep(0.2)
         self.boots += 1
         self.configure()
-
-    def set_configure_callback(self, configure_callback):
-        self.configure_callback = configure_callback
 
     def configure(self):
         # normally called by callback
@@ -126,6 +159,7 @@ class Board:
         return val
 
     def wait_no_button(self, timeout=None):
+        self.chan.flush_in()
         if timeout is None:
             while self.command('readButtons', ignore_error=True) != NONE:
                 pass
