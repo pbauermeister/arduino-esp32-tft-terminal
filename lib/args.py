@@ -50,15 +50,18 @@ def get_args():
     if args.demo_once:
         args.demo = True
     if args.demo or args.demo_once:
-        args.monitor_host_timeout = 4
-        args.monitor_cpu_timeout = 4
-        args.apps_timeout = 4
-        args.app_asteriods_autoplay = True
-        args.app_asteriods_autoplay_timeout = 10
+        args.monitor_host_timeout = args.monitor_host_timeout or 4
+        args.monitor_cpu_timeout = args.monitor_cpu_timeout or 4
+        args.apps_timeout = args.apps_timeout or 4
+        args.app_asteriods_autoplay = args.app_asteriods_autoplay or True
+        args.app_asteriods_autoplay_timeout \
+            = args.app_asteriods_autoplay_timeout or 10
 
     for	spec in	specs:
         val = args.__dict__[spec.as_arg]
         if val is not None:
             config.__setattr__(spec.name, val)
+        else:
+            args.__dict__[spec.as_arg] = config.__dict__[spec.name]
 
     return args
