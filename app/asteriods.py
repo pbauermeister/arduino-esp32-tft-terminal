@@ -123,7 +123,7 @@ class Asteriods(App):
             # Update / create
             game.update_asteroids()
             game.create_asteroid()
-            if autoplay:
+            if autoplay.enabled:
                 game.autoplay(keys)
             game.update_ship(keys)
             game.update_shots()
@@ -148,14 +148,16 @@ class Asteriods(App):
                 return GOTO_NEXT  # exit autoplay
 
             # crash
-            game.handle_crash()
-            if overs == 1:
-                time.sleep(3)
+            crashed = game.handle_crash()
+            if crashed and game.player.lives == 0:
+                time.sleep(1)
                 if autoplay.enabled:
-                    return GOTO_NEXT  # exit autoplay
-                autoplay.enable()
-            if game.player.lives == 0:
-                overs += 1
+                    # autoplay crashed
+                    return GOTO_NEXT
+                else:
+                    # player crashed
+                    autoplay.enable()
+                    self.board.wait_no_button()
 
 
 class Game:
