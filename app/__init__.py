@@ -12,7 +12,6 @@ class App:
         self.board = board
         self.name = name or self.__class__.__name__
         print(f'== {self.name} ==')
-        print(datetime.datetime.now())
         self.board.set_comm_error_handler(self.init)
         self.auto_read = auto_read
         self.extra_configurator = extra_configurator
@@ -23,6 +22,7 @@ class App:
         if self.board.read_buttons(flush=True):
             return False
 
+        start = datetime.datetime.now()
         reset = False
         if not self.board.wait_no_button(2):
             reset = self._run()
@@ -30,6 +30,8 @@ class App:
                 reset = reset or 'R' in self.board.end_auto_read_buttons()
         self.board.set_comm_error_handler(self.init)
         self.board.set_configure_callback(None)
+        duration = datetime.datetime.now() - start
+        print('Duration:', duration)
         return reset
 
     def init(self):
