@@ -11,6 +11,8 @@ class App:
                  name=None):
         self.board = board
         self.name = name or self.__class__.__name__
+        print(f'== {self.name} ==')
+        print(datetime.datetime.now())
         self.board.set_comm_error_handler(self.init)
         self.auto_read = auto_read
         self.extra_configurator = extra_configurator

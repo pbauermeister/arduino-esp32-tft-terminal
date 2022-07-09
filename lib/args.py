@@ -2,6 +2,7 @@ import argparse
 
 import config
 
+APPS_DEMO_TIMEOUT = 5
 
 class Arg:
     def __init__(self, name, value):
@@ -20,7 +21,7 @@ def get_config_args_specs():
     names = dir(config)
     args = [Arg(n, config.__dict__.get(n)) for n in names]
     args = [a for a in args
-            if not a.name.startswith('__') and a.type in (str, bool, int)]
+            if not a.name.startswith('__') and a.type in (str, bool, int, float)]
     return args
 
 
@@ -50,12 +51,18 @@ def get_args():
     if args.demo_once:
         args.demo = True
     if args.demo or args.demo_once:
-        args.monitor_host_timeout = args.monitor_host_timeout or 4
-        args.monitor_cpu_timeout = args.monitor_cpu_timeout or 4
-        args.apps_timeout = args.apps_timeout or 4
-        args.app_asteriods_autoplay = args.app_asteriods_autoplay or True
-        args.app_asteriods_autoplay_timeout \
-            = args.app_asteriods_autoplay_timeout or 10
+        args.apps_timeout = args.apps_timeout or APPS_DEMO_TIMEOUT
+        args.app_asteriods_autoplay_timeout = (
+            args.app_asteriods_autoplay_timeout or args.apps_timeout)
+
+        args.monitor_host_timeout = (
+            args.monitor_host_timeout or args.apps_timeout)
+        args.monitor_cpu_timeout = (
+            args.monitor_cpu_timeout or args.apps_timeout)
+        args.apps_timeout = (
+            args.apps_timeout or args.apps_timeout)
+
+        args.app_asteriods_autoplay = True
 
     for	spec in	specs:
         val = args.__dict__[spec.as_arg]
