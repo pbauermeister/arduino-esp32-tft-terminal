@@ -106,15 +106,15 @@ class Asteriods(App):
             return MENU_PLAY
         return MENU_AUTO
 
-    def run_once(self, autoplay):
-        game = Game(self, autoplay)
+    def run_once(self, autoplay_enabled):
+        game = Game(self, autoplay_enabled)
+        autoplay = Autoplay(game, autoplay_enabled)
         overs = 0
-        autoplay_start = None
         while True:
             keys = self.board.read_buttons()
             if 'R' in keys:
                 return GOTO_QUIT
-            if autoplay and keys:
+            if autoplay.enabled and keys:
                 return GOTO_MENU
 
             # Erase
@@ -143,27 +143,25 @@ class Asteriods(App):
                 self.command(render)
             self.command('display')
 
+            now = datetime.datetime.now()
+            if autoplay.enabled and autoplay.until and now > autoplay.until:
+                return GOTO_NEXT  # exit autoplay
+
             # crash
             game.handle_crash()
-
             if overs == 1:
                 time.sleep(3)
-                if autoplay:
-                    return GOTO_NEXT
-                autoplay = True
-                autoplay_start = datetime.datetime.now()
-                game.player.autoplay =True
-                game.player.score = 0
-                game.player.lives = LIVES
-                overs = 0
+                if autoplay.enabled:
+                    return GOTO_NEXT  # exit autoplay
+                autoplay.enable()
             if game.player.lives == 0:
                 overs += 1
 
 
 class Game:
-    def __init__(self, app, autoplay):
+    def __init__(self, app, autoplay_enabled):
         self.app = app
-        self.player = Player(autoplay)
+        self.player = Player(autoplay_enabled)
         self.shots = []
         self.asteroids = []
 
@@ -226,7 +224,7 @@ class Game:
         x = config.WIDTH - 12
         l.append(f'setCursor {x} {0}')
         l.append(f'print L{self.player.lives}')
-        if self.player.autoplay:
+        if self.player.autoplay_enabled:
             x, y = GAME_OVER_POS
             l.append(f'setCursor {x} {y}')
             l.append(f'print {GAME_OVER_TITLE}')
@@ -273,10 +271,10 @@ class Game:
 
 
 class Player:
-    def __init__(self, autoplay):
+    def __init__(self, autoplay_enabled):
         self.ship = Ship()
         self.lives = LIVES
-        self.autoplay = autoplay
+        self.autoplay_enabled = autoplay_enabled
         self.score = 0
 
 
@@ -556,3 +554,25 @@ class Detect:
         dy = (a.y - y)**2
         r2 = (dx + dy) * factor
         return r2 < a.r**2
+
+class Autoplay:
+    def __init__(self, game, enabled):
+        self.game = game
+        self.enabled = enabled
+        self.start = None
+        self.until = None
+        if enabled:
+            self.enable()
+
+    def enable(self):
+        self.enabled = True
+        self.start = datetime.datetime.now()
+        ap_timeout = config.APP_ASTERIODS_AUTOPLAY_TIMEOUT
+        if ap_timeout:
+            self.until = self.start + \
+                         datetime.timedelta(seconds=ap_timeout)
+        else:
+            self.until = None
+        self.game.player.autoplay_enabled =True
+        self.game.player.score = 0
+        self.game.player.lives = LIVES
