@@ -216,6 +216,8 @@ class Monitor(App):
             loads = data['sysstat']['hosts'][0]['statistics'][0]['cpu-load']
             cpus = [l for l in loads if l['cpu'] not in ('all', '-1')]
             pcents = [int(c['usr']+.5) for c in cpus]
+
+            pcents.sort(reverse=True)  # DEBATABLE
         except:
             return ['<CPUs: mpstat error>']
         lines = []

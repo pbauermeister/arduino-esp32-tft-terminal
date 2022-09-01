@@ -34,7 +34,8 @@ class Channel:
 
     def write(self, s):
         if config.DEBUG: print('<<<', s)
-        self.ser.write(s.encode(ASCII) + b'\n')
+        #self.ser.write(s.encode(ASCII) + b'\n')
+        self.ser.write(str.encode(s) + b'\n')
 
     def read(self):
         bytes = None

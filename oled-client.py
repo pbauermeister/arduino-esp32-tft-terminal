@@ -24,6 +24,7 @@ from app.starfield import Starfield
 from app.tunnel import Tunnel
 from app.quix import Quix
 from app.bumps import Bumps
+from app.fill import Fill
 from app.thats_all import ThatsAll
 
 
@@ -52,8 +53,24 @@ def make_all():
 ### Here we go ###
 
 # Init
-args = get_args()
+args, only_apps = get_args(
+    Asteriods,
+    Monitor,
+    Cube,
+    Road,
+    Starfield,
+    Tunnel,
+    Quix,
+    Bumps,
+    Fill,
+    )
 chan, board = make_all()
+
+
+def start_app_maybe(cls):
+    if only_apps and cls not in only_apps: return False
+    return cls(board).run()
+
 
 # Cycle through apps
 while True:
@@ -64,14 +81,15 @@ while True:
             if config.MONITOR_ONLY:
                 continue
             if not config.APP_ASTERIODS_SKIP:
-                if Asteriods(board).run(): break
+                if start_app_maybe(Asteriods): break
 
-            if Cube(board).run(): break
-            if Road(board).run(): break
-            if Starfield(board).run(): break
-            if Tunnel(board).run(): break
-            if Quix(board).run(): break
-            if Bumps(board).run(): break
+            if start_app_maybe(Cube): break
+            if start_app_maybe(Road): break
+            if start_app_maybe(Starfield): break
+            if start_app_maybe(Tunnel): break
+            if start_app_maybe(Quix): break
+            if start_app_maybe(Bumps): break
+            if start_app_maybe(Fill): break
 
             if args.demo_once: break
 

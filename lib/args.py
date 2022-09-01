@@ -25,7 +25,7 @@ def get_config_args_specs():
     return args
 
 
-def get_args():
+def get_args(*apps):
     specs = get_config_args_specs()
 
     parser = argparse.ArgumentParser(description=__doc__)
@@ -45,8 +45,23 @@ def get_args():
                                 type=spec.type,
                                 metavar=spec.type.__name__.upper(),
                                 help=f'default: {spec.value}')
+    existing = [spec.as_flag for spec in specs]
+
+    names = sorted([a.__name__.lower() for a in apps])
+    for name in names:
+        flag = f'--{name}-only'
+        if flag not in existing:
+            parser.add_argument(f'--{name}-only',
+                                help='run only this app',
+                                action='store_true')
 
     args = parser.parse_args()
+
+    only_apps = set()
+    for app in apps:
+        k = f'{app.__name__.lower()}_only'
+        if args.__dict__[k]:
+            only_apps.add(app)
 
     if args.demo_once:
         args.demo = True
@@ -71,4 +86,4 @@ def get_args():
         else:
             args.__dict__[spec.as_arg] = config.__dict__[spec.name]
 
-    return args
+    return args, only_apps
