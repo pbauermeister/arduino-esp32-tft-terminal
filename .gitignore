@@ -1,11 +1,14 @@
+*.bak
 .DS_Store
+__pycache__
 applet
 application.linux-arm64
 application.linux-armv6hf
 application.linux32
 application.linux64
+application.macosx
 application.windows32
 application.windows64
-application.macosx
+build/
 out
-__pycache__
+**/.vscode/c_cpp_properties.json
