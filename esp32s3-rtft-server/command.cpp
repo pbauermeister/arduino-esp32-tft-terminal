@@ -6,20 +6,23 @@
 #include "config.h"
 #include "esp32s3-display.h"
 
+// constants
 const char *ERR_EXTRA_ARG = "ERROR extra arg";
 const char *ERR_MISSING_ARG = "ERROR missing arg";
 const char *ERR_UNKNOWN_CMD = "ERROR unknown cmd";
 const char *OK_MESSAGE = "OK";
 const char *NONE_MESSAGE = "NONE";
 
+// variables
 bool auto_display = true;
 bool auto_read_buttons = false;
+char buffer[100];
 
-char buffer[100];  // used for input and output, so use with care!
-
+// forward declarations
 const char *ok();
 const char *make_resp_buffer(char **rest, int val);
 void unescape_inplace(char *input);
+void print_state(const char *prefix, char letter);
 
 class ErrorHolder {
  public:
@@ -387,116 +390,95 @@ const char *interpret(char *input, const Config &config) {
                               0  //@@@ display.getCursorY()
       );
     }
-      /*
-          case hash("monitorButtons"): {  // monitorButtons 60000 /
-         monitorButtons 60000 500 unsigned int during = read_int(&rest, &error);
-            unsigned int interval = read_int(&rest, &error, true, 100);
-            if (error) return error;
 
-            unsigned long start = millis();
-            unsigned int delta;
-            const unsigned long STEP = 10;
-            int every = interval < STEP ? 1 : interval / STEP;
-            int counter = 0;
-            do {
-              if (button1.pressed())  print_state("DOWN", 'A');
-              if (button1.released()) print_state("UP",   'A');
-              if (button2.pressed())  print_state("DOWN", 'B');
-              if (button2.released()) print_state("UP",   'B');
-              if (button3.pressed())  print_state("DOWN", 'C');
-              if (button3.released()) print_state("UP",   'C');
+    case hash("monitorButtons"): {
+      // monitorButtons 60000 / monitorButtons 60000 500
+      unsigned int during = read_int(&rest, error);
+      unsigned int interval = read_int(&rest, error, true, 100);
+      if (error.message) return error.message;
 
-              if (counter % every == 0) {
-                if (button1.read() == Button::PRESSED) print_state("PRESSED",
-         'A'); if (button2.read() == Button::PRESSED) print_state("PRESSED",
-         'B'); if (button3.read() == Button::PRESSED) print_state("PRESSED",
-         'C');
-              }
-              counter++;
+      unsigned long start = millis();
+      unsigned int delta;
+      const unsigned long STEP = 10;
+      int every = interval < STEP ? 1 : interval / STEP;
+      int counter = 0;
+      do {
+        if (button0_down()) print_state("DOWN", 'A');
+        if (button0_up()) print_state("UP", 'A');
+        if (button1_down()) print_state("DOWN", 'B');
+        if (button1_up()) print_state("UP", 'B');
+        if (button2_down()) print_state("DOWN", 'C');
+        if (button2_up()) print_state("UP", 'C');
 
-              delay(STEP);
-              yield();
-              delta = millis() - start;
-            } while(delta < during && Serial.available() == 0);
-            return ok();
-          }
-          case hash("watchButtons"): {  // watchButtons / watchButtons 60000 /
-         watchButtons 60000 500 unsigned int during = read_int(&rest, &error,
-         true, 0); unsigned int interval = read_int(&rest, &error, true, 100);
-            if (error) return error;
+        if (counter % every == 0) {
+          if (button0_pressed()) print_state("PRESSED", 'A');
+          if (button1_pressed()) print_state("PRESSED", 'B');
+          if (button2_pressed()) print_state("PRESSED", 'C');
+        }
+        counter++;
 
-            unsigned long start = millis();
-            unsigned int delta;
-            do {
-              if (button1.read() == Button::PRESSED) Serial.print('A');
-              if (button2.read() == Button::PRESSED) Serial.print('B');
-              if (button3.read() == Button::PRESSED) Serial.print('C');
+        delay(STEP);
+        yield();
+        delta = millis() - start;
+      } while (delta < during && Serial.available() == 0);
+      return ok();
+    }
 
-              delay(interval);
-              yield();
-              delta = millis() - start;
-            } while((!during || delta < during) && Serial.available() == 0);
-            return "";
-          }
-      */
+    case hash("watchButtons"): {
+      // watchButtons / watchButtons 60000 / watchButtons 60000 500
+      unsigned int during = read_int(&rest, error, true, 0);
+      unsigned int interval = read_int(&rest, error, true, 100);
+      if (error.message) return error.message;
 
-      /** @@@
-      case hash("readButtons"):
-      { // readButtons
-        buffer[0] = 0;
-        if (button1.read() == Button::PRESSED)
-          strcat(buffer, "A");
-        if (button2.read() == Button::PRESSED)
-          strcat(buffer, "B");
-        if (button3.read() == Button::PRESSED)
-          strcat(buffer, "C");
-        return strlen(buffer) ? buffer : NONE_MESSAGE;
-      }
-      case hash("waitButton"):
-      { //  waitButton 60000 1
-        unsigned int during = read_int(&rest, &error);
-        unsigned int up = read_int(&rest, &error);
-        if (error)
-          return error;
+      unsigned long start = millis();
+      unsigned int delta;
+      do {
+        if (button0_pressed()) Serial.print('A');
+        if (button1_pressed()) Serial.print('B');
+        if (button2_pressed()) Serial.print('C');
 
-        unsigned long start = millis();
-        unsigned int delta;
-        const unsigned long STEP = 10;
+        delay(interval);
+        yield();
+        delta = millis() - start;
+      } while ((!during || delta < during) && Serial.available() == 0);
+      return "";
+    }
 
-        // flush
-        button1.released();
-        button1.pressed();
-        button2.released();
-        button2.pressed();
-        button3.released();
-        button3.pressed();
+    case hash("readButtons"): {  // readButtons
+      buffer[0] = 0;
+      if (button0_pressed()) strcat(buffer, "A");
+      if (button1_pressed()) strcat(buffer, "B");
+      if (button2_pressed()) strcat(buffer, "C");
+      return strlen(buffer) ? buffer : NONE_MESSAGE;
+    }
 
-        do
-        {
-          if (up)
-          {
-            if (button1.released())
-              return "A";
-            if (button2.released())
-              return "B";
-            if (button3.released())
-              return "C";
-          }
-          else
-          {
-            if (button1.pressed())
-              return "A";
-            if (button2.pressed())
-              return "B";
-            if (button3.pressed())
-              return "C";
-          }
-          delay(STEP);
-          yield();
-          delta = millis() - start;
-        } while (delta < during && Serial.available() == 0);
-        return (NONE_MESSAGE);
-      }*/
+    case hash("waitButton"): {  //  waitButton 60000 1
+      unsigned int during = read_int(&rest, error);
+      unsigned int up = read_int(&rest, error);
+      if (error.message) return error.message;
+
+      unsigned long start = millis();
+      unsigned int delta;
+      const unsigned long STEP = 10;
+
+      buttons_flush();
+
+      do {
+        if (up) {
+          if (button0_up()) return "A";
+          if (button1_up()) return "B";
+          if (button2_up()) return "C";
+        } else {
+          if (button0_down()) return "A";
+          if (button1_down()) return "B";
+          if (button2_down()) return "C";
+        }
+        delay(STEP);
+        yield();
+        delta = millis() - start;
+      } while (delta < during && Serial.available() == 0);
+      return (NONE_MESSAGE);
+    }
 
       /*
         sleep(timeout)
@@ -507,6 +489,7 @@ const char *interpret(char *input, const Config &config) {
         case hash("drawRGBBitmap"): {  //
         case hash("setFont"): {  //
       */
+
     default:
       break;
   }
@@ -515,32 +498,31 @@ const char *interpret(char *input, const Config &config) {
 
 const char *ok() {
   strcpy(buffer, OK_MESSAGE);
-  /** @@@
-  if (auto_read_buttons)
-  {
+  if (auto_read_buttons) {
     strcat(buffer, " ");
     bool any = false;
 
-    if (button1.read() == Button::PRESSED)
-    {
+    if (button0_pressed()) {
       strcat(buffer, "A");
       any = true;
     }
-    if (button2.read() == Button::PRESSED)
-    {
+    if (button1_pressed()) {
       strcat(buffer, "B");
       any = true;
     }
-    if (button3.read() == Button::PRESSED)
-    {
+    if (button2_pressed()) {
       strcat(buffer, "C");
       any = true;
     }
-    if (!any)
-      strcat(buffer, NONE_MESSAGE);
+    if (!any) strcat(buffer, NONE_MESSAGE);
   }
-  */
   return buffer;
+}
+
+void print_state(const char *prefix, char letter) {
+  Serial.print(prefix);
+  Serial.print(' ');
+  Serial.println(letter);
 }
 
 const char *make_resp_buffer(char **rest, int val) {

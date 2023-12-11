@@ -1,7 +1,10 @@
+
 #include "esp32s3-display.h"
 
 #include <Adafruit_GFX.h>     // Core graphics library
 #include <Adafruit_ST7789.h>  // Hardware-specific library for ST7789
+#include <Arduino.h>
+#include <Button.h>  // Button by Michael Adams https://github.com/madleech/Button
 #include <SPI.h>
 
 // Use dedicated hardware SPI pins
@@ -332,14 +335,48 @@ void display_reset() {
   tft.setTextWrap(true);
 }
 
-void display_clear() {
-  tft.fillScreen(ST77XX_BLACK);
+void display_clear() { tft.fillScreen(ST77XX_BLACK); }
+
+void display_print(char *text) { tft.print(text); }
+
+void display_set_cursor(int16_t x, int16_t y) { tft.setCursor(x, y); }
+
+////////////////////////////////////////////////////////////////////////////////
+// Buttons
+
+Button button0(0);
+Button button1(1);
+Button button2(2);
+
+// button 0 has normal polarity
+bool button0_down() { return button0.pressed(); }
+bool button0_up() { return button0.released(); }
+bool button0_pressed() { return button0.read() == Button::PRESSED; }
+
+// button 1 has inverted polarity
+bool button1_down() { return button1.released(); }
+bool button1_up() { return button1.pressed(); }
+bool button1_pressed() { return button1.read() != Button::PRESSED; }
+
+// button 2 has inverted polarity
+bool button2_down() { return button2.released(); }
+bool button2_up() { return button2.pressed(); }
+bool button2_pressed() { return button2.read() != Button::PRESSED; }
+
+// buttons management
+
+void buttons_flush() {
+  button0_up();
+  button0_down();
+  button1_up();
+  button1_down();
+  button2_up();
+  button2_down();
 }
 
-void display_print(char *text) {
-  tft.print(text);
-}
-
-void display_set_cursor(int16_t x, int16_t y) {
-  tft.setCursor(x, y);
+void buttons_setup() {
+  pinMode(0, INPUT_PULLUP);
+  pinMode(1, INPUT_PULLDOWN);
+  pinMode(2, INPUT_PULLDOWN);
+  buttons_flush();  // flush unsynched inverted initial state
 }

@@ -6,9 +6,8 @@
 //    IDE: Wait for "Hard resetting via RTS pin..."
 // 2. Board: Click Reset
 
-// #include <Adafruit_GFX.h>     // Core graphics library
-// #include <Adafruit_ST7789.h>  // Hardware-specific library for ST7789
-// #include <SPI.h>
+#include <Adafruit_ST7789.h>
+#include <Arduino.h>
 
 #include "command.h"
 #include "config.h"
@@ -17,10 +16,12 @@
 #define BOARD_NAME "ARDUINO_ADAFRUIT_FEATHER_ESP32S3_REVERSE_TFT"
 
 void setup(void) {
+  // TFT
   display_setup();
   delay(1000);
   display_reset();
 
+  // Serial
   Serial.begin(115200);
   Serial.print("# Board: ");
   Serial.println(BOARD_NAME);
@@ -32,7 +33,9 @@ void setup(void) {
 
   Serial.println("READY");
 
+  // Pins
   pinMode(LED_BUILTIN, OUTPUT);  // init LED *AFTER* Serial
+  buttons_setup();
 }
 
 bool inverted = true;
