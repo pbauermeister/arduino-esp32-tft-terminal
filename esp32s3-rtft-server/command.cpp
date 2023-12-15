@@ -106,7 +106,6 @@ const char *interpret(char *input, const Config &config) {
     }
     case hash("print"): {  // print HELLO\n
       display_print(rest);
-      //@@@ display.print(rest);
       return ok();
     }
     case hash("clearDisplay"): {
@@ -128,28 +127,22 @@ const char *interpret(char *input, const Config &config) {
       return ok();
     }
 
-      /// DONE until here
-
     case hash("drawPixel"): {  // drawPixel 100 10 1
       int x = read_int(&rest, error);
       int y = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.drawPixel(x, y, color);
-      if (auto_display) {
-        //@@@ display.display();
-      }
+      drawPixel(x, y, color);
       return ok();
     }
+
     case hash("setRotation"): {  // setRotation 0 // ..3
-      int x = read_int(&rest, error);
+      int m = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.setRotation(x);
-      if (auto_display) {
-        //@@@ display.display();
-      }
+      setRotation(m);
       return ok();
     }
+
 #if 0
     case hash("invertDisplay"): {  // invertDisplay
       display.invertDisplay();
@@ -163,24 +156,20 @@ const char *interpret(char *input, const Config &config) {
       int h = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.drawFastVLine(x, y, h, color);
-      if (auto_display) {
-        //@@@ display.display();
-      }
+      drawFastVLine(x, y, h, color);
       return ok();
     }
+
     case hash("drawFastHLine"): {  // drawFastHLine 20 20 50 1
       int x = read_int(&rest, error);
       int y = read_int(&rest, error);
       int w = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.drawFastHLine(x, y, w, color);
-      if (auto_display) {
-        //@@@ display.display();
-      }
+      drawFastHLine(x, y, w, color);
       return ok();
     }
+
     case hash("fillRect"): {  // fillRect 20 10 100 50 1
       int x = read_int(&rest, error);
       int y = read_int(&rest, error);
@@ -188,12 +177,12 @@ const char *interpret(char *input, const Config &config) {
       int h = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.fillRect(x, y, w, h, color);
-      if (auto_display) {
-        //@@@ display.display();
-      }
+      fillRect(x, y, w, h, color);
       return ok();
     }
+
+      /// DONE until here
+
     case hash("fillScreen"): {  // fillScreen 1
       int color = read_int(&rest, error);
       if (error.message) return error.message;
@@ -229,6 +218,7 @@ const char *interpret(char *input, const Config &config) {
       }
       return ok();
     }
+
     case hash("drawCircle"): {  // drawCircle 50 30 25 1
       int x0 = read_int(&rest, error);
       int y0 = read_int(&rest, error);

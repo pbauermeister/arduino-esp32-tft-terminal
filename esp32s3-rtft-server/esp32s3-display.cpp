@@ -380,3 +380,24 @@ void buttons_setup() {
   pinMode(2, INPUT_PULLDOWN);
   buttons_flush();  // flush unsynched inverted initial state
 }
+
+uint16_t fg_color = ST77XX_WHITE;
+uint16_t bg_color = ST77XX_BLACK;
+
+void drawPixel(int16_t x, int16_t y, bool fg) {
+  tft.drawPixel(x, y, fg ? fg_color : bg_color);
+}
+
+void setRotation(uint8_t m) { tft.setRotation(m); }
+
+void drawFastVLine(int16_t x, int16_t y, int16_t h, bool fg) {
+  tft.drawFastVLine(x, y, h, fg ? fg_color : bg_color);
+}
+
+void drawFastHLine(int16_t x, int16_t y, int16_t w, bool fg) {
+  tft.drawFastHLine(x, y, w, fg ? fg_color : bg_color);
+}
+
+void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, bool fg) {
+  tft.fillRect(x, y, w, h, fg ? fg_color : bg_color);
+}
