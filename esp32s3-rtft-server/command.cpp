@@ -181,17 +181,13 @@ const char *interpret(char *input, const Config &config) {
       return ok();
     }
 
-      /// DONE until here
-
     case hash("fillScreen"): {  // fillScreen 1
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.fillScreen(color);
-      if (auto_display) {
-        //@@@ display.display();
-      }
+      fillScreen(color);
       return ok();
     }
+
     case hash("drawLine"): {  // drawLine 20 5 100 45 1
       int x0 = read_int(&rest, error);
       int y0 = read_int(&rest, error);
@@ -199,12 +195,10 @@ const char *interpret(char *input, const Config &config) {
       int y1 = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.drawLine(x0, y0, x1, y1, color);
-      if (auto_display) {
-        //@@@ display.display();
-      }
+      // drawLine(x0, y0, x1, y1, color);
       return ok();
     }
+
     case hash("drawRect"): {  // drawRect 20 5 100 50 1
       int x = read_int(&rest, error);
       int y = read_int(&rest, error);
@@ -212,12 +206,11 @@ const char *interpret(char *input, const Config &config) {
       int h = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.drawRect(x, y, w, h, color);
-      if (auto_display) {
-        //@@@ display.display();
-      }
+      drawRect(x, y, w, h, color);
       return ok();
     }
+
+      /// DONE until here
 
     case hash("drawCircle"): {  // drawCircle 50 30 25 1
       int x0 = read_int(&rest, error);
@@ -226,9 +219,6 @@ const char *interpret(char *input, const Config &config) {
       int color = read_int(&rest, error);
       if (error.message) return error.message;
       //@@@ display.drawCircle(x0, y0, r, color);
-      if (auto_display) {
-        //@@@ display.display();
-      }
       return ok();
     }
     case hash("fillCircle"): {  // fillCircle 50 30 25 1
@@ -238,9 +228,6 @@ const char *interpret(char *input, const Config &config) {
       int color = read_int(&rest, error);
       if (error.message) return error.message;
       //@@@ display.fillCircle(x0, y0, r, color);
-      if (auto_display) {
-        //@@@ display.display();
-      }
       return ok();
     }
     case hash("drawTriangle"): {  // drawTriangle 10 25 100 5 120 50 1
@@ -253,9 +240,6 @@ const char *interpret(char *input, const Config &config) {
       int color = read_int(&rest, error);
       if (error.message) return error.message;
       //@@@ display.drawTriangle(x0, y0, x1, y1, x2, y2, color);
-      if (auto_display) {
-        //@@@ display.display();
-      }
       return ok();
     }
     case hash("fillTriangle"): {  // fillTriangle 12 27 102 7 122 52 1
@@ -268,9 +252,6 @@ const char *interpret(char *input, const Config &config) {
       int color = read_int(&rest, error);
       if (error.message) return error.message;
       //@@@ display.fillTriangle(x0, y0, x1, y1, x2, y2, color);
-      if (auto_display) {
-        //@@@ display.display();
-      }
       return ok();
     }
     case hash("drawRoundRect"): {  // drawRoundRect 20 5 100 50 12 1
@@ -282,9 +263,6 @@ const char *interpret(char *input, const Config &config) {
       int color = read_int(&rest, error);
       if (error.message) return error.message;
       //@@@ display.drawRoundRect(x, y, w, h, r, color);
-      if (auto_display) {
-        //@@@ display.display();
-      }
       return ok();
     }
     case hash("fillRoundRect"): {  // fillRoundRect 20 5 100 50 12 1
@@ -296,9 +274,6 @@ const char *interpret(char *input, const Config &config) {
       int color = read_int(&rest, error);
       if (error.message) return error.message;
       //@@@ display.fillRoundRect(x, y, w, h, r, color);
-      if (auto_display) {
-        //@@@ display.display();
-      }
       return ok();
     }
     case hash("drawChar"): {  // drawChar 40 20 65 0 1 3
@@ -310,9 +285,6 @@ const char *interpret(char *input, const Config &config) {
       int size = read_int(&rest, error);
       if (error.message) return error.message;
       //@@@ display.drawChar(x, y, c, color, bg, size);
-      if (auto_display) {
-        //@@@ display.display();
-      }
       return ok();
     }
     case hash("getTextBounds"): {  // getTextBounds 40 20 Hello world
