@@ -56,11 +56,61 @@ inline void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, bool fg) {
 inline void fillScreen(bool fg) { tft.fillScreen(fg ? fg_color : bg_color); }
 
 inline void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, bool fg) {
-  tft.drawLine(x0, y0, x1, y1, fg ? fg_color : bg_color);
+  //  tft.drawLine(x0, y0, x1, y1, fg ? fg_color : bg_color);
 }
 
 inline void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, bool fg) {
   tft.drawRect(x, y, w, h, fg ? fg_color : bg_color);
 }
+
+inline void drawCircle(int16_t x, int16_t y, int16_t r, bool fg) {
+  tft.drawCircle(x, y, r, fg ? fg_color : bg_color);
+}
+
+inline void fillCircle(int16_t x, int16_t y, int16_t r, bool fg) {
+  //  tft.fillCircle(x, y, r, fg ? fg_color : bg_color);
+}
+
+inline void drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
+                         int16_t x2, int16_t y2, bool fg) {
+  tft.drawTriangle(x0, y0, x1, y1, x2, y2, fg ? fg_color : bg_color);
+}
+
+inline void fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
+                         int16_t x2, int16_t y2, bool fg) {
+  tft.fillTriangle(x0, y0, x1, y1, x2, y2, fg ? fg_color : bg_color);
+}
+
+inline void drawRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r,
+                          bool fg) {
+  tft.drawRoundRect(x, y, w, h, r, fg ? fg_color : bg_color);
+}
+
+inline void fillRoundRect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r,
+                          bool fg) {
+  tft.fillRoundRect(x, y, w, h, r, fg ? fg_color : bg_color);
+}
+
+inline void drawChar(int16_t x, int16_t y, unsigned char c, bool fg, bool bg,
+                     uint8_t size) {
+  uint16_t fgc = fg ? fg_color : bg_color;
+  uint16_t bgc = bg ? fg_color : bg_color;
+  // tft.drawChar(x, y, c, fgc, bgc, size);
+}
+
+inline void getTextBounds(const char *str, int16_t x, int16_t y, int16_t *x1,
+                          int16_t *y1, uint16_t *w, uint16_t *h) {
+//  tft.getTextBounds(str, x, y, x1, y1, w, h);
+}
+
+inline void setTextSize(uint8_t s, uint8_t sy) {
+      if (sy == -1) {
+        tft.setTextSize(s);
+      } else {
+        tft.setTextSize(s, sy);
+      }
+}
+
+
 
 #endif

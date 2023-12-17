@@ -128,9 +128,9 @@ const char *interpret(char *input, const Config &config) {
     }
 
     case hash("drawPixel"): {  // drawPixel 100 10 1
-      int x = read_int(&rest, error);
-      int y = read_int(&rest, error);
-      int color = read_int(&rest, error);
+      int16_t x = read_int(&rest, error);
+      int16_t y = read_int(&rest, error);
+      int16_t color = read_int(&rest, error);
       if (error.message) return error.message;
       drawPixel(x, y, color);
       return ok();
@@ -151,9 +151,9 @@ const char *interpret(char *input, const Config &config) {
     }
 #endif
     case hash("drawFastVLine"): {  // drawFastVLine 20 20 50 1
-      int x = read_int(&rest, error);
-      int y = read_int(&rest, error);
-      int h = read_int(&rest, error);
+      int16_t x = read_int(&rest, error);
+      int16_t y = read_int(&rest, error);
+      int16_t h = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
       drawFastVLine(x, y, h, color);
@@ -161,9 +161,9 @@ const char *interpret(char *input, const Config &config) {
     }
 
     case hash("drawFastHLine"): {  // drawFastHLine 20 20 50 1
-      int x = read_int(&rest, error);
-      int y = read_int(&rest, error);
-      int w = read_int(&rest, error);
+      int16_t x = read_int(&rest, error);
+      int16_t y = read_int(&rest, error);
+      int16_t w = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
       drawFastHLine(x, y, w, color);
@@ -171,10 +171,10 @@ const char *interpret(char *input, const Config &config) {
     }
 
     case hash("fillRect"): {  // fillRect 20 10 100 50 1
-      int x = read_int(&rest, error);
-      int y = read_int(&rest, error);
-      int w = read_int(&rest, error);
-      int h = read_int(&rest, error);
+      int16_t x = read_int(&rest, error);
+      int16_t y = read_int(&rest, error);
+      int16_t w = read_int(&rest, error);
+      int16_t h = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
       fillRect(x, y, w, h, color);
@@ -189,104 +189,109 @@ const char *interpret(char *input, const Config &config) {
     }
 
     case hash("drawLine"): {  // drawLine 20 5 100 45 1
-      int x0 = read_int(&rest, error);
-      int y0 = read_int(&rest, error);
-      int x1 = read_int(&rest, error);
-      int y1 = read_int(&rest, error);
+      int16_t x0 = read_int(&rest, error);
+      int16_t y0 = read_int(&rest, error);
+      int16_t x1 = read_int(&rest, error);
+      int16_t y1 = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      // drawLine(x0, y0, x1, y1, color);
+      drawLine(x0, y0, x1, y1, color);
       return ok();
     }
 
     case hash("drawRect"): {  // drawRect 20 5 100 50 1
-      int x = read_int(&rest, error);
-      int y = read_int(&rest, error);
-      int w = read_int(&rest, error);
-      int h = read_int(&rest, error);
+      int16_t x = read_int(&rest, error);
+      int16_t y = read_int(&rest, error);
+      int16_t w = read_int(&rest, error);
+      int16_t h = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
       drawRect(x, y, w, h, color);
       return ok();
     }
 
-      /// DONE until here
-
     case hash("drawCircle"): {  // drawCircle 50 30 25 1
-      int x0 = read_int(&rest, error);
-      int y0 = read_int(&rest, error);
-      int r = read_int(&rest, error);
+      int16_t x0 = read_int(&rest, error);
+      int16_t y0 = read_int(&rest, error);
+      int16_t r = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.drawCircle(x0, y0, r, color);
+      drawCircle(x0, y0, r, color);
       return ok();
     }
+
     case hash("fillCircle"): {  // fillCircle 50 30 25 1
-      int x0 = read_int(&rest, error);
-      int y0 = read_int(&rest, error);
-      int r = read_int(&rest, error);
+      int16_t x0 = read_int(&rest, error);
+      int16_t y0 = read_int(&rest, error);
+      int16_t r = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.fillCircle(x0, y0, r, color);
+      fillCircle(x0, y0, r, color);
       return ok();
     }
+
     case hash("drawTriangle"): {  // drawTriangle 10 25 100 5 120 50 1
-      int x0 = read_int(&rest, error);
-      int y0 = read_int(&rest, error);
-      int x1 = read_int(&rest, error);
-      int y1 = read_int(&rest, error);
-      int x2 = read_int(&rest, error);
-      int y2 = read_int(&rest, error);
+      int16_t x0 = read_int(&rest, error);
+      int16_t y0 = read_int(&rest, error);
+      int16_t x1 = read_int(&rest, error);
+      int16_t y1 = read_int(&rest, error);
+      int16_t x2 = read_int(&rest, error);
+      int16_t y2 = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.drawTriangle(x0, y0, x1, y1, x2, y2, color);
+      drawTriangle(x0, y0, x1, y1, x2, y2, color);
       return ok();
     }
+
     case hash("fillTriangle"): {  // fillTriangle 12 27 102 7 122 52 1
-      int x0 = read_int(&rest, error);
-      int y0 = read_int(&rest, error);
-      int x1 = read_int(&rest, error);
-      int y1 = read_int(&rest, error);
-      int x2 = read_int(&rest, error);
-      int y2 = read_int(&rest, error);
+      int16_t x0 = read_int(&rest, error);
+      int16_t y0 = read_int(&rest, error);
+      int16_t x1 = read_int(&rest, error);
+      int16_t y1 = read_int(&rest, error);
+      int16_t x2 = read_int(&rest, error);
+      int16_t y2 = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.fillTriangle(x0, y0, x1, y1, x2, y2, color);
+      fillTriangle(x0, y0, x1, y1, x2, y2, color);
       return ok();
     }
+
     case hash("drawRoundRect"): {  // drawRoundRect 20 5 100 50 12 1
-      int x = read_int(&rest, error);
-      int y = read_int(&rest, error);
-      int w = read_int(&rest, error);
-      int h = read_int(&rest, error);
-      int r = read_int(&rest, error);
+      int16_t x = read_int(&rest, error);
+      int16_t y = read_int(&rest, error);
+      int16_t w = read_int(&rest, error);
+      int16_t h = read_int(&rest, error);
+      int16_t r = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.drawRoundRect(x, y, w, h, r, color);
+      drawRoundRect(x, y, w, h, r, color);
       return ok();
     }
+
     case hash("fillRoundRect"): {  // fillRoundRect 20 5 100 50 12 1
-      int x = read_int(&rest, error);
-      int y = read_int(&rest, error);
-      int w = read_int(&rest, error);
-      int h = read_int(&rest, error);
-      int r = read_int(&rest, error);
+      int16_t x = read_int(&rest, error);
+      int16_t y = read_int(&rest, error);
+      int16_t w = read_int(&rest, error);
+      int16_t h = read_int(&rest, error);
+      int16_t r = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.fillRoundRect(x, y, w, h, r, color);
+      fillRoundRect(x, y, w, h, r, color);
       return ok();
     }
+
     case hash("drawChar"): {  // drawChar 40 20 65 0 1 3
-      int x = read_int(&rest, error);
-      int y = read_int(&rest, error);
+      int16_t x = read_int(&rest, error);
+      int16_t y = read_int(&rest, error);
       unsigned char c = read_int(&rest, error);
       int color = read_int(&rest, error);
       int bg = read_int(&rest, error);
       int size = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.drawChar(x, y, c, color, bg, size);
+      drawChar(x, y, c, color, bg, size);
       return ok();
     }
+
     case hash("getTextBounds"): {  // getTextBounds 40 20 Hello world
       int x = read_int(&rest, error);
       int y = read_int(&rest, error);
@@ -296,21 +301,21 @@ const char *interpret(char *input, const Config &config) {
       int16_t y1;
       uint16_t w;
       uint16_t h;
-      //@@@ display.getTextBounds(str, x, y, &x1, &y1, &w, &h);
+      getTextBounds(str, x, y, &x1, &y1, &w, &h);
       snprintf(buffer, sizeof(buffer) - 1, "%d %d %d %d", x1, y1, w, h);
       return buffer;
     }
+
     case hash("setTextSize"): {  // setTextSize 3  / setTextSize 1 4
       int s = read_int(&rest, error);
       int sy = read_int(&rest, error, true);
       if (error.message) return error.message;
-      if (sy == -1) {
-        //@@@ display.setTextSize(s);
-      } else {
-        //@@@ display.setTextSize(s, sy);
-      }
+      setTextSize(s, sy);
       return ok();
     }
+
+      /// DONE until here
+
     case hash("setCursor"): {  // setCursor 50 5
       int x = read_int(&rest, error);
       int y = read_int(&rest, error);
