@@ -56,7 +56,7 @@ inline void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, bool fg) {
 inline void fillScreen(bool fg) { tft.fillScreen(fg ? fg_color : bg_color); }
 
 inline void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, bool fg) {
-  //  tft.drawLine(x0, y0, x1, y1, fg ? fg_color : bg_color);
+    tft.drawLine(x0, y0, x1, y1, fg ? fg_color : bg_color);
 }
 
 inline void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, bool fg) {
@@ -68,7 +68,7 @@ inline void drawCircle(int16_t x, int16_t y, int16_t r, bool fg) {
 }
 
 inline void fillCircle(int16_t x, int16_t y, int16_t r, bool fg) {
-  //  tft.fillCircle(x, y, r, fg ? fg_color : bg_color);
+    tft.fillCircle(x, y, r, fg ? fg_color : bg_color);
 }
 
 inline void drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
@@ -110,7 +110,5 @@ inline void setTextSize(uint8_t s, uint8_t sy) {
         tft.setTextSize(s, sy);
       }
 }
-
-
 
 #endif
