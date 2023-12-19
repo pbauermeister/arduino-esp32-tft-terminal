@@ -284,17 +284,17 @@ const char *interpret(char *input, const Config &config) {
       int16_t x = read_int(&rest, error);
       int16_t y = read_int(&rest, error);
       unsigned char c = read_int(&rest, error);
-      int color = read_int(&rest, error);
-      int bg = read_int(&rest, error);
-      int size = read_int(&rest, error);
+      bool fg = read_int(&rest, error);
+      bool bg = read_int(&rest, error);
+      int8_t size = read_int(&rest, error);
       if (error.message) return error.message;
-      drawChar(x, y, c, color, bg, size);
+      drawChar(x, y, c, fg, bg, size);
       return ok();
     }
 
     case hash("getTextBounds"): {  // getTextBounds 40 20 Hello world
-      int x = read_int(&rest, error);
-      int y = read_int(&rest, error);
+      int16_t x = read_int(&rest, error);
+      int16_t y = read_int(&rest, error);
       const char *str = read_last_str(&rest, error);
       if (error.message) return error.message;
       int16_t x1;
@@ -314,22 +314,24 @@ const char *interpret(char *input, const Config &config) {
       return ok();
     }
 
-      /// DONE until here
-
     case hash("setCursor"): {  // setCursor 50 5
       int x = read_int(&rest, error);
       int y = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.setCursor(x, y);
+      setCursor(x, y);
       return ok();
     }
-    case hash(
-        "setTextColor"): {  // fillScreen 1  /  setTextColor 1  /  print HELLO
+
+    case hash("setTextColor"): {
+      // fillScreen 1  /  setTextColor 0  /  print HELLO
       int c = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.setTextColor(c);
+      setTextColor(c);
       return ok();
     }
+
+      /// DONE until here
+
     case hash("setTextWrap"): {  // setTextWrap 0
       int w = read_int(&rest, error);
       if (error.message) return error.message;
