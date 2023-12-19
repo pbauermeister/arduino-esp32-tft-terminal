@@ -103,7 +103,7 @@ inline void drawChar(int16_t x, int16_t y, unsigned char c, bool fg, bool bg,
 
 inline void getTextBounds(const char *str, int16_t x, int16_t y, int16_t *x1,
                           int16_t *y1, uint16_t *w, uint16_t *h) {
-  //  tft.getTextBounds(str, x, y, x1, y1, w, h);
+  tft.getTextBounds(str, x, y, x1, y1, w, h);
 }
 
 inline void setTextSize(uint8_t s, uint8_t sy) {
