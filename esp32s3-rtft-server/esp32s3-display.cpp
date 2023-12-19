@@ -383,3 +383,5 @@ void buttons_setup() {
 
 uint16_t fg_color = ST77XX_WHITE;
 uint16_t bg_color = ST77XX_BLACK;
+
+void display_test() {}

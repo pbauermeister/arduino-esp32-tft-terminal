@@ -62,6 +62,14 @@ int read_int(char **rest_p, ErrorHolder &error, bool optional = false,
   return atoi(v);
 }
 
+bool read_bool(char *rest, ErrorHolder &error, bool optional = false,
+               bool defval = true) {
+  if (!rest) return defval;
+  int i = read_int(&rest, error, optional, defval ? 1 : 0);
+  if (error.message) return false;
+  return i != 0;
+}
+
 const char *read_last_str(char **rest_p, ErrorHolder &error) {
   char *v = *rest_p;
   if (v == NULL)
@@ -143,13 +151,13 @@ const char *interpret(char *input, const Config &config) {
       return ok();
     }
 
-#if 0
-    case hash("invertDisplay"): {  // invertDisplay
-      display.invertDisplay();
-      if (auto_display) display.display();
+    case hash("invertDisplay"): {  // invertDisplay / invertDisplay 0
+      bool inv = read_bool(rest, error, true, true);
+      if (error.message) return error.message;
+      invertDisplay(inv);
       return ok();
     }
-#endif
+
     case hash("drawFastVLine"): {  // drawFastVLine 20 20 50 1
       int16_t x = read_int(&rest, error);
       int16_t y = read_int(&rest, error);
@@ -357,8 +365,6 @@ const char *interpret(char *input, const Config &config) {
       return make_resp_buffer(&rest, getCursorY());
     }
 
-      /// DONE until here
-
     case hash("monitorButtons"): {
       // monitorButtons 60000 / monitorButtons 60000 500
       unsigned int during = read_int(&rest, error);
@@ -446,6 +452,10 @@ const char *interpret(char *input, const Config &config) {
         delta = millis() - start;
       } while (delta < during && Serial.available() == 0);
       return (NONE_MESSAGE);
+    }
+
+    case hash("test"): {  //  test
+      display_test();
     }
 
       /*

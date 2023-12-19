@@ -17,6 +17,7 @@ int16_t display_get_height();
 void display_reset();
 void display_clear();
 void display_print(char *text);
+void display_test();
 
 void display_set_cursor(int16_t x, int16_t y);
 
@@ -40,6 +41,8 @@ inline void drawPixel(int16_t x, int16_t y, bool fg) {
 }
 
 inline void setRotation(uint8_t m) { tft.setRotation(m); }
+
+inline void invertDisplay(bool inv) { tft.invertDisplay(!inv); }
 
 inline void drawFastVLine(int16_t x, int16_t y, int16_t h, bool fg) {
   tft.drawFastVLine(x, y, h, fg ? fg_color : bg_color);
@@ -95,7 +98,7 @@ inline void drawChar(int16_t x, int16_t y, unsigned char c, bool fg, bool bg,
                      uint8_t size) {
   uint16_t fgc = fg ? fg_color : bg_color;
   uint16_t bgc = bg ? fg_color : bg_color;
-  // tft.drawChar(x, y, c, fgc, bgc, size);
+  tft.drawChar(x, y, c, fgc, bgc, size);
 }
 
 inline void getTextBounds(const char *str, int16_t x, int16_t y, int16_t *x1,
