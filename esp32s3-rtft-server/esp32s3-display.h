@@ -111,13 +111,18 @@ inline void setTextSize(uint8_t s, uint8_t sy) {
   }
 }
 
-inline void setCursor(int16_t x, int16_t y) {
-  tft.setCursor(x, y);
-}
+inline void setCursor(int16_t x, int16_t y) { tft.setCursor(x, y); }
 
 inline void setTextColor(bool fg) {
   tft.setTextColor(fg ? fg_color : bg_color);
 }
 
+inline void setTextWrap(bool enabled) { tft.setTextWrap(enabled); }
+
+inline uint8_t getRotation() { return tft.getRotation(); }
+
+inline int16_t getCursorX() { return tft.getCursorX(); }
+
+inline int16_t getCursorY() { return tft.getCursorY(); }
 
 #endif

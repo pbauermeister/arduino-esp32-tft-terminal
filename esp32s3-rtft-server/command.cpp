@@ -330,35 +330,34 @@ const char *interpret(char *input, const Config &config) {
       return ok();
     }
 
-      /// DONE until here
-
     case hash("setTextWrap"): {  // setTextWrap 0
       int w = read_int(&rest, error);
       if (error.message) return error.message;
-      //@@@ display.setTextWrap((bool)w);
+      setTextWrap((bool)w);
       return ok();
     }
+
     case hash("width"): {  // width
       return make_resp_buffer(&rest, config.display_width);
     }
+
     case hash("height"): {  // height
       return make_resp_buffer(&rest, config.display_height);
     }
+
     case hash("getRotation"): {  // getRotation
-      return make_resp_buffer(&rest,
-                              0  //@@@ display.getRotation()
-      );
+      return make_resp_buffer(&rest, getRotation());
     }
+
     case hash("getCursorX"): {  // getCursorX
-      return make_resp_buffer(&rest,
-                              0  //@@@ display.getCursorX()
-      );
+      return make_resp_buffer(&rest, getCursorX());
     }
+
     case hash("getCursorY"): {  // getCursorY
-      return make_resp_buffer(&rest,
-                              0  //@@@ display.getCursorY()
-      );
+      return make_resp_buffer(&rest, getCursorY());
     }
+
+      /// DONE until here
 
     case hash("monitorButtons"): {
       // monitorButtons 60000 / monitorButtons 60000 500
