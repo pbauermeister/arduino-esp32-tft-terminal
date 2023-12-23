@@ -471,6 +471,34 @@ uint16_t bg_color = ST77XX_BLACK;
 // test
 
 void display_test(char *buffer) {
+
+  // rotation
+  // width / height
+  // cursor
+
+  // reset home  clearDisplay 
+
+  // setRotation
+
+  // print
+  // drawPixel
+  // drawFastVLine, drawFastHLine
+  // fillScreen
+  // drawLine
+  // drawRect, fillRect
+  // drawCircle, fillCircle
+  // drawTriangle, fillTriangle
+  // drawRoundRect, fillRoundRect
+  // draw char
+
+  // text bounds
+  // text wrap
+  // text color
+  // text size
+
+  // invertDisplay
+
+  // buttons
   while (1) {
     // monitor buttons
     Serial.printf("Monitoring buttons for 30 seconds: ");

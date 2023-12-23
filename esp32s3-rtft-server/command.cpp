@@ -14,7 +14,6 @@ const char *OK_MESSAGE = "OK";
 const char *NONE_MESSAGE = "NONE";
 
 // variables
-bool auto_display = true;
 bool auto_read_buttons = false;
 char buffer[100];
 
@@ -97,36 +96,42 @@ const char *interpret(char *input, const Config &config) {
     case hash("autoDisplay"): {  // autoDisplay 1
       bool on = read_int(&rest, error);
       if (error.message) return error.message;
-      auto_display = on;
+      // auto_display = on;
       return ok();
     }
+
     case hash("autoReadButtons"): {  // autoReadButtons 1
       bool on = read_int(&rest, error);
       if (error.message) return error.message;
       auto_read_buttons = on;
       return ok();
     }
+
     case hash("display"): {  // display
       no_arg(&rest, error);
       if (error.message) return error.message;
       return ok();
     }
+
     case hash("print"): {  // print HELLO\n
       display_print(rest);
       return ok();
     }
+
     case hash("clearDisplay"): {
       no_arg(&rest, error);
       if (error.message) return error.message;
       display_clear();
       return ok();
     }
+
     case hash("home"): {
       no_arg(&rest, error);
       if (error.message) return error.message;
       display_set_cursor(0, 0);
       return ok();
     }
+
     case hash("reset"): {
       no_arg(&rest, error);
       if (error.message) return error.message;
@@ -139,21 +144,21 @@ const char *interpret(char *input, const Config &config) {
       int16_t y = read_int(&rest, error);
       int16_t color = read_int(&rest, error);
       if (error.message) return error.message;
-      drawPixel(x, y, color);
+      draw_pixel(x, y, color);
       return ok();
     }
 
     case hash("setRotation"): {  // setRotation 0 // ..3
       int m = read_int(&rest, error);
       if (error.message) return error.message;
-      setRotation(m);
+      set_rotation(m);
       return ok();
     }
 
     case hash("invertDisplay"): {  // invertDisplay / invertDisplay 0
       bool inv = read_bool(rest, error, true, true);
       if (error.message) return error.message;
-      invertDisplay(inv);
+      invert_display(inv);
       return ok();
     }
 
@@ -163,7 +168,7 @@ const char *interpret(char *input, const Config &config) {
       int16_t h = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      drawFastVLine(x, y, h, color);
+      draw_fast_vline(x, y, h, color);
       return ok();
     }
 
@@ -173,25 +178,14 @@ const char *interpret(char *input, const Config &config) {
       int16_t w = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      drawFastHLine(x, y, w, color);
-      return ok();
-    }
-
-    case hash("fillRect"): {  // fillRect 20 10 100 50 1
-      int16_t x = read_int(&rest, error);
-      int16_t y = read_int(&rest, error);
-      int16_t w = read_int(&rest, error);
-      int16_t h = read_int(&rest, error);
-      int color = read_int(&rest, error);
-      if (error.message) return error.message;
-      fillRect(x, y, w, h, color);
+      draw_fast_hline(x, y, w, color);
       return ok();
     }
 
     case hash("fillScreen"): {  // fillScreen 1
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      fillScreen(color);
+      fill_screen(color);
       return ok();
     }
 
@@ -202,7 +196,7 @@ const char *interpret(char *input, const Config &config) {
       int16_t y1 = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      drawLine(x0, y0, x1, y1, color);
+      draw_line(x0, y0, x1, y1, color);
       return ok();
     }
 
@@ -213,7 +207,18 @@ const char *interpret(char *input, const Config &config) {
       int16_t h = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      drawRect(x, y, w, h, color);
+      draw_rect(x, y, w, h, color);
+      return ok();
+    }
+
+    case hash("fillRect"): {  // fillRect 20 10 100 50 1
+      int16_t x = read_int(&rest, error);
+      int16_t y = read_int(&rest, error);
+      int16_t w = read_int(&rest, error);
+      int16_t h = read_int(&rest, error);
+      int color = read_int(&rest, error);
+      if (error.message) return error.message;
+      fill_rect(x, y, w, h, color);
       return ok();
     }
 
@@ -223,7 +228,7 @@ const char *interpret(char *input, const Config &config) {
       int16_t r = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      drawCircle(x0, y0, r, color);
+      draw_circle(x0, y0, r, color);
       return ok();
     }
 
@@ -233,7 +238,7 @@ const char *interpret(char *input, const Config &config) {
       int16_t r = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      fillCircle(x0, y0, r, color);
+      fill_circle(x0, y0, r, color);
       return ok();
     }
 
@@ -246,7 +251,7 @@ const char *interpret(char *input, const Config &config) {
       int16_t y2 = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      drawTriangle(x0, y0, x1, y1, x2, y2, color);
+      draw_triangle(x0, y0, x1, y1, x2, y2, color);
       return ok();
     }
 
@@ -259,7 +264,7 @@ const char *interpret(char *input, const Config &config) {
       int16_t y2 = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      fillTriangle(x0, y0, x1, y1, x2, y2, color);
+      fill_triangle(x0, y0, x1, y1, x2, y2, color);
       return ok();
     }
 
@@ -271,7 +276,7 @@ const char *interpret(char *input, const Config &config) {
       int16_t r = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      drawRoundRect(x, y, w, h, r, color);
+      draw_round_rect(x, y, w, h, r, color);
       return ok();
     }
 
@@ -283,7 +288,7 @@ const char *interpret(char *input, const Config &config) {
       int16_t r = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      fillRoundRect(x, y, w, h, r, color);
+      fill_round_rect(x, y, w, h, r, color);
       return ok();
     }
 
@@ -295,7 +300,7 @@ const char *interpret(char *input, const Config &config) {
       bool bg = read_int(&rest, error);
       int8_t size = read_int(&rest, error);
       if (error.message) return error.message;
-      drawChar(x, y, c, fg, bg, size);
+      draw_char(x, y, c, fg, bg, size);
       return ok();
     }
 
@@ -308,7 +313,7 @@ const char *interpret(char *input, const Config &config) {
       int16_t y1;
       uint16_t w;
       uint16_t h;
-      getTextBounds(str, x, y, &x1, &y1, &w, &h);
+      get_text_bounds(str, x, y, &x1, &y1, &w, &h);
       snprintf(buffer, sizeof(buffer) - 1, "%d %d %d %d", x1, y1, w, h);
       return buffer;
     }
@@ -317,7 +322,7 @@ const char *interpret(char *input, const Config &config) {
       int s = read_int(&rest, error);
       int sy = read_int(&rest, error, true);
       if (error.message) return error.message;
-      setTextSize(s, sy);
+      set_text_size(s, sy);
       return ok();
     }
 
@@ -325,7 +330,7 @@ const char *interpret(char *input, const Config &config) {
       int x = read_int(&rest, error);
       int y = read_int(&rest, error);
       if (error.message) return error.message;
-      setCursor(x, y);
+      set_cursor(x, y);
       return ok();
     }
 
@@ -333,14 +338,14 @@ const char *interpret(char *input, const Config &config) {
       // fillScreen 1  /  setTextColor 0  /  print HELLO
       int c = read_int(&rest, error);
       if (error.message) return error.message;
-      setTextColor(c);
+      set_text_color(c);
       return ok();
     }
 
     case hash("setTextWrap"): {  // setTextWrap 0
       int w = read_int(&rest, error);
       if (error.message) return error.message;
-      setTextWrap((bool)w);
+      set_text_wrap((bool)w);
       return ok();
     }
 
