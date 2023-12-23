@@ -12,9 +12,6 @@ Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
 void testdrawtext(char *text, uint16_t color);
 
-int16_t display_get_width() { return tft.width(); }
-int16_t display_get_height() { return tft.height(); }
-
 void display_setup(void) {
   // turn on backlite
   pinMode(TFT_BACKLITE, OUTPUT);
@@ -479,13 +476,14 @@ bool test_rgb(uint8_t r, uint8_t g, uint8_t b, uint16_t expected) {
 void display_test(char *buffer) {
   // Toggle un/commenting this line: suceeds/fails to boot
   Serial.println("Starting tests");  // reason? code alignment/parity?
+  Serial.println("Starting tests");  // reason? code alignment/parity?
 
   // Test color conversion
   // ---------------------
   // RGB16 is:
   // MSB rrrr.rggg gggr.rrrr LSB
 
-  Serial.println("RGB conversion:");
+  Serial.println("\nRGB conversion:");
   bool ok = true;
 
   ok = ok && test_rgb(255, 255, 255, 0xffff);
@@ -507,6 +505,28 @@ void display_test(char *buffer) {
     return;
   }
   Serial.println("RGB conversion: success");
+
+  // color palette
+  Serial.println("\nColor palette");
+  uint16_t w = display_get_width();
+  uint16_t h = display_get_height();
+  const uint16_t size = 15 * 2;
+  for (uint16_t x = 0; x < w; ++x) {
+    for (uint16_t y = 0; y < h; ++y) {
+      unsigned int r = (x % size) * 256 / size;
+      unsigned int g = (y % size) * 256 / size;
+      unsigned int b = (((x + y) * 256) / (w + h));
+      set_fg_color(r, g, b);
+      draw_pixel(x, y, true);
+    }
+  }
+
+  // inversion
+  Serial.println("\nInversion");
+  for (int i = 0; i < 4; ++i) {
+    delay(1000);
+    invert_display((i & 1) == 0);
+  }
 
   // rotation
   // width / height
@@ -532,15 +552,11 @@ void display_test(char *buffer) {
   // drawTriangle, fillTriangle
   // drawRoundRect, fillRoundRect
 
-  int r = ST77XX_RED;    // 5
-  int g = ST77XX_GREEN;  // 6
-  int b = ST77XX_BLUE;   // 5
-
   // invertDisplay
 
   // Test buttons
   // ------------
-
+  Serial.println("\nButtons");
   while (1) {
     // monitor buttons
     Serial.printf("Monitoring buttons for 30 seconds: ");

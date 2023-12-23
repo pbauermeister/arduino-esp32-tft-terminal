@@ -11,8 +11,9 @@ extern uint16_t bg_color;
 
 void display_setup(void);
 void display_invert(bool inverted);
-int16_t display_get_width();
-int16_t display_get_height();
+
+inline int16_t display_get_width() { return tft.width(); }
+inline int16_t display_get_height() { return tft.height(); }
 
 void display_reset();
 void display_clear();
@@ -51,6 +52,14 @@ inline uint16_t make_rgb(uint8_t r, uint8_t g, uint8_t b) {
   uint8_t g6 = g >> 2;
   uint8_t b5 = b >> 3;
   return b5 | (g6 << 5) | (r5 << 11);
+}
+
+inline void set_fg_color(uint8_t r, uint8_t g, uint8_t b) {
+  fg_color = make_rgb(r, g, b);
+}
+
+inline void set_bg_color(uint8_t r, uint8_t g, uint8_t b) {
+  bg_color = make_rgb(r, g, b);
 }
 
 inline void set_rotation(uint8_t m) { tft.setRotation(m); }
