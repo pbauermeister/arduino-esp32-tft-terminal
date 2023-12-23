@@ -45,6 +45,14 @@ inline void draw_pixel(int16_t x, int16_t y, bool fg) {
   tft.drawPixel(x, y, fg ? fg_color : bg_color);
 }
 
+inline uint16_t make_rgb(uint8_t r, uint8_t g, uint8_t b) {
+  // convert to 565
+  uint8_t r5 = r >> 3;
+  uint8_t g6 = g >> 2;
+  uint8_t b5 = b >> 3;
+  return b5 | (g6 << 5) | (r5 << 11);
+}
+
 inline void set_rotation(uint8_t m) { tft.setRotation(m); }
 
 inline void invert_display(bool inv) { tft.invertDisplay(!inv); }
@@ -80,34 +88,34 @@ inline void fill_circle(int16_t x, int16_t y, int16_t r, bool fg) {
 }
 
 inline void draw_triangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
-                         int16_t x2, int16_t y2, bool fg) {
+                          int16_t x2, int16_t y2, bool fg) {
   tft.drawTriangle(x0, y0, x1, y1, x2, y2, fg ? fg_color : bg_color);
 }
 
 inline void fill_triangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
-                         int16_t x2, int16_t y2, bool fg) {
+                          int16_t x2, int16_t y2, bool fg) {
   tft.fillTriangle(x0, y0, x1, y1, x2, y2, fg ? fg_color : bg_color);
 }
 
-inline void draw_round_rect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r,
-                          bool fg) {
+inline void draw_round_rect(int16_t x, int16_t y, int16_t w, int16_t h,
+                            int16_t r, bool fg) {
   tft.drawRoundRect(x, y, w, h, r, fg ? fg_color : bg_color);
 }
 
-inline void fill_round_rect(int16_t x, int16_t y, int16_t w, int16_t h, int16_t r,
-                          bool fg) {
+inline void fill_round_rect(int16_t x, int16_t y, int16_t w, int16_t h,
+                            int16_t r, bool fg) {
   tft.fillRoundRect(x, y, w, h, r, fg ? fg_color : bg_color);
 }
 
 inline void draw_char(int16_t x, int16_t y, unsigned char c, bool fg, bool bg,
-                     uint8_t size) {
+                      uint8_t size) {
   uint16_t fgc = fg ? fg_color : bg_color;
   uint16_t bgc = bg ? fg_color : bg_color;
   tft.drawChar(x, y, c, fgc, bgc, size);
 }
 
 inline void get_text_bounds(const char *str, int16_t x, int16_t y, int16_t *x1,
-                          int16_t *y1, uint16_t *w, uint16_t *h) {
+                            int16_t *y1, uint16_t *w, uint16_t *h) {
   tft.getTextBounds(str, x, y, x1, y1, w, h);
 }
 

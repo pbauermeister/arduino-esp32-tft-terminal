@@ -470,17 +470,59 @@ uint16_t bg_color = ST77XX_BLACK;
 ////////////////////////////////////////////////////////////////////////////////
 // test
 
+bool test_rgb(uint8_t r, uint8_t g, uint8_t b, uint16_t expected) {
+  uint16_t rgb = make_rgb(r, g, b);
+  Serial.printf("- %3d / %3d / %3d = %04x =? %04x\n", r, g, b, rgb, expected);
+  return rgb == expected;
+}
+
 void display_test(char *buffer) {
+  // Toggle un/commenting this line: suceeds/fails to boot
+  Serial.println("Starting tests");  // reason? code alignment/parity?
+
+  // Test color conversion
+  // ---------------------
+  // RGB16 is:
+  // MSB rrrr.rggg gggr.rrrr LSB
+
+  Serial.println("RGB conversion:");
+  bool ok = true;
+
+  ok = ok && test_rgb(255, 255, 255, 0xffff);
+  ok = ok && test_rgb(255 - 7, 255 - 3, 255 - 7, 0xffff);
+  ok = ok && test_rgb(255 - 8, 255 - 4, 255 - 8, 0xf7de);
+  ok = ok && test_rgb(255, 0, 0, 0xf800);
+  ok = ok && test_rgb(0, 255, 0, 0x07e0);
+  ok = ok && test_rgb(0, 0, 255, 0x001f);
+
+  ok = ok && test_rgb(8, 4, 8, 0x0821);
+  ok = ok && test_rgb(8 + 7, 4 + 3, 8 + 7, 0x0821);
+  ok = ok && test_rgb(7, 3, 7, 0x0000);
+  ok = ok && test_rgb(8, 0, 0, 0x0800);
+  ok = ok && test_rgb(0, 4, 0, 0x0020);
+  ok = ok && test_rgb(0, 0, 8, 0x0001);
+
+  if (!ok) {
+    Serial.println("RGB conversion: TEST FAILED");
+    return;
+  }
+  Serial.println("RGB conversion: success");
 
   // rotation
   // width / height
   // cursor
 
-  // reset home  clearDisplay 
+  // reset home  clearDisplay
 
   // setRotation
 
   // print
+  // draw char
+  // text bounds
+  // text wrap
+  // text color
+  // text size
+
   // drawPixel
   // drawFastVLine, drawFastHLine
   // fillScreen
@@ -489,16 +531,16 @@ void display_test(char *buffer) {
   // drawCircle, fillCircle
   // drawTriangle, fillTriangle
   // drawRoundRect, fillRoundRect
-  // draw char
 
-  // text bounds
-  // text wrap
-  // text color
-  // text size
+  int r = ST77XX_RED;    // 5
+  int g = ST77XX_GREEN;  // 6
+  int b = ST77XX_BLUE;   // 5
 
   // invertDisplay
 
-  // buttons
+  // Test buttons
+  // ------------
+
   while (1) {
     // monitor buttons
     Serial.printf("Monitoring buttons for 30 seconds: ");
