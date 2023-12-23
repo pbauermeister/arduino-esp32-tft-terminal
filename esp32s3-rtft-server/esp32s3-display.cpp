@@ -381,7 +381,125 @@ void buttons_setup() {
   buttons_flush();  // flush unsynched inverted initial state
 }
 
+static const char *NONE_MESSAGE = "NONE";
+
+const char *wait_buttons(unsigned int during, bool up) {
+  unsigned long start = millis();
+  unsigned int delta;
+  const unsigned long STEP = 10;
+
+  buttons_flush();
+
+  do {
+    if (up) {
+      if (button0_up()) return "A";
+      if (button1_up()) return "B";
+      if (button2_up()) return "C";
+    } else {
+      if (button0_down()) return "A";
+      if (button1_down()) return "B";
+      if (button2_down()) return "C";
+    }
+    delay(STEP);
+    yield();
+    delta = millis() - start;
+  } while (delta < during && Serial.available() == 0);
+  return NONE_MESSAGE;
+}
+
+const char *read_buttons(char *buffer) {
+  buffer[0] = 0;
+  if (button0_pressed()) strcat(buffer, "A");
+  if (button1_pressed()) strcat(buffer, "B");
+  if (button2_pressed()) strcat(buffer, "C");
+  return strlen(buffer) ? buffer : NONE_MESSAGE;
+}
+
+void watch_buttons(unsigned int during, unsigned int interval) {
+  unsigned long start = millis();
+  unsigned int delta;
+  do {
+    if (button0_pressed()) Serial.print('A');
+    if (button1_pressed()) Serial.print('B');
+    if (button2_pressed()) Serial.print('C');
+
+    delay(interval);
+    yield();
+    delta = millis() - start;
+  } while ((!during || delta < during) && Serial.available() == 0);
+}
+
+void print_state(const char *prefix, char letter) {
+  Serial.print(prefix);
+  Serial.print(' ');
+  Serial.println(letter);
+}
+
+void monitor_buttons(unsigned int during, unsigned int interval) {
+  unsigned long start = millis();
+  unsigned int delta;
+  const unsigned long STEP = 10;
+  int every = interval < STEP ? 1 : interval / STEP;
+  int counter = 0;
+  do {
+    if (button0_down()) print_state("DOWN", 'A');
+    if (button0_up()) print_state("UP", 'A');
+    if (button1_down()) print_state("DOWN", 'B');
+    if (button1_up()) print_state("UP", 'B');
+    if (button2_down()) print_state("DOWN", 'C');
+    if (button2_up()) print_state("UP", 'C');
+
+    if (counter % every == 0) {
+      if (button0_pressed()) print_state("PRESSED", 'A');
+      if (button1_pressed()) print_state("PRESSED", 'B');
+      if (button2_pressed()) print_state("PRESSED", 'C');
+    }
+    counter++;
+
+    delay(STEP);
+    yield();
+    delta = millis() - start;
+  } while (delta < during && Serial.available() == 0);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// color
 uint16_t fg_color = ST77XX_WHITE;
 uint16_t bg_color = ST77XX_BLACK;
 
-void display_test() {}
+////////////////////////////////////////////////////////////////////////////////
+// test
+
+void display_test(char *buffer) {
+  while (1) {
+    // monitor buttons
+    Serial.printf("Monitoring buttons for 30 seconds: ");
+    // monitor_buttons(30000, 100);
+    Serial.println("");
+
+    // watch buttons
+    Serial.printf("Watching buttons for 30 seconds: ");
+    watch_buttons(30000, 100);
+    Serial.println("");
+
+    // read buttons
+    Serial.printf("Reading buttons for some time:");
+    for (int i = 0; i < 1000; ++i) {
+      const char *res = read_buttons(buffer);
+      Serial.printf(" %s", res);
+      delay(10);
+    }
+    Serial.println("");
+
+    // wait buttons
+    bool up = true;
+    for (int i = 6; i; --i) {
+      Serial.printf("(%d to go) Waiting 10 seconds for button %s: ", i,
+                    up ? "up" : "down");
+      const char *res = wait_buttons(10 * 1000, up);
+      Serial.println(res);
+      if (!up) wait_buttons(5 * 1000, true);  // if press, wait for release
+      up = !up;
+    }
+  }
+}

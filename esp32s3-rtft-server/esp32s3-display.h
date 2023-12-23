@@ -17,7 +17,7 @@ int16_t display_get_height();
 void display_reset();
 void display_clear();
 void display_print(char *text);
-void display_test();
+void display_test(char *buffer);
 
 void display_set_cursor(int16_t x, int16_t y);
 
@@ -35,6 +35,11 @@ bool button1_pressed();
 bool button2_down();
 bool button2_up();
 bool button2_pressed();
+
+const char *wait_buttons(unsigned int during, bool up);
+const char *read_buttons(char *buffer);
+void watch_buttons(unsigned int during, unsigned int interval);
+void monitor_buttons(unsigned int during, unsigned int interval);
 
 inline void drawPixel(int16_t x, int16_t y, bool fg) {
   tft.drawPixel(x, y, fg ? fg_color : bg_color);
