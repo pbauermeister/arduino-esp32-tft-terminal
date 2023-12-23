@@ -198,7 +198,7 @@ bool test_rgb(uint8_t r, uint8_t g, uint8_t b, uint16_t expected) {
 void display_test(char *buffer) {
   // Toggle un/commenting this line: suceeds/fails to boot
   Serial.println("Starting tests");  // reason? code alignment/parity?
-  //Serial.println("Starting tests");  // reason? code alignment/parity?
+  Serial.println("Starting tests");  // reason? code alignment/parity?
 
   // Test color conversion
   // ---------------------
@@ -233,15 +233,21 @@ void display_test(char *buffer) {
   uint16_t w = display_get_width();
   uint16_t h = display_get_height();
   const uint16_t size = 15 * 2;
+  const bool transactional = true; // both same speed!
+  if (transactional) tft.startWrite();
   for (uint16_t x = 0; x < w; ++x) {
     for (uint16_t y = 0; y < h; ++y) {
       unsigned int r = (x % size) * 256 / size;
       unsigned int g = (y % size) * 256 / size;
       unsigned int b = (((x + y) * 256) / (w + h));
       set_fg_color(r, g, b);
-      draw_pixel(x, y, true);
+      if (transactional)
+        tft.writePixel(x, y, fg_color);
+      else
+        draw_pixel(x, y, true);
     }
   }
+  if (transactional) tft.endWrite();
 
   // inversion
   Serial.println("\nInversion");
