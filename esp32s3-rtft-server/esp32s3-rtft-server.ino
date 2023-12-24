@@ -20,8 +20,8 @@ Config config;
 void setup(void) {
   // TFT
   display_setup();
-  delay(1000);
-  display_reset();
+  //delay(1000);
+  //display_reset();
 
   // Serial
   Serial.begin(115200);

@@ -7,10 +7,15 @@
 #include <Button.h>  // Button by Michael Adams https://github.com/madleech/Button
 #include <SPI.h>
 
+#include "logo.c"
+
 // Use dedicated hardware SPI pins
 Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
-void testdrawtext(char *text, uint16_t color);
+void test_lorem();
+void test_draw_text(char *text, uint16_t color);
+void test_color_palette();
+void test_logo();
 
 void display_setup(void) {
   // turn on backlite
@@ -28,8 +33,13 @@ void display_setup(void) {
   tft.fillScreen(ST77XX_BLACK);
 
   // large block of text
+  //test_color_palette();
+  test_logo();
+}
+
+void test_lorem() {
   tft.fillScreen(ST77XX_BLACK);
-  testdrawtext(
+  test_draw_text(
       "*** [4] MOST HAPPY HACKING *** "
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur "
       "adipiscing ante sed nibh tincidunt feugiat. Maecenas enim massa, "
@@ -40,7 +50,7 @@ void display_setup(void) {
       ST77XX_WHITE);
 }
 
-void testdrawtext(char *text, uint16_t color) {
+void test_draw_text(char *text, uint16_t color) {
   tft.setCursor(0, 0);
   tft.setTextColor(color);
   tft.setTextWrap(true);
@@ -189,6 +199,43 @@ uint16_t bg_color = ST77XX_BLACK;
 ////////////////////////////////////////////////////////////////////////////////
 // test
 
+struct Image {
+  unsigned int width;
+  unsigned int height;
+  unsigned int bytes_per_pixel; /* 2:RGB16, 3:RGB, 4:RGBA */
+  unsigned char pixel_data[240 * 135 * 2 + 1];
+};
+
+//extern Image gimp_image;
+
+void test_logo() {
+  const uint16_t *bitmap = (const uint16_t *)(gimp_image.pixel_data);
+  tft.drawRGBBitmap(0, 0, bitmap, (int16_t)gimp_image.width,
+                    (int16_t)gimp_image.height);
+}
+
+void test_color_palette() {
+  // color palette
+  uint16_t w = display_get_width();
+  uint16_t h = display_get_height();
+  const uint16_t size = 15 * 2;
+  const bool transactional = true;  // both same speed!
+  if (transactional) tft.startWrite();
+  for (uint16_t x = 0; x < w; ++x) {
+    for (uint16_t y = 0; y < h; ++y) {
+      unsigned int r = (x % size) * 256 / size;
+      unsigned int g = (y % size) * 256 / size;
+      unsigned int b = (((x + y) * 256) / (w + h));
+      set_fg_color(r, g, b);
+      if (transactional)
+        tft.writePixel(x, y, fg_color);
+      else
+        draw_pixel(x, y, true);
+    }
+  }
+  if (transactional) tft.endWrite();
+}
+
 bool test_rgb(uint8_t r, uint8_t g, uint8_t b, uint16_t expected) {
   uint16_t rgb = make_rgb(r, g, b);
   Serial.printf("- %3d / %3d / %3d = %04x =? %04x\n", r, g, b, rgb, expected);
@@ -230,24 +277,7 @@ void display_test(char *buffer) {
 
   // color palette
   Serial.println("\nColor palette");
-  uint16_t w = display_get_width();
-  uint16_t h = display_get_height();
-  const uint16_t size = 15 * 2;
-  const bool transactional = true; // both same speed!
-  if (transactional) tft.startWrite();
-  for (uint16_t x = 0; x < w; ++x) {
-    for (uint16_t y = 0; y < h; ++y) {
-      unsigned int r = (x % size) * 256 / size;
-      unsigned int g = (y % size) * 256 / size;
-      unsigned int b = (((x + y) * 256) / (w + h));
-      set_fg_color(r, g, b);
-      if (transactional)
-        tft.writePixel(x, y, fg_color);
-      else
-        draw_pixel(x, y, true);
-    }
-  }
-  if (transactional) tft.endWrite();
+  test_color_palette();
 
   // inversion
   Serial.println("\nInversion");
