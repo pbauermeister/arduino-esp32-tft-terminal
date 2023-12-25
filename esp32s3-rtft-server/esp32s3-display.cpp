@@ -33,7 +33,7 @@ void display_setup(void) {
   tft.fillScreen(ST77XX_BLACK);
 
   // large block of text
-  //test_color_palette();
+  // test_color_palette();
   test_logo();
 }
 
@@ -64,7 +64,7 @@ void display_reset() {
   tft.setTextWrap(true);
 }
 
-void display_clear() { tft.fillScreen(ST77XX_BLACK); }
+void display_clear() { tft.fillScreen(bg_color); }
 
 void display_print(char *text) { tft.print(text); }
 
@@ -206,7 +206,7 @@ struct Image {
   unsigned char pixel_data[240 * 135 * 2 + 1];
 };
 
-//extern Image gimp_image;
+// extern Image gimp_image;
 
 void test_logo() {
   const uint16_t *bitmap = (const uint16_t *)(gimp_image.pixel_data);
@@ -214,12 +214,12 @@ void test_logo() {
                     (int16_t)gimp_image.height);
 }
 
-void test_color_palette() {
+void test_color_palette_draw_pixel() {
   // color palette
   uint16_t w = display_get_width();
   uint16_t h = display_get_height();
   const uint16_t size = 15 * 2;
-  const bool transactional = true;  // both same speed!
+  const bool transactional = false;  // both same speed!
   if (transactional) tft.startWrite();
   for (uint16_t x = 0; x < w; ++x) {
     for (uint16_t y = 0; y < h; ++y) {
@@ -242,8 +242,24 @@ bool test_rgb(uint8_t r, uint8_t g, uint8_t b, uint16_t expected) {
   return rgb == expected;
 }
 
+void next_tile(uint16_t *x, uint16_t *y, uint16_t width, uint16_t height,
+               uint16_t tile_size) {
+  *y += tile_size;
+  if (*y + tile_size > height - tile_size) {
+    *y = 0;
+    *x += tile_size;
+    if (*x + tile_size > width) {
+      *x = 0;
+    }
+  }
+
+  set_fg_color(128, 128, 128);
+  draw_rect(*x, *y, tile_size, tile_size, true);
+}
+
 void display_test(char *buffer) {
   // Toggle un/commenting this line: suceeds/fails to boot
+  Serial.println("Starting tests");  // reason? code alignment/parity?
   Serial.println("Starting tests");  // reason? code alignment/parity?
   Serial.println("Starting tests");  // reason? code alignment/parity?
 
@@ -276,15 +292,8 @@ void display_test(char *buffer) {
   Serial.println("RGB conversion: success");
 
   // color palette
-  Serial.println("\nColor palette");
-  test_color_palette();
-
-  // inversion
-  Serial.println("\nInversion");
-  for (int i = 0; i < 4; ++i) {
-    delay(1000);
-    invert_display((i & 1) == 0);
-  }
+  // Serial.println("\nColor palette");
+  // test_color_palette_draw_pixel();
 
   // rotation
   // width / height
@@ -301,16 +310,137 @@ void display_test(char *buffer) {
   // text color
   // text size
 
-  // drawPixel
-  // drawFastVLine, drawFastHLine
   // fillScreen
+
+  const uint16_t size = 45;
+  uint16_t width = tft.width();
+  uint16_t height = tft.height();
+  uint16_t ox = width;
+  uint16_t oy = height;
+
+  set_bg_color(0, 0, 0);
+  display_clear();
+
+  // drawPixel
+  next_tile(&ox, &oy, width, height, size);
+  for (uint8_t x = 1; x < size - 1; ++x) {
+    for (uint8_t y = 1; y < size - 1; ++y) {
+      uint8_t u = (x - 1) * 256 / (size - 2);
+      uint8_t v = (y - 1) * 256 / (size - 2);
+      set_fg_color(u, v, (u + v) / 2);
+      draw_pixel(ox + x, oy + y, true);
+    }
+  }
+  next_tile(&ox, &oy, width, height, size);
+  for (uint8_t x = 1; x < size - 1; ++x) {
+    for (uint8_t y = 1; y < size - 1; ++y) {
+      uint8_t u = (x - 1) * 256 / (size - 2);
+      uint8_t v = (y - 1) * 256 / (size - 2);
+      set_fg_color(255 - u, 255 - (u + v) / 2, 255 - v);
+      draw_pixel(ox + x, oy + y, true);
+    }
+  }
+
+  // fillCircle
+  next_tile(&ox, &oy, width, height, size);
+  for (uint16_t r = size / 2 - 1; r > 5; r -= 5) {
+    int v = 255 - r * 9;
+    set_fg_color(v, v, v);
+    Serial.printf("v: %d / fg: %04x\n", v, fg_color);
+    fill_circle(ox + size / 2, oy + size / 2, r, true);
+  }
+
+  // drawCircle
+  next_tile(&ox, &oy, width, height, size);
+  uint16_t r = size / 2 - 1;
+  set_fg_color(255, 0, 0);
+  draw_circle(ox + size / 2, oy + size / 2, r, true);
+
+  set_fg_color(0, 255, 0);
+  draw_circle(ox + size / 2, oy + size / 2, r * 2 / 3, true);
+
+  set_fg_color(0, 0, 255);
+  draw_circle(ox + size / 2, oy + size / 2, r / 3, true);
+
   // drawLine
-  // drawRect, fillRect
-  // drawCircle, fillCircle
+  next_tile(&ox, &oy, width, height, size);
+  for (uint16_t i = 0; i < size - 1; i += 4) {
+    int v = i * 5;
+    set_fg_color(255 - v, v, v);
+    draw_line(ox + 1, oy + 1, ox + 1 + i, oy + size - 2, true);
+  }
+
+  // drawFastVLine, drawFastHLine
+  next_tile(&ox, &oy, width, height, size);
+  for (uint16_t i = 0; i < size - 1; i += 5) {
+    int v = i * 5;
+    set_fg_color(255 - v, v, v);
+    draw_fast_vline(ox + 1 + i, oy + 1, i, true);
+
+    set_fg_color(v, v, 255 - v);
+    draw_fast_hline(ox + 1, oy + 1 + i, i, true);
+  }
+
+  // fillRect, drawRect
+  next_tile(&ox, &oy, width, height, size);
+  uint16_t d = 2;
+  set_fg_color(0, 64, 64);
+  for (uint16_t i = 1; i < size; i += d, d *= 2) {
+    if (i + d >= size) d = size - i - 1;
+    fill_rect(ox + i, oy + i, d, d, true);
+    if (i + d == size - 1) break;
+  }
+  d = 2;
+  set_fg_color(255, 0, 0);
+  for (uint16_t i = 1; i < size; i += d, d *= 2) {
+    if (i + d >= size) d = size - i - 1;
+    draw_rect(ox + i, oy + i, d, d, true);
+    if (i + d == size - 1) break;
+  }
+
   // drawTriangle, fillTriangle
+  next_tile(&ox, &oy, width, height, size);
+  for (uint16_t i = 1; i < size; i += size / 5) {
+    int16_t x0 = ox + 1;
+    int16_t y0 = oy + 1 + i / 2;
+    int16_t x1 = ox + 1 + i;
+    int16_t y1 = oy + size - 2;
+    int16_t x2 = i < size / 2 ? ox + size - 2 : ox + size - 1 - (i * 2 - size);
+    int16_t y2 = i < size / 2 ? oy + size - 2 - i * 2 : oy + 1;
+
+    int v = i * 4;
+    set_fg_color(255 - v / 2, 255 - 64 - v / 2, 128 + v / 2);
+    fill_triangle(x0, y0, x1, y1, x2, y2, true);
+
+    set_fg_color(255, 255, 255);
+    draw_triangle(x0, y0, x1, y1, x2, y2, true);
+  }
+
   // drawRoundRect, fillRoundRect
+  next_tile(&ox, &oy, width, height, size);
+  for (uint16_t r = 1, b = 0, a = 0;  //
+       r < size / 2 && a < size / 2;  //
+       r += 2, a += 4, b = !b) {
+    int v = b ? r * 4 : 255 - r * 8;
+
+    int16_t x = ox + 1 + a;
+    int16_t y = oy + 1 + a;
+    int16_t w = size - 2 - a * 2;
+    int16_t h = size - 2 - a * 2;
+
+    set_fg_color(255 - v / 2, 255 - 64 - v / 2, 128 + v / 2);
+    fill_round_rect(x, y, w, h, r, true);
+
+    set_fg_color(255, 255, 255);
+    draw_round_rect(x, y, w, h, r, true);
+  }
 
   // invertDisplay
+  Serial.println("\nInversion");
+  for (int i = 1; i < 10; ++i) {
+    delay(50 * i);
+    invert_display((i & 1) == 0);
+  }
 
   // Test buttons
   // ------------

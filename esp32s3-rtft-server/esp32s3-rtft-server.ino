@@ -16,12 +16,15 @@
 #define BOARD_NAME "ARDUINO_ADAFRUIT_FEATHER_ESP32S3_REVERSE_TFT"
 
 Config config;
+bool inverted = true;
+int counter = 0;
+char input_buffer[100];
 
 void setup(void) {
   // TFT
   display_setup();
-  //delay(1000);
-  //display_reset();
+  // delay(1000);
+  // display_reset();
 
   // Serial
   Serial.begin(115200);
@@ -40,12 +43,8 @@ void setup(void) {
   buttons_setup();
 
   config = Config{display_get_width(), display_get_height()};
+  display_test(input_buffer);
 }
-
-bool inverted = true;
-int counter = 0;
-
-char input_buffer[100];
 
 char *get_input() {
   size_t len = sizeof(input_buffer);
