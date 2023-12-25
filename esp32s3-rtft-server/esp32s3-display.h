@@ -144,10 +144,10 @@ inline void set_text_color(bool fg) {
 
 inline void set_text_wrap(bool enabled) { tft.setTextWrap(enabled); }
 
-inline uint8_t getRotation() { return tft.getRotation(); }
+inline uint8_t get_rotation() { return tft.getRotation(); }
 
-inline int16_t getCursorX() { return tft.getCursorX(); }
+inline int16_t get_cursor_x() { return tft.getCursorX(); }
 
-inline int16_t getCursorY() { return tft.getCursorY(); }
+inline int16_t get_cursor_y() { return tft.getCursorY(); }
 
 #endif

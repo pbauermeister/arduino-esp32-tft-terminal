@@ -358,15 +358,15 @@ const char *interpret(char *input, const Config &config) {
     }
 
     case hash("getRotation"): {  // getRotation
-      return make_resp_buffer(&rest, getRotation());
+      return make_resp_buffer(&rest, get_rotation());
     }
 
     case hash("getCursorX"): {  // getCursorX
-      return make_resp_buffer(&rest, getCursorX());
+      return make_resp_buffer(&rest, get_cursor_x());
     }
 
     case hash("getCursorY"): {  // getCursorY
-      return make_resp_buffer(&rest, getCursorY());
+      return make_resp_buffer(&rest, get_cursor_y());
     }
 
     case hash("monitorButtons"): {
