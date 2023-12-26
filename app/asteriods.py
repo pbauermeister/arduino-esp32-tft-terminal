@@ -1,173 +1,293 @@
-from lib import *
-from app import App
-import time
-import random
-import math
 import datetime
+import math
+import random
+import time
+from dataclasses import dataclass
+
 import config
+from app import App
+from lib import *
+from lib.board import Board
 
 # Parameters
-SHIP_RADIUS      = 6
-SHIP_SPEED       = 2
-SHIP_ROT_STEP    = .2
+SHIP_RADIUS = 6
+SHIP_SPEED = 2
+SHIP_ROT_STEP = .2
 
-SHOT_SPEED       = 5
-SHOT_DELAY       = 2
-SHOT_MAX         = 8
+SHOT_SPEED = 5
+SHOT_DELAY = 2
+SHOT_MAX = 8
 
-ASTEROID_NB_MAX  = 5
-ASTEROID_RADIUS  = 2, 10
+ASTEROID_NB_MAX = 5
+ASTEROID_RADIUS = 2, 10
 ASTEROID_SPLIT_A = .4  # angle
 
-SHIELD_DURATION  = 12
-SHIELD_TIMEOUT   = 20
-SHIELD_RADIUS    = SHIP_RADIUS + 6
+SHIELD_DURATION = 12
+SHIELD_TIMEOUT = 20
+SHIELD_RADIUS = SHIP_RADIUS + 6
 
 PROTECT_DURATION = 16
 
-GAME_OVER_TITLE  = "GAME OVER"
-GAME_OVER_POS    = 0, 0  # to be computed
+GAME_OVER_TITLE = "GAME OVER"
+GAME_OVER_POS = 0, 0  # to be computed
 
-LIVES            = 3
+LIVES = 3
 
-MENU_TIMEOUT     = 30
+MENU_TIMEOUT = 30
 
 # Enums
-MENU_PLAY        = 1
-MENU_NEXT        = 2
-MENU_AUTO        = 3
-MENU_QUIT        = 4
+MENU_PLAY = 1
+MENU_NEXT = 2
+MENU_AUTO = 3
+MENU_QUIT = 4
 
-GOTO_MENU        = 1
-GOTO_NEXT        = 2
-GOTO_QUIT        = 3
+GOTO_MENU = 1
+GOTO_NEXT = 2
+GOTO_QUIT = 3
 
 
-class Asteriods(App):
-    def extra_configurator(self):
-        self.command('setTextWrap 0')
+class Shot:
+    def __init__(self, x: float, y: float, vx: float, vy: float):
+        self.x, self.y, self.vx, self.vy = x, y, vx, vy
 
-    def __init__(self, board):
-        super().__init__(board, auto_read=False,
-                         extra_configurator=self.extra_configurator)
-        global GAME_OVER_POS
-        GAME_OVER_POS = self.get_title_pos(GAME_OVER_TITLE)
+    def move(self) -> None:
+        self.x += self.vx
+        self.y += self.vy
 
-    def _run(self):
-        first = True
-        while True:
-            if config.APP_ASTERIODS_AUTOPLAY and first:
-                auto = True
+    def valid(self) -> bool:
+        return \
+            self.x >= 0 and self.x < config.WIDTH and \
+            self.y >= 0 and self.y < config.HEIGHT
+
+    def add_renders(self, l: list[str]) -> None:
+        l.append(f'drawPixel {self.x} {self.y} 1')
+
+
+class Ship:
+    def __init__(self) -> None:
+        self.x: float = config.WIDTH / 2
+        self.y: float = config.HEIGHT / 2
+        self.a: float = 0
+        self.r: int = SHIP_RADIUS
+        self.v: float = SHIP_SPEED
+        self.shield: int = -SHIELD_TIMEOUT
+        self.i: int = 0
+        self.compute()
+        self.shot_reload = 0
+        self.protect = 0
+        self.aster_crash: Asteroid = None
+        self.reloading = 0
+
+    def move(self, keys: set[str]) -> None:
+        v = self.v
+        # rotate & advance
+        if 'A' in keys and 'B' in keys:
+            if self.shield < -SHIELD_TIMEOUT:
+                self.shield = SHIELD_DURATION
+        elif 'B' in keys:
+            self.a -= SHIP_ROT_STEP
+            v = self.v/2
+        elif 'A' in keys:
+            self.a += SHIP_ROT_STEP
+            v = self.v/2
+        if 'C' in keys:
+            pass  # v = self.v/4
+
+        self.ca, self.sa = math.cos(self.a), math.sin(self.a)
+        self.x += self.ca * v
+        self.y += self.sa * v
+        self.i += 1
+        self.shot_reload += 1
+        self.shield -= 1
+        if self.protect:
+            self.protect -= 1
+
+        # wrap around
+        if self.x < -self.r:
+            self.x = config.WIDTH + self.r
+        if self.x > config.WIDTH + self.r:
+            self.x = -self.r
+        if self.y < -self.r:
+            self.y = config.HEIGHT + self.r
+        if self.y > config.HEIGHT + self.r:
+            self.y = -self.r
+        self.compute()
+
+        if self.shield <= 0 and self.shield > -SHIELD_TIMEOUT:
+            self.reloading = SHIELD_TIMEOUT + self.shield
+        else:
+            self.reloading = 0
+
+    def compute(self) -> None:
+        self.ca, self.sa = math.cos(self.a), math.sin(self.a)
+        self.x0 = int(self.r*self.ca + self.x + .5)
+        self.y0 = int(self.r*self.sa + self.y + .5)
+
+        b = self.a + math.pi * .8
+        self.x1 = int(self.r*math.cos(b) + self.x + .5)
+        self.y1 = int(self.r*math.sin(b) + self.y + .5)
+
+        b = self.a + math.pi * 1.2
+        self.x2 = int(self.r*math.cos(b) + self.x + .5)
+        self.y2 = int(self.r*math.sin(b) + self.y + .5)
+
+    def shoot(self, shots: list[Shot]) -> None:
+        if self.shield > 0:
+            return
+        if self.shot_reload <= SHOT_DELAY:
+            return
+        if len(shots) >= SHOT_MAX:
+            return
+        vx, vy = self.ca*SHOT_SPEED, self.sa*SHOT_SPEED
+        shot = Shot(self.x0, self.y0, vx, vy)
+        shots.append(shot)
+        shot = Shot(self.x0+vx, self.y0+vy, vx, vy)
+        shots.append(shot)
+        self.shot_reload = 0
+
+    def add_renders(self, l: list[str]) -> None:
+        x0 = self.x0
+        y0 = self.y0
+        x1 = self.x1
+        y1 = self.y1
+        x2 = self.x2
+        y2 = self.y2
+        if self.shield > 0 and not self.protect:
+            l.append(f'fillTriangle {x0} {y0} '
+                     f'{x1} {y1} {x2} {y2} 1')
+        else:
+            l.append(f'drawTriangle {x0} {y0} '
+                     f'{x1} {y1} {x2} {y2} 1')
+
+        if self.shield > 0:
+            x = int(self.x + .5)
+            y = int(self.y + .5)
+            if self.protect:
+                r = SHIELD_RADIUS
             else:
-                menu = self.menu()
-                auto = False
-                if menu == MENU_NEXT:
-                    return False
-                elif menu == MENU_QUIT:
-                    return True
-                elif menu == MENU_PLAY:
-                    pass
-                elif menu == MENU_AUTO:
-                    auto = True
-                else:
-                    return False
-            first = False
+                r = SHIELD_RADIUS - 3 + (self.i % 3)*3
+            l.append(f'drawCircle {x} {y} {r} 1')
 
-            go = self.run_once(auto)
-            if go == GOTO_MENU:
-                pass
-            elif go == GOTO_NEXT:
-                return False
-            elif go == GOTO_QUIT:
-                if auto: return True
-                else: continue  # reset during playing returns to menu
+    def add_renders_boom(self, i: int, l: list[str]) -> None:
+        c = i % 2
+        l.append(f'fillTriangle {self.x0} {self.y0} '
+                 f'{self.x1} {self.y1} {self.x2} {self.y2} {c}')
+        l.append(f'drawTriangle {self.x0} {self.y0} '
+                 f'{self.x1} {self.y1} {self.x2} {self.y2} 1')
 
 
-    def menu(self):
-        self.show_header('', 'C:next B:start A:auto')
-        self.command(f'print \\n')
-        self.command(f'print {self.name.upper()} keys:\\n')
-        self.command(f'print   C   fire\\n')
-        self.command(f'print   B   cntr-clockwise\\n')
-        self.command(f'print   A   clockwise\\n')
-        self.command(f'print   A+B shield\\n')
-        self.command(f'print   R   back to menu\\n\\n')
-        #self.command(f'print R:exit  any:start')
-        self.command(f'display')
+class Player:
+    def __init__(self, autoplay_enabled: bool):
+        self.ship = Ship()
+        self.lives = LIVES
+        self.autoplay_enabled = autoplay_enabled
+        self.score = 0
 
-        k = self.board.wait_button_up(MENU_TIMEOUT)
-        if 'R' in k:
-            return MENU_QUIT
-        elif 'C' in k:
-            return MENU_NEXT
-        elif 'A' in k:
-            return MENU_AUTO
-        elif k:
-            return MENU_PLAY
-        return MENU_AUTO
 
-    def run_once(self, autoplay_enabled):
-        game = Game(self, autoplay_enabled)
-        autoplay = Autoplay(game, autoplay_enabled)
-        overs = 0
-        while True:
-            keys = self.board.read_buttons()
-            if 'R' in keys:
-                return GOTO_QUIT
-            if autoplay.enabled and keys:
-                return GOTO_MENU
+@dataclass
+class AsteriodData:
+    xx: float
+    x: float
+    yy: float
+    y: float
+    r: float
+    a: float
+    hit: bool
 
-            # Erase
-            self.command(f'reset')
 
-            # Update / create
-            game.update_asteroids()
-            game.create_asteroid()
-            if autoplay.enabled:
-                game.autoplay(keys)
-            game.update_ship(keys)
-            game.update_shots()
+class Asteroid(AsteriodData):
+    def __init__(self, ship: Ship = None, other: Asteroid = None):
+        if ship is not None:
+            self.init(ship.x, ship.y)
+        elif other is not None:
+            self.xx, self.x = other.xx, other.x
+            self.yy, self.y = other.yy, other.y
+            self.r = other.r
+            self.a = other.a
+            self.hit = other.hit
+        else:
+            self.init(0, 0)
 
-            # Hits
-            game.do_detections()
+    def init(self, ship_x: float, ship_y: float) -> None:
+        r = random.randrange(*ASTEROID_RADIUS)
+        a = random.random() * math.pi + math.pi/2
 
-            # Draw
-            renders = []
-            game.add_renders(renders)
+        p = random.random()
+        x: float
+        y: float
+        if p > .5:
+            x = config.WIDTH + r
+            y = config.HEIGHT * random.random()
+        elif p < .25:
+            y = -r
+            x = config.WIDTH * (.75 + random.random() * .25)
+        else:
+            y = config.HEIGHT + r
+            x = config.WIDTH * (.75 + random.random() * .25)
 
-            # indicators
-            game.add_renders_overlays(renders)
+        if ship_x > config.WIDTH / 2:
+            x = config.WIDTH - x
+            a += math.pi/2
 
-            # show
-            for render in renders:
-                self.command(render)
-            self.command('display')
+        self.xx = self.x = int(x+.5)
+        self.yy = self.y = int(y+.5)
+        self.r = int(r+.5)
+        self.a = a
+        self.hit = False
 
-            now = datetime.datetime.now()
-            if autoplay.enabled and autoplay.until and now > autoplay.until:
-                return GOTO_NEXT  # exit autoplay
+    def move(self, dist: float = None) -> None:
+        if dist is None:
+            v = max((ASTEROID_RADIUS[1] - self.r)**1.5 / 6, .5)
+            dist = v
+        vx = math.cos(self.a) * dist
+        vy = math.sin(self.a) * dist
 
-            # crash
-            crashed = game.handle_crash()
-            if crashed and game.player.lives == 0:
-                time.sleep(1)
-                if autoplay.enabled:
-                    # autoplay crashed
-                    return GOTO_NEXT
-                else:
-                    # player crashed
-                    autoplay.enable()
-                    self.board.wait_no_button()
+        self.xx += vx
+        self.yy += vy
+
+        # wrap around
+        if self.xx < -self.r:
+            self.xx = config.WIDTH + self.r
+        if self.xx > config.WIDTH + self.r:
+            self.xx = -self.r
+        if self.yy < -self.r:
+            self.yy = config.HEIGHT + self.r
+        if self.yy > config.HEIGHT + self.r:
+            self.yy = -self.r
+        self.x = int(self.xx+.5)
+        self.y = int(self.yy+.5)
+
+    def shrink(self) -> None:
+        self.r -= 1
+        if self.r < 4:
+            self.r = 0
+
+    def add_renders(self, l: list[str]) -> None:
+        x = int(self.x + .5)
+        y = int(self.y + .5)
+        r = int(self.r + .5)
+        if self.hit:
+            l.append(f'fillCircle {x} {y} {r} 1')
+        else:
+            l.append(f'drawCircle {x} {y} {r} 1')
+
+    def add_renders_boom(self, i: int, l: list[str]) -> None:
+        x = int(self.x + .5)
+        y = int(self.y + .5)
+        r = int(self.r + .5)
+        c = i % 2
+        l.append(f'fillCircle {x} {y} {r} {c}')
+        l.append(f'drawCircle {x} {y} {r} 1')
 
 
 class Game:
-    def __init__(self, app, autoplay_enabled):
+    def __init__(self, app: App, autoplay_enabled: bool):
         self.app = app
         self.player = Player(autoplay_enabled)
-        self.shots = []
-        self.asteroids = []
+        self.shots: list[Shot] = []
+        self.asteroids: list[Asteroid] = []
 
-    def update_asteroids(self):
+    def update_asteroids(self) -> None:
         for a in self.asteroids:
             a.move()
             if a.hit:
@@ -176,12 +296,14 @@ class Game:
                 if a.r == 0:
                     self.asteroids.remove(a)
 
-    def create_asteroid(self):
-        if random.random() > .05: return
-        if len(self.asteroids) >= ASTEROID_NB_MAX: return
+    def create_asteroid(self) -> None:
+        if random.random() > .05:
+            return
+        if len(self.asteroids) >= ASTEROID_NB_MAX:
+            return
         self.asteroids.append(Asteroid(ship=self.player.ship))
 
-    def autoplay(self, keys):
+    def autoplay(self, keys: set[str]) -> None:
         p = random.random()
         if p < .1:
             if len(self.asteroids):
@@ -198,31 +320,31 @@ class Game:
                 keys.add('B')
                 keys.add('C')
 
-    def update_ship(self, keys):
+    def update_ship(self, keys: set[str]) -> None:
         shoot = 'C' in keys
         self.player.ship.move(keys)
         if shoot:
             self.player.ship.shoot(self.shots)
 
-    def update_shots(self):
+    def update_shots(self) -> None:
         for shot in self.shots:
             shot.move()
             if not shot.valid():
                 self.shots.remove(shot)
 
-    def do_detections(self):
+    def do_detections(self) -> None:
         self.player.score += Detect.hits(self.shots, self.asteroids)
         Detect.collisions(self.asteroids)
         Detect.crash(self.player.ship, self.asteroids)
 
-    def add_renders(self, l):
+    def add_renders(self, l: list[str]) -> None:
         self.player.ship.add_renders(l)
         for a in self.asteroids:
             a.add_renders(l)
         for shot in self.shots:
             shot.add_renders(l)
 
-    def add_renders_overlays(self, l):
+    def add_renders_overlays(self, l: list[str]) -> None:
         x = config.WIDTH - 12
         l.append(f'setCursor {x} {0}')
         l.append(f'print L{self.player.lives}')
@@ -245,8 +367,7 @@ class Game:
             l.append(f'home')
             l.append(f'print {self.player.score:04d}')
 
-
-    def handle_crash(self):
+    def handle_crash(self) -> bool:
         if not self.player.ship.aster_crash:
             return False
         self.boom(self.player.ship, self.player.ship.aster_crash)
@@ -255,14 +376,14 @@ class Game:
             self.player.lives -= 1
         return True
 
-    def boom(self, ship, asteroid):
+    def boom(self, ship: Ship, asteroid: Asteroid) -> None:
         command = self.app.command
         command(f'home')
         command(f'print Boom!')
         i = 0
         for i in range(4):
             i += 1
-            renders = []
+            renders: list[str] = []
             ship.add_renders_boom(i, renders)
             asteroid.add_renders_boom(i, renders)
             for r in renders:
@@ -272,216 +393,9 @@ class Game:
         ship.shield = SHIELD_DURATION
 
 
-class Player:
-    def __init__(self, autoplay_enabled):
-        self.ship = Ship()
-        self.lives = LIVES
-        self.autoplay_enabled = autoplay_enabled
-        self.score = 0
-
-
-class Ship:
-    def __init__(self):
-        self.x = config.WIDTH / 2
-        self.y = config.HEIGHT / 2
-        self.a = 0
-        self.r = SHIP_RADIUS
-        self.v = SHIP_SPEED
-        self.shield = -SHIELD_TIMEOUT
-        self.i = 0
-        self.compute()
-        self.shot_reload = 0
-        self.protect = 0
-        self.aster_crash = None
-        self.reloading = 0
-
-    def move(self, keys):
-        v = self.v
-        # rotate & advance
-        if 'A' in keys and 'B' in keys:
-            if self.shield < -SHIELD_TIMEOUT:
-                self.shield = SHIELD_DURATION
-        elif 'B' in keys:
-            self.a -= SHIP_ROT_STEP
-            v = self.v/2
-        elif 'A' in keys:
-            self.a += SHIP_ROT_STEP
-            v = self.v/2
-        if 'C' in keys:
-            pass #v = self.v/4
-
-        self.ca, self.sa = math.cos(self.a), math.sin(self.a)
-        self.x += self.ca * v
-        self.y += self.sa * v
-        self.i += 1
-        self.shot_reload += 1
-        self.shield -= 1
-        if self.protect:
-            self.protect -= 1
-
-        # wrap around
-        if self.x < -self.r:
-            self.x = config.WIDTH + self.r
-        if self.x > config.WIDTH + self.r:
-            self.x = -self.r
-        if self.y < -self.r:
-            self.y = config.HEIGHT + self.r
-        if self.y > config.HEIGHT + self.r:
-            self.y = -self.r
-        self.compute()
-
-        if self.shield <=0 and self.shield > -SHIELD_TIMEOUT:
-            self.reloading = SHIELD_TIMEOUT + self.shield
-        else:
-            self.reloading = 0
-
-    def compute(self):
-        self.ca, self.sa = math.cos(self.a), math.sin(self.a)
-        self.x0 = int(self.r*self.ca + self.x +.5)
-        self.y0 = int(self.r*self.sa + self.y +.5)
-
-        b = self.a + math.pi * .8
-        self.x1 = int(self.r*math.cos(b) + self.x +.5)
-        self.y1 = int(self.r*math.sin(b) + self.y +.5)
-
-        b = self.a + math.pi * 1.2
-        self.x2 = int(self.r*math.cos(b) + self.x +.5)
-        self.y2 = int(self.r*math.sin(b) + self.y +.5)
-
-    def shoot(self, shots):
-        if self.shield > 0:
-            return
-        if self.shot_reload <= SHOT_DELAY:
-            return
-        if len(shots) >= SHOT_MAX:
-            return
-        vx, vy = self.ca*SHOT_SPEED, self.sa*SHOT_SPEED
-        shot = Shot(self.x0, self.y0, vx, vy)
-        shots.append(shot)
-        shot = Shot(self.x0+vx, self.y0+vy, vx, vy)
-        shots.append(shot)
-        self.shot_reload = 0
-
-    def add_renders(self, l):
-        if self.shield > 0 and not self.protect:
-            l.append(f'fillTriangle {self.x0} {self.y0} '
-                     f'{self.x1} {self.y1} {self.x2} {self.y2} 1')
-        else:
-            l.append(f'drawTriangle {self.x0} {self.y0} '
-                     f'{self.x1} {self.y1} {self.x2} {self.y2} 1')
-
-        if self.shield > 0:
-            if self.protect:
-                r = SHIELD_RADIUS
-            else:
-                r = SHIELD_RADIUS -3 + (self.i%3)*3
-            l.append(f'drawCircle {self.x} {self.y} {r} 1')
-
-    def add_renders_boom(self, i, l):
-        c = i % 2
-        l.append(f'fillTriangle {self.x0} {self.y0} '
-                 f'{self.x1} {self.y1} {self.x2} {self.y2} {c}')
-        l.append(f'drawTriangle {self.x0} {self.y0} '
-                 f'{self.x1} {self.y1} {self.x2} {self.y2} 1')
-
-
-class Shot:
-    def __init__(self, x, y, vx, vy):
-        self.x, self.y, self.vx, self.vy = x, y, vx, vy
-
-    def move(self):
-        self.x += self.vx
-        self.y += self.vy
-
-    def valid(self):
-        return \
-            self.x >=0 and self.x < config.WIDTH and \
-            self.y >=0 and self.y <config.HEIGHT
-
-    def add_renders(self, l):
-        l.append(f'drawPixel {self.x} {self.y} 1')
-
-
-class Asteroid:
-    def __init__(self, ship=None, other=None):
-        if ship is not None:
-            self.init(ship.x, ship.y)
-        elif other is not None:
-            self.xx, self.x = other.xx, other.x
-            self.yy, self.y = other.yy, other.y
-            self.r = other.r
-            self.a = other.a
-            self.hit = other.hit
-        else:
-            self.init(0, 0)
-
-    def init(self, ship_x, ship_y):
-        r = random.randrange(*ASTEROID_RADIUS)
-        a = random.random() * math.pi + math.pi/2
-
-        p = random.random()
-        if p > .5:
-            x = config.WIDTH + r
-            y = config.HEIGHT * random.random()
-        elif p < .25:
-            y = -r
-            x = config.WIDTH * (.75 + random.random() * .25)
-        else:
-            y = config.HEIGHT + r
-            x = config.WIDTH * (.75 + random.random() * .25)
-
-        if ship_x > config.WIDTH / 2:
-            x = config.WIDTH - x
-            a += math.pi/2
-
-        self.xx = self.x = int(x+.5)
-        self.yy = self.y = int(y+.5)
-        self.r = int(r+.5)
-        self.a = a
-        self.hit = False
-
-    def move(self, dist=None):
-        if not dist:
-            v = max((ASTEROID_RADIUS[1] - self.r)**1.5 / 6, .5)
-            dist = v
-        vx = math.cos(self.a) * dist
-        vy = math.sin(self.a) * dist
-
-        self.xx += vx
-        self.yy += vy
-
-        # wrap around
-        if self.xx < -self.r:
-            self.xx = config.WIDTH + self.r
-        if self.xx > config.WIDTH + self.r:
-            self.xx = -self.r
-        if self.yy < -self.r:
-            self.yy = config.HEIGHT + self.r
-        if self.yy > config.HEIGHT + self.r:
-            self.yy = -self.r
-        self.x = int(self.xx+.5)
-        self.y = int(self.yy+.5)
-
-    def shrink(self):
-        self.r -= 1
-        if self.r < 4:
-            self.r = 0
-
-    def add_renders(self, l):
-        if self.hit:
-            l.append(f'fillCircle {self.x} {self.y} {self.r} 1')
-        else:
-            l.append(f'drawCircle {self.x} {self.y} {self.r} 1')
-
-    def add_renders_boom(self, i, l):
-        c = i%2
-        l.append(f'fillCircle {self.x} {self.y} {self.r} {c}')
-        l.append(f'drawCircle {self.x} {self.y} {self.r} 1')
-
-
 class Detect:
     @staticmethod
-    def hits(shots, asteroids):
+    def hits(shots: list[Shot], asteroids: list[Asteroid]) -> int:
         score = 0
         if not shots or not asteroids:
             return 0
@@ -511,7 +425,7 @@ class Detect:
         return score
 
     @staticmethod
-    def crash(ship, asteroids):
+    def crash(ship: Ship, asteroids: list[Asteroid]) -> None:
         if ship.protect:
             return
 
@@ -525,56 +439,177 @@ class Detect:
             if (Detect.hit(ship.x0, ship.y0, a,  .9) or
                 Detect.hit(ship.x1, ship.y1, a,  .9) or
                 Detect.hit(ship.x2, ship.y2, a,  .9) or
-                Detect.hit(ship.x,  ship.y,  a, 1.1) ):
+                    Detect.hit(ship.x,  ship.y,  a, 1.1)):
                 a.hit = True
                 ship.aster_crash = a
         return
 
     @staticmethod
-    def collisions(asteroids):
+    def collisions(asteroids: list[Asteroid]) -> None:
         pairs = {}
         for a in asteroids:
             for b in asteroids:
-                if a is b: continue
-                if (a, b) in pairs: continue
+                if a is b:
+                    continue
+                if (a, b) in pairs:
+                    continue
                 pairs[(a, b)] = True
                 if Detect.touch(a.x, a.y, b.x, b.y, a.r, b.r):
-                    a.hit=True
-                    b.hit=True
+                    a.hit = True
+                    b.hit = True
 
     @staticmethod
-    def touch(x0, y0, x1, y1, r0, r1):
+    def touch(x0: float, y0: float, x1: float, y1: float, r0: float, r1: float) -> bool:
         dx = (x0 - x1)**2
         dy = (y0 - y1)**2
         rr = (dx + dy)
         return rr < (r0 + r1)**2
 
     @staticmethod
-    def hit(x, y, asteroid, factor):
+    def hit(x: float, y: float, asteroid: Asteroid, factor: float) -> bool:
         a = asteroid
         dx = (a.x - x)**2
         dy = (a.y - y)**2
         r2 = (dx + dy) * factor
         return r2 < a.r**2
 
+
 class Autoplay:
-    def __init__(self, game, enabled):
+    def __init__(self, game: Game, enabled: bool):
         self.game = game
         self.enabled = enabled
-        self.start = None
-        self.until = None
+        self.start: datetime.datetime = None
+        self.until: datetime.datetime = None
         if enabled:
             self.enable()
 
-    def enable(self):
+    def enable(self) -> None:
         self.enabled = True
         self.start = datetime.datetime.now()
         ap_timeout = config.APP_ASTERIODS_AUTOPLAY_TIMEOUT
         if ap_timeout:
             self.until = self.start + \
-                         datetime.timedelta(seconds=ap_timeout)
+                datetime.timedelta(seconds=ap_timeout)
         else:
             self.until = None
-        self.game.player.autoplay_enabled =True
+        self.game.player.autoplay_enabled = True
         self.game.player.score = 0
         self.game.player.lives = LIVES
+
+
+class Asteriods(App):
+    def extra_configurator(self) -> None:
+        self.command('setTextWrap 0')
+
+    def __init__(self, board: Board):
+        super().__init__(board, auto_read=False,
+                         extra_configurator=self.extra_configurator)
+        global GAME_OVER_POS
+        GAME_OVER_POS = self.get_title_pos(GAME_OVER_TITLE)
+
+    def _run(self) -> bool:
+        first = True
+        while True:
+            if config.APP_ASTERIODS_AUTOPLAY and first:
+                auto = True
+            else:
+                menu = self.menu()
+                auto = False
+                if menu == MENU_NEXT:
+                    return False
+                elif menu == MENU_QUIT:
+                    return True
+                elif menu == MENU_PLAY:
+                    pass
+                elif menu == MENU_AUTO:
+                    auto = True
+                else:
+                    return False
+            first = False
+
+            go = self.run_once(auto)
+            if go == GOTO_MENU:
+                pass
+            elif go == GOTO_NEXT:
+                return False
+            elif go == GOTO_QUIT:
+                if auto:
+                    return True
+                else:
+                    continue  # reset during playing returns to menu
+
+    def menu(self) -> int:
+        self.show_header('', 'C:next B:start A:auto')
+        self.command(f'print \\n')
+        self.command(f'print {self.name.upper()} keys:\\n')
+        self.command(f'print   C   fire\\n')
+        self.command(f'print   B   cntr-clockwise\\n')
+        self.command(f'print   A   clockwise\\n')
+        self.command(f'print   A+B shield\\n')
+        self.command(f'print   R   back to menu\\n\\n')
+        # self.command(f'print R:exit  any:start')
+        self.command(f'display')
+
+        k = self.board.wait_button_up(MENU_TIMEOUT)
+        if 'R' in k:
+            return MENU_QUIT
+        elif 'C' in k:
+            return MENU_NEXT
+        elif 'A' in k:
+            return MENU_AUTO
+        elif k:
+            return MENU_PLAY
+        return MENU_AUTO
+
+    def run_once(self, autoplay_enabled: bool) -> int:
+        game = Game(self, autoplay_enabled)
+        autoplay = Autoplay(game, autoplay_enabled)
+        overs = 0
+        while True:
+            keys = self.board.read_buttons()
+            if 'R' in keys:
+                return GOTO_QUIT
+            if autoplay.enabled and keys:
+                return GOTO_MENU
+
+            # Erase
+            self.command(f'reset')
+
+            # Update / create
+            game.update_asteroids()
+            game.create_asteroid()
+            if autoplay.enabled:
+                game.autoplay(keys)
+            game.update_ship(keys)
+            game.update_shots()
+
+            # Hits
+            game.do_detections()
+
+            # Draw
+            renders: list[str] = []
+            game.add_renders(renders)
+
+            # indicators
+            game.add_renders_overlays(renders)
+
+            # show
+            for render in renders:
+                self.command(render)
+            self.command('display')
+
+            now = datetime.datetime.now()
+            if autoplay.enabled and autoplay.until and now > autoplay.until:
+                return GOTO_NEXT  # exit autoplay
+
+            # crash
+            crashed = game.handle_crash()
+            if crashed and game.player.lives == 0:
+                time.sleep(1)
+                if autoplay.enabled:
+                    # autoplay crashed
+                    return GOTO_NEXT
+                else:
+                    # player crashed
+                    autoplay.enable()
+                    self.board.wait_no_button()

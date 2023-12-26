@@ -4,23 +4,23 @@
 SCREEN_ROTATION = 3
 
 # Will be dynamically updated by asking board, meanwile invalid:
-WIDTH = None
-HEIGHT = None
+WIDTH: int = None
+HEIGHT: int = None
 
-COLUMNS = None
-ROWS = None
+COLUMNS: int = None
+ROWS: int = None
 
 # Communication setup
-SERIAL_PORT = "/dev/ttyUSB0"  # adapt dep on your OS
-SERIAL_BAUDRATE = 57600  # default baudrate of oled-server.ino
-SERIAL_ERROR_RETRY_DELAY = 15
+SERIAL_PORT_BASE = "/dev/ttyACM"  # adapt dep on your OS
+SERIAL_BAUDRATE = 115200  # default baudrate of oled-server.ino
+SERIAL_ERROR_RETRY_DELAY = 5
 
 # Misc
 DEBUG = False
 
 MONITOR_SKIP = False
 MONITOR_HOST_TIMEOUT = 8
-MONITOR_CPU_TIMEOUT  = 60*60
+MONITOR_CPU_TIMEOUT = 60*60
 MONITOR_CPU_INTERVAL = 2
 MONITOR_ONLY = False  # if False, will show demos after monitors
 MONITOR_SSH_AUTHORITY = ''

@@ -1,11 +1,14 @@
 import argparse
+from typing import Any, Type
 
 import config
+from app import App
 
 APPS_DEMO_TIMEOUT = 5
 
+
 class Arg:
-    def __init__(self, name, value):
+    def __init__(self, name: str, value: Any) -> None:
         self.name = name
         self.value = value
         self.type = value.__class__
@@ -13,7 +16,7 @@ class Arg:
         self.as_arg = name.lower()
 
 
-def get_config_args_specs():
+def get_config_args_specs() -> list[Arg]:
     """Scan config module and find declared values, to be overriden by
     commandline options.
 
@@ -25,7 +28,7 @@ def get_config_args_specs():
     return args
 
 
-def get_args(*apps):
+def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]:
     specs = get_config_args_specs()
 
     parser = argparse.ArgumentParser(description=__doc__)
@@ -37,7 +40,7 @@ def get_args(*apps):
                         action='store_true')
 
     for spec in specs:
-        if spec.type==bool:
+        if spec.type == bool:
             parser.add_argument(spec.as_flag,
                                 action='store_true')
         else:
@@ -47,7 +50,7 @@ def get_args(*apps):
                                 help=f'default: {spec.value}')
     existing = [spec.as_flag for spec in specs]
 
-    names = sorted([a.__name__.lower() for a in apps])
+    names = sorted([a.__class__.__name__.lower() for a in apps])
     for name in names:
         flag = f'--{name}-only'
         if flag not in existing:
@@ -59,7 +62,7 @@ def get_args(*apps):
 
     only_apps = set()
     for app in apps:
-        k = f'{app.__name__.lower()}_only'
+        k = f'{app.__class__.__name__.lower()}_only'
         if args.__dict__[k]:
             only_apps.add(app)
 
@@ -79,7 +82,7 @@ def get_args(*apps):
 
         args.app_asteriods_autoplay = True
 
-    for	spec in	specs:
+    for spec in specs:
         val = args.__dict__[spec.as_arg]
         if val is not None:
             config.__setattr__(spec.name, val)

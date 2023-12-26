@@ -1,48 +1,53 @@
-import config
-import serial  # pip3 install pyserial
+import datetime
 import time
+from typing import Any, Callable
 
+import serial  # pip3 install pyserial
+
+import config
 from lib import *
+
+from .channel import Channel
 
 
 class Board:
-    def __init__(self, channel):
+    def __init__(self, channel: Channel) -> None:
         self.chan = channel
-        self.configure_callback = None
-        self.comm_error_handler = None
+        self.configure_callback: Callable[[], None] = None
+        self.comm_error_handler: Callable[[], None] = None
         self.configured = False
         self.boots = 0
-        self.last_command = None
+        self.last_command: str = None
         self.reading_buttons = False
-        self.auto_buttons = set()
+        self.auto_buttons: set[str] = set()
         self.auto_buttons_boots = 0
         self.read_buttons_boots = 0
 
         self.chan.open()
         self.chan.set_callback('READY', self.on_ready)
 
-    def set_configure_callback(self, configure_callback):
+    def set_configure_callback(self, configure_callback: Callable[[], None]) -> None:
         self.configure_callback = configure_callback
 
-    def set_comm_error_handler(self, handler):
+    def set_comm_error_handler(self, handler: Callable[[], None]) -> None:
         self.comm_error_handler = handler
 
-    def close(self):
+    def close(self) -> None:
         self.chan.close()
 
-    def reopen(self):
+    def reopen(self) -> None:
         self.chan.open()
 
-    def command(self, cmd, ignore_error=False):
-        # Since the board may be rebooted in the middle of a command,
-        # it is okay to retry once
-        try:
-            return self._command(cmd, ignore_error)
-        except:
-            self.chan.clear()
-            return self._command(cmd, ignore_error)
+    # def command(self, cmd, ignore_error=False):
+    #     # Since the board may be rebooted in the middle of a command,
+    #     # it is okay to retry once
+    #     try:
+    #         return self._command(cmd, ignore_error)
+    #     except:
+    #         self.chan.clear()
+    #         return self._command(cmd, ignore_error)
 
-    def command(self, cmd, ignore_error=False):
+    def command(self, cmd: str, ignore_error: bool = False) -> str:
         delay = config.SERIAL_ERROR_RETRY_DELAY
         while True:
             try:
@@ -51,7 +56,7 @@ class Board:
                 print('Serial error:', e)
                 self.close()
                 while True:
-                    print('-- will retry in', delay)
+                    print('-- Board.command will retry in', delay)
                     time.sleep(delay)
                     try:
                         self.reopen()
@@ -64,7 +69,7 @@ class Board:
                     except ArduinoCommExceptions as e:
                         print('Error:', e)
 
-    def _command(self, cmd, ignore_error=False):
+    def _command(self, cmd: str, ignore_error: bool = False) -> str:
         self._command_send(cmd)
         try:
             return self._command_response()
@@ -73,12 +78,12 @@ class Board:
                 return ''
             raise
 
-    def _command_send(self, cmd):
+    def _command_send(self, cmd: str) -> None:
         assert not self.reading_buttons
         self.chan.write(cmd)
         self.last_command = cmd
 
-    def _command_response(self):
+    def _command_response(self) -> str:
         response = self.chan.read()
         if not config.DEBUG:
             if response.startswith(ERROR) or response.startswith(UNKNOWN):
@@ -91,19 +96,19 @@ class Board:
                 self.auto_buttons |= set(b)
         return response
 
-    def on_ready(self, _=None):
+    def on_ready(self, _: Any = None) -> None:
         time.sleep(0.2)
         self.boots += 1
         self.configure()
 
-    def configure(self):
+    def configure(self) -> None:
         # normally called by callback
         try:
             self._configure()
         except:
             self._configure()
 
-    def _configure(self):
+    def _configure(self) -> None:
         time.sleep(0.1)
         self.chan.clear()
         self.command(f'setRotation {config.SCREEN_ROTATION}')
@@ -125,14 +130,14 @@ class Board:
             self.configure_callback()
         self.configured = True
 
-    def wait_configured(self):
+    def wait_configured(self) -> None:
         while True:
             if self.configured:
                 return
             self.chan.read()
             time.sleep(0.5)
 
-    def begin_read_buttons(self):
+    def begin_read_buttons(self) -> None:
         assert not self.reading_buttons
         if config.DEBUG:
             print('* begin_read_buttons')
@@ -140,7 +145,7 @@ class Board:
         self.reading_buttons = True
         self.auto_buttons_boots = self.boots
 
-    def end_read_buttons(self):
+    def end_read_buttons(self) -> set[str]:
         assert self.reading_buttons
         if config.DEBUG:
             print('* end_read_buttons')
@@ -148,6 +153,7 @@ class Board:
         self._command_send('width')
         resp = self._command_response()
         self.chan.flush_in()
+        val: set[str]
         if resp == NONE:
             val = set()
         else:
@@ -158,7 +164,7 @@ class Board:
             print('* end_read_buttons done:', val)
         return val
 
-    def wait_no_button(self, timeout=None):
+    def wait_no_button(self, timeout: int = None) -> bool:
         self.chan.flush_in()
         if timeout is None:
             while self.command('readButtons', ignore_error=True) != NONE:
@@ -169,22 +175,23 @@ class Board:
             while datetime.datetime.now() < until:
                 if self.command('readButtons', ignore_error=True) != NONE:
                     break
+        return False
 
-    def begin_auto_read_buttons(self):
+    def begin_auto_read_buttons(self) -> None:
         self.command('autoReadButtons 1')
         if config.DEBUG:
             print('* begin_auto_read_buttons')
         self.auto_buttons = set()
         self.auto_buttons_boots = self.boots
 
-    def auto_read_buttons(self):
+    def auto_read_buttons(self) -> set[str]:
         if self.boots > self.auto_buttons_boots:
             self.auto_buttons.add('R')
         b = self.auto_buttons
         self.auto_buttons = set()
         return b
 
-    def end_auto_read_buttons(self):
+    def end_auto_read_buttons(self) -> set[str]:
         self.command('autoReadButtons 0')
         self.chan.flush_in()
         if config.DEBUG:
@@ -193,34 +200,36 @@ class Board:
             self.auto_buttons.add('R')
         return self.auto_buttons
 
-    def clear_buttons(self):
+    def clear_buttons(self) -> None:
         self.chan.flush_in()
         self.read_buttons_boots = self.boots
 
-    def wait_button_up(self, timeout=None):
+    def wait_button_up(self, timeout: int = None) -> set[str]:
         return self.wait_button(timeout, wait_released=True)
 
-    def wait_button(self, timeout=None, wait_released=False):
+    def wait_button(self, timeout: int = None, wait_released: bool = False) -> set[str]:
         self.wait_no_button()
-        b = set()
+        b: set[str] = set()
         with until(timeout) as done:
             while not done():
                 b = self.read_buttons()
-                if b: break
+                if b:
+                    break
         if wait_released:
             while True:
                 b2 = self.read_buttons()
-                if not b2: break
+                if not b2:
+                    break
                 b |= b2
         return b
 
-    def read_buttons(self, flush=False):
+    def read_buttons(self, flush: bool = False) -> set[str]:
         if flush:
             self.chan.flush_in()
             self.read_buttons_boots = self.boots
 
         ans = self.command('readButtons', ignore_error=True)
-        b = set()
+        b: set[str] = set()
         if ans != NONE:
             for c in ans:
                 if c in 'ABC':

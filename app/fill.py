@@ -2,16 +2,17 @@ import math
 import random
 import time
 
-from lib import *
 import config
-from app import App, TimeEscaper, Bouncer
+from app import App, Bouncer, TimeEscaper
+from lib import *
+from lib.board import Board
 
 
 class Fill(App):
-    def __init__(self, board):
+    def __init__(self, board: Board):
         super().__init__(board, auto_read=True)
 
-    def _run(self):
+    def _run(self) -> None:
         escaper = TimeEscaper(self)
         alt = True
         while True:
@@ -22,8 +23,10 @@ class Fill(App):
                 c = chr(i)
                 self.command(f'print {c}')
             self.command('display')
-            if self.board.auto_read_buttons(): break
-            if escaper.check(): break
+            if self.board.auto_read_buttons():
+                break
+            if escaper.check():
+                break
             time.sleep(.5)
             alt = not alt
 

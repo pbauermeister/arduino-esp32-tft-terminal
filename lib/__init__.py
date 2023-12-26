@@ -1,30 +1,35 @@
 import contextlib
 import datetime
-import serial  # pip3 install pyserial
 import sys
 import termios
+from typing import Any, Callable, Generator
 
-READY   = 'READY'
-ASCII   = 'ASCII'
-OK      = 'OK'
-NONE    = 'NONE'
-ERROR   = 'ERROR'
+import serial  # pip3 install pyserial
+
+from .board import Board
+
+READY = 'READY'
+ASCII = 'ASCII'
+OK = 'OK'
+NONE = 'NONE'
+ERROR = 'ERROR'
 UNKNOWN = 'UNKNOWN'
 
 
 @contextlib.contextmanager
-def until(timeout=None):
+def until(timeout: int = None) -> Generator[Callable[[], bool], None, None]:
     start = datetime.datetime.now()
     if timeout is not None:
         until = start + datetime.timedelta(seconds=timeout)
-    def done():
+
+    def done() -> bool:
         if timeout is None:
             return False
         return datetime.datetime.now() >= until
     yield done
 
 
-def chunkize(str, n):
+def chunkize(str: str, n: int) -> list[str]:
     return [str[i:i+n] for i in range(0, len(str), n)]
 
 
@@ -32,7 +37,7 @@ class RebootedException(Exception):
     pass
 
 
-def fatal(board, msg):
+def fatal(board: Board, msg: str) -> None:
     print(msg)
     board.command('home')
     board.command('setTextSize 1')

@@ -1,49 +1,61 @@
 import math
 import random
+from dataclasses import dataclass
 
-from lib import *
 import config
-from app import App, TimeEscaper, Bouncer
+from app import App, Bouncer, TimeEscaper
+from lib import *
+from lib.board import Board
 
 NB_LINES = 8
 REDRAW = False  # True looks cleaner but is slower
 
 
+@dataclass
+class Segment:
+    ax: int
+    ay: int
+    bx: int
+    by: int
+
+
 class Quix(App):
-    def __init__(self, board):
+    def __init__(self, board: Board):
         super().__init__(board, auto_read=True)
 
-    def _run(self):
+    def _run(self) -> None:
         a = Bouncer(2, -1, -1)
-        b = Bouncer(2,  1 , 1)
+        b = Bouncer(2,  1, 1)
 
-        history = [None] * NB_LINES
+        history: list[Segment] = [None] * NB_LINES
         i = 0
 
         escaper = TimeEscaper(self)
         while True:
-            if self.board.auto_read_buttons(): break
+            if self.board.auto_read_buttons():
+                break
 
             a.advance()
             b.advance()
 
-            history[i] = (a.x, a.y, b.x, b.y)
+            history[i] = Segment(a.x, a.y, b.x, b.y)
             i = (i+1) % NB_LINES
             last = history[i]
             if last:
-                ax, ay, bx, by = last
-                self.command(f'drawLine {ax} {ay} {bx} {by} 0')
+                self.command(
+                    f'drawLine {last.ax} {last.ay} {last.bx} {last.by} 0')
 
             if REDRAW:
                 for j in range(NB_LINES-1):
                     last = history[(i-1-j) % NB_LINES]
                     if last:
-                        ax, ay, bx, by = last
-                        self.command(f'drawLine {ax} {ay} {bx} {by} 1')
+                        self.command(
+                            f'drawLine {last.ax} {last.ay} {last.bx} {last.by} 1')
             else:
                 self.command(f'drawLine {a.x} {a.y} {b.x} {b.y} 1')
 
-            if escaper.check(): break
+            if escaper.check():
+                break
             self.command('display')
 
         return

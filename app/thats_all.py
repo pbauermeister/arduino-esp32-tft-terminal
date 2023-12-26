@@ -1,10 +1,12 @@
-from lib import *
 import config
 from app import App
+from lib import *
+from lib.board import Board
+
 
 class ThatsAll(App):
-    def __init__(self, board):
+    def __init__(self, board: Board):
         super().__init__(board, auto_read=False, name='That\'s All')
 
-    def _run(self):
+    def _run(self) -> None:
         pass

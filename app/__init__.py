@@ -2,13 +2,17 @@ import contextlib
 import datetime
 import random
 import time
+from typing import Any, Callable
 
 import config
 from lib import *
+from lib.board import Board
+
 
 class App:
-    def __init__(self, board, auto_read, extra_configurator=None,
-                 name=None):
+    def __init__(self, board: Board, auto_read: bool = False,
+                 extra_configurator: Callable[[], None] = None,
+                 name: str = None) -> None:
         self.board = board
         self.name = name or self.__class__.__name__
         print(f'== {self.name} ==')
@@ -18,23 +22,24 @@ class App:
         board.set_configure_callback(extra_configurator)
         self.init()
 
-    def run(self):
+    def run(self) -> bool:
         if self.board.read_buttons(flush=True):
             return False
 
         start = datetime.datetime.now()
         reset = False
         if not self.board.wait_no_button(2):
-            reset = self._run()
-            if self.auto_read:
-                reset = reset or 'R' in self.board.end_auto_read_buttons()
+            # reset = self._run()
+            # if self.auto_read:
+            #    reset = reset or 'R' in self.board.end_auto_read_buttons()
+            pass
         self.board.set_comm_error_handler(self.init)
         self.board.set_configure_callback(None)
         duration = datetime.datetime.now() - start
         print('Duration:', duration)
         return reset
 
-    def init(self):
+    def init(self) -> None:
         self.board.set_comm_error_handler(self.init)
         self.board.configure()
         assert config.WIDTH and config.HEIGHT
@@ -55,7 +60,7 @@ class App:
         if self.auto_read:
             self.board.begin_auto_read_buttons()
 
-    def command(self, cmd, **kw):
+    def command(self, cmd: str, **kw: Any) -> str:
         delay = config.SERIAL_ERROR_RETRY_DELAY
         while True:
             try:
@@ -64,7 +69,7 @@ class App:
                 print('Serial error:', e)
                 self.board.close()
                 while True:
-                    print('-- will retry in', delay)
+                    print('-- App.command will retry in', delay)
                     time.sleep(delay)
                     try:
                         self.board.reopen()
@@ -74,19 +79,19 @@ class App:
                     except Exception as e:
                         print('Error:', e)
 
-    def get_title_pos(self, title):
+    def get_title_pos(self, title: str) -> tuple[int, int]:
         w, h = self.get_text_size(title)
-        x = int(config.WIDTH/2 - w/2 +.5)
-        y = int(config.HEIGHT/2 - h/2 +.5)
+        x = int(config.WIDTH/2 - w/2 + .5)
+        y = int(config.HEIGHT/2 - h/2 + .5)
         return x, y
 
-    def get_text_size(self, text):
+    def get_text_size(self, text: str) -> tuple[int, int]:
         ans = self.command(f'getTextBounds 0 0 {text}')
         vals = [int(v) for v in ans.split()]
         w, h = vals[-2:]
         return w, h
 
-    def show_header(self, title, menu, with_banner=False):
+    def show_header(self, title: str, menu: str, with_banner: bool = False) -> None:
         self.command(f'reset')
         self.command(f'setTextSize 1 1')
         self.command(f'fillRect 0 0 {config.WIDTH} 8 1')
@@ -108,24 +113,22 @@ class App:
             self.command(f'home')
             self.command(f'print \\n')
 
-    def show_title(self, title):
+    def show_title(self, title: str) -> None:
         x, y = self.get_title_pos(title)
         self.command(f'setCursor {x} {y}')
         self.command(f'print {title}')
 
 
 class TimeEscaper:
-    def __init__(self, app, timeout=-1):
+    def __init__(self, app: App, timeout: int = None) -> None:
         self.app = app
-        if timeout == -1:
+        if timeout is None:
             timeout = config.APPS_TIMEOUT  # config is patched, so not in ctor
-        if timeout is not None:
-            timeout = datetime.timedelta(seconds=timeout)
-        self.timeout = timeout
+        self.timeout = datetime.timedelta(seconds=timeout)
         self.frames = 0
         self.start = datetime.datetime.now()
 
-    def check(self):
+    def check(self) -> bool:
         self.frames += 1
         elapsed = datetime.datetime.now() - self.start
         nf = 30
@@ -139,14 +142,14 @@ class TimeEscaper:
 
 
 class Bouncer:
-    def __init__(self, size, vx, vy):
+    def __init__(self, size: int, vx: float, vy: float) -> None:
         self.size = size
         k = .5
-        v = (4 + 7**1.25 - size**1.25) * k
-        self.xx = size if vx > 0 else config.WIDTH-size
-        self.yy = size if vy > 0 else config.HEIGHT-size
+        v: float = (4 + 7**1.25 - size**1.25) * k
+        self.xx: float = size if vx > 0 else config.WIDTH-size
+        self.yy: float = size if vy > 0 else config.HEIGHT-size
 
-        self.x, self.y = int(self.xx +.5), int(self.yy +.5)
+        self.x, self.y = int(self.xx + .5), int(self.yy + .5)
 
         self.vx, self.vy = vx*v, vy*v
         self.vx0, self.vy0 = abs(vx*v), abs(vy*v)
@@ -154,11 +157,11 @@ class Bouncer:
         self.bumped = False
 
     @staticmethod
-    def bump(v, v0):
+    def bump(v: float, v0: float) -> float:
         nv = (1 + (random.random()-.5)/2)*v0
         return nv if v < 0 else -nv
 
-    def advance(self):
+    def advance(self) -> None:
         self.bumped = False
         self.xx += self.vx
         self.yy += self.vy
@@ -178,22 +181,22 @@ class Bouncer:
             self.yy = self.size
             self.vy = self.bump(self.vy, self.vy0)
             self.bumped = True
-        self.x, self.y = int(self.xx +.5), int(self.yy +.5)
+        self.x, self.y = int(self.xx + .5), int(self.yy + .5)
 
 
 class Sprite(Bouncer):
-    def __init__(self, app, size, vx, vy):
+    def __init__(self, app: App, size: int, vx: float, vy: float) -> None:
         super().__init__(size, vx, vy)
         self.app = app
         self.was_filled = False
 
-    def erase(self):
+    def erase(self) -> None:
         if self.was_filled:
             self.app.command(f'fillCircle {self.x} {self.y} {self.size} 0')
         else:
             self.app.command(f'drawCircle {self.x} {self.y} {self.size} 0')
 
-    def advance(self):
+    def advance(self) -> None:
         super().advance()
         if self.bumped:
             self.app.command(f'fillCircle {self.x} {self.y} {self.size} 1')

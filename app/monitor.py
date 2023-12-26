@@ -1,48 +1,56 @@
-from lib import *
-from app import App
-import time
-import random
-import math
 import datetime
-import config
+import json
+import math
+import random
 import socket
 import subprocess
 import textwrap
-import json
 import threading
+import time
+
+import config
+from app import App
+from lib import *
+from lib.board import Board
 
 CHOICE_EXIT = 1
 CHOICE_NEXT = 2
+
 
 class Monitor(App):
     CHOICE_EXIT = 1
     CHOICE_NEXT = 2
 
-    def __init__(self, board):
+    def __init__(self, board: Board):
         super().__init__(board, auto_read=False)
         self.chars_per_line = int(config.WIDTH / 6.4)
         self.lines = int(config.WIDTH / 8)
         self.mutex = threading.Lock()
+        self.changed = False
+        self.stop = False
 
-    def _run(self):
+    def _run(self) -> None:
         while True:
             if config.MONITOR_HOST_TIMEOUT:
                 ans = self.show_host()
-                if ans == CHOICE_EXIT: break
+                if ans == CHOICE_EXIT:
+                    break
 
             if config.MONITOR_CPU_TIMEOUT:
                 ans = self.show_cpu()
-                if ans == CHOICE_EXIT: break
+                if ans == CHOICE_EXIT:
+                    break
 
-            if ans is not None: continue
-            if not config.MONITOR_ONLY: break
+            if ans is not None:
+                continue
+            if not config.MONITOR_ONLY:
+                break
+        return
 
-        return False
-
-    def show_header(self, title, with_banner=False):
+    def show_header(self, title: str, menu: str = None, with_banner: bool = False) -> None:
         super().show_header(title, 'C:next R:exit', with_banner)
 
-    def wait_button(self, timeout):
+    def wait_button(self, timeout: int) -> int:
         if timeout == 0:
             ans = self.board.read_buttons()
         else:
@@ -53,7 +61,7 @@ class Monitor(App):
             return CHOICE_EXIT
         return None
 
-    def show_host(self):
+    def show_host(self) -> int:
         title = 'Host'
         self.show_header(title, with_banner=True)
         self.command(f'display')
@@ -62,8 +70,8 @@ class Monitor(App):
             return CHOICE_NEXT
         self.board.begin_read_buttons()
 
-        users = self.get_nb_users()
-        users = f'{users or "???"} user' + ('' if users==1 else 's')
+        nb_users = self.get_nb_users()
+        users = f'{nb_users or "???"} user' + ('' if nb_users == 1 else 's')
 
         date = self.get_date()
 
@@ -73,7 +81,7 @@ class Monitor(App):
             users,
             date,
             self.get_uptime(),
-            ] + self.get_mem()
+        ] + self.get_mem()
 
         if 'C' in self.board.end_read_buttons():
             return CHOICE_NEXT
@@ -86,7 +94,7 @@ class Monitor(App):
 
         return self.wait_button(config.MONITOR_HOST_TIMEOUT)
 
-    def show_cpu(self):
+    def show_cpu(self) -> int:
         start = datetime.datetime.now()
         until = start + datetime.timedelta(seconds=config.MONITOR_CPU_TIMEOUT)
 
@@ -124,38 +132,39 @@ class Monitor(App):
             choice = self.wait_button(timeout=0)
             if choice:
                 self.stop = True
-                #th.join()
+                # th.join()
                 return choice
 
             now = datetime.datetime.now()
             if now >= until:
                 self.stop = True
-                #th.join()
+                # th.join()
                 return None
 
-    def task(self):
+    def task(self) -> None:
         self.changed = False
         while not self.stop:
             cpus = self.get_cpus_pcents()
             mem = self.get_mem()
-            if self.stop: break
+            if self.stop:  # can be set by other thread
+                break  # type:ignore[unreachable]
             with self.mutex:
                 self.cpus, self.mem = cpus, mem
                 self.changed = True
 
-    def get_hostname(self):
+    def get_hostname(self) -> str:
         try:
             return command(['hostname'])
         except:
             return '<hostname unavail>'
 
-    def get_ip(self):
+    def get_ip(self) -> str:
         if config.MONITOR_SSH_AUTHORITY:
             return self.get_remote_ip()
         else:
             return self.get_local_ip()
 
-    def get_remote_ip(self):
+    def get_remote_ip(self) -> str:
         try:
             host = config.MONITOR_SSH_AUTHORITY.split('@')[-1]
             out = command(['host', host], force_local=True, check=False)
@@ -163,29 +172,29 @@ class Monitor(App):
         except:
             return '<rmt ip addr unavail>'
 
-    def get_local_ip(self):
+    def get_local_ip(self) -> str:
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
-            return s.getsockname()[0]
+            return str(s.getsockname()[0])
         except:
             return '<ip addr unavail>'
 
-    def get_nb_users(self):
+    def get_nb_users(self) -> int:
         try:
             out = command(['who'])
             return len(out.splitlines())
         except:
             return None
 
-    def get_date(self):
+    def get_date(self) -> str:
         try:
             out = command(['date', '--rfc-3339=seconds'])
             return out.split('+')[0]
         except:
             return '<date unavail>'
 
-    def get_uptime(self):
+    def get_uptime(self) -> str:
         try:
             uptime = command(['uptime', '-p'])
         except:
@@ -196,7 +205,7 @@ class Monitor(App):
             uptime = uptime.replace(what+'s', initial).replace(what, initial)
         return uptime
 
-    def get_mem(self):
+    def get_mem(self) -> list[str]:
         try:
             out = command(['free', '--giga'])
             stats = out.splitlines()[1].split()[1:]
@@ -208,7 +217,7 @@ class Monitor(App):
         except:
             return ['mem unavailable']
 
-    def get_cpus_pcents(self):
+    def get_cpus_pcents(self) -> list[str]:
         try:
             out = command((f'mpstat -P ALL {config.MONITOR_CPU_INTERVAL} 1 '
                            f'-o JSON').split())
@@ -230,11 +239,12 @@ class Monitor(App):
                 line = ''
             else:
                 line += ' '
-        if line: lines.append(line)
+        if line:
+            lines.append(line)
         return lines
 
 
-def command(cmd, force_local=False, check=True):
+def command(cmd: list[str], force_local: bool = False, check: bool = True) -> str:
     if config.MONITOR_SSH_AUTHORITY and not force_local:
         cmd = ['ssh', config.MONITOR_SSH_AUTHORITY] + cmd
     try:
@@ -244,6 +254,7 @@ def command(cmd, force_local=False, check=True):
         print(f'Error >>> {cmd}')
         raise
 
-def shorten(txt):
+
+def shorten(txt: str) -> str:
     txt = txt.rstrip()
     return txt[:config.COLUMNS]

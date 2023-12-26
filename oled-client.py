@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Program communicating with Arduino running oled-server.ino."""
 
-import config
 import datetime
 import math
 import os
@@ -9,37 +8,41 @@ import random
 import sys
 import time
 import traceback
+from typing import Type
 
-from lib import *
-from lib.args import get_args
-from lib.channel import Channel
-from lib.board import Board
-
+import config
 from app import App
 from app.asteriods import Asteriods
-from app.monitor import Monitor
+from app.bumps import Bumps
 from app.cube import Cube
+from app.fill import Fill
+from app.monitor import Monitor
+from app.quix import Quix
 from app.road import Road
 from app.starfield import Starfield
-from app.tunnel import Tunnel
-from app.quix import Quix
-from app.bumps import Bumps
-from app.fill import Fill
 from app.thats_all import ThatsAll
+from app.tunnel import Tunnel
+from lib import *
+from lib.args import get_args
+from lib.board import Board
+from lib.channel import Channel
 
 
-def make_board(chan):
+def make_board(chan: Channel) -> Board:
     try:
         board = Board(chan)
         board.wait_configured()
         board.clear_buttons()
         return board
     except ArduinoCommExceptions as e:
-        try: board.close()
-        except: pass
+        try:
+            board.close()
+        except:
+            pass
         raise
 
-def make_all():
+
+def make_all() -> tuple[Channel, Board]:
     while True:
         try:
             chan = Channel()
@@ -47,13 +50,14 @@ def make_all():
             return chan, board
         except ArduinoCommExceptions as e:
             print('Serial error:', e)
-            print('-- will retry in', config.SERIAL_ERROR_RETRY_DELAY)
+            print('-- make_all will retry in', config.SERIAL_ERROR_RETRY_DELAY)
             time.sleep(config.SERIAL_ERROR_RETRY_DELAY)
 
 ### Here we go ###
 
+
 # Init
-args, only_apps = get_args(
+args, only_apps = get_args([
     Asteriods,
     Monitor,
     Cube,
@@ -63,12 +67,16 @@ args, only_apps = get_args(
     Quix,
     Bumps,
     Fill,
-    )
+])
+
+Channel().monitor()
+
 chan, board = make_all()
 
 
-def start_app_maybe(cls):
-    if only_apps and cls not in only_apps: return False
+def start_app_maybe(cls: Type[App]) -> bool:
+    if only_apps and cls not in only_apps:
+        return False
     return cls(board).run()
 
 
@@ -81,17 +89,26 @@ while True:
             if config.MONITOR_ONLY:
                 continue
             if not config.APP_ASTERIODS_SKIP:
-                if start_app_maybe(Asteriods): break
+                if start_app_maybe(Asteriods):
+                    break
 
-            if start_app_maybe(Cube): break
-            if start_app_maybe(Road): break
-            if start_app_maybe(Starfield): break
-            if start_app_maybe(Tunnel): break
-            if start_app_maybe(Quix): break
-            if start_app_maybe(Bumps): break
-            if start_app_maybe(Fill): break
+            if start_app_maybe(Cube):
+                break
+            if start_app_maybe(Road):
+                break
+            if start_app_maybe(Starfield):
+                break
+            if start_app_maybe(Tunnel):
+                break
+            if start_app_maybe(Quix):
+                break
+            if start_app_maybe(Bumps):
+                break
+            if start_app_maybe(Fill):
+                break
 
-            if args.demo_once: break
+            if args.demo_once:
+                break
 
     except RebootedException:
         # restart loop
@@ -104,7 +121,8 @@ while True:
         msg = traceback.format_exc()
         fatal(board, msg)
 
-    if args.demo_once: break
+    if args.demo_once:
+        break
 
 if args.demo:
     ThatsAll(board).run()
