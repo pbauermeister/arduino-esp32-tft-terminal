@@ -566,7 +566,6 @@ class Asteriods(App):
     def run_once(self, autoplay_enabled: bool) -> int:
         game = Game(self, autoplay_enabled)
         autoplay = Autoplay(game, autoplay_enabled)
-        overs = 0
         while True:
             keys = self.board.read_buttons()
             if 'R' in keys:
@@ -590,12 +589,14 @@ class Asteriods(App):
 
             # Draw
             renders: list[str] = []
-            game.add_renders(renders)
 
-            # indicators
+            # - indicators
             game.add_renders_overlays(renders)
 
-            # show
+            # - objects
+            game.add_renders(renders)
+
+            # - show
             for render in renders:
                 self.command(render)
             self.command('display')
@@ -604,7 +605,7 @@ class Asteriods(App):
             if autoplay.enabled and autoplay.until and now > autoplay.until:
                 return GOTO_NEXT  # exit autoplay
 
-            # crash
+            # Crash
             crashed = game.handle_crash()
             if crashed and game.player.lives == 0:
                 time.sleep(1)
