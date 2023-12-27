@@ -50,7 +50,7 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
                                 help=f'default: {spec.value}')
     existing = [spec.as_flag for spec in specs]
 
-    names = sorted([a.__class__.__name__.lower() for a in apps])
+    names = sorted([a.__name__.lower() for a in apps])
     for name in names:
         flag = f'--{name}-only'
         if flag not in existing:
@@ -62,7 +62,7 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
 
     only_apps = set()
     for app in apps:
-        k = f'{app.__class__.__name__.lower()}_only'
+        k = f'{app.__name__.lower()}_only'
         if args.__dict__[k]:
             only_apps.add(app)
 

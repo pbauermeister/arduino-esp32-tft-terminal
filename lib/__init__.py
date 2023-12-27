@@ -6,8 +6,6 @@ from typing import Any, Callable, Generator
 
 import serial  # pip3 install pyserial
 
-from .board import Board
-
 READY = 'READY'
 ASCII = 'ASCII'
 OK = 'OK'
@@ -35,21 +33,6 @@ def chunkize(str: str, n: int) -> list[str]:
 
 class RebootedException(Exception):
     pass
-
-
-def fatal(board: Board, msg: str) -> None:
-    print(msg)
-    board.command('home')
-    board.command('setTextSize 1')
-    board.command('setTextWrap 1')
-    board.command('reset')
-
-    msg = ' '.join(msg.split())
-    msg = msg[-20*8:]
-    for chunk in chunkize(msg.replace('\n', ' '), 20):
-        board.command(f'print {chunk}')
-    board.command('display')
-    sys.exit(1)
 
 
 ArduinoCommExceptions = (

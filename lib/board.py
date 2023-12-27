@@ -1,4 +1,5 @@
 import datetime
+import sys
 import time
 from typing import Any, Callable
 
@@ -241,3 +242,17 @@ class Board:
             b.add('R')
             self.read_buttons_boots = self.boots
         return b
+
+    def fatal(self, msg: str) -> None:
+        print(msg)
+        self.command('home')
+        self.command('setTextSize 1')
+        self.command('setTextWrap 1')
+        self.command('reset')
+
+        msg = ' '.join(msg.split())
+        msg = msg[-20*8:]
+        for chunk in chunkize(msg.replace('\n', ' '), 20):
+            self.command(f'print {chunk}')
+        self.command('display')
+        sys.exit(1)

@@ -31,7 +31,7 @@ from lib.channel import Channel
 def make_board(chan: Channel) -> Board:
     try:
         board = Board(chan)
-        board.wait_configured()
+        # board.wait_configured()
         board.clear_buttons()
         return board
     except ArduinoCommExceptions as e:
@@ -69,8 +69,7 @@ args, only_apps = get_args([
     Fill,
 ])
 
-Channel().monitor()
-
+# Channel().monitor()
 chan, board = make_all()
 
 
@@ -115,11 +114,11 @@ while True:
         pass
     except KeyboardInterrupt:
         print()
-        fatal(board, 'Keyboard interrupt')
+        board.fatal('Keyboard interrupt')
         raise
     except Exception as e:
         msg = traceback.format_exc()
-        fatal(board, msg)
+        board.fatal(msg)
 
     if args.demo_once:
         break

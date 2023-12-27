@@ -196,7 +196,7 @@ class AsteriodData:
 
 
 class Asteroid(AsteriodData):
-    def __init__(self, ship: Ship = None, other: Asteroid = None):
+    def __init__(self, ship: Ship = None, other: AsteriodData = None):
         if ship is not None:
             self.init(ship.x, ship.y)
         elif other is not None:
@@ -451,9 +451,11 @@ class Detect:
             for b in asteroids:
                 if a is b:
                     continue
-                if (a, b) in pairs:
+                ah = a and a.__hash__
+                bh = b and b.__hash__
+                if (ah, bh) in pairs:
                     continue
-                pairs[(a, b)] = True
+                pairs[(ah, bh)] = True
                 if Detect.touch(a.x, a.y, b.x, b.y, a.r, b.r):
                     a.hit = True
                     b.hit = True

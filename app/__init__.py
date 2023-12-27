@@ -25,14 +25,13 @@ class App:
     def run(self) -> bool:
         if self.board.read_buttons(flush=True):
             return False
-
         start = datetime.datetime.now()
         reset = False
         if not self.board.wait_no_button(2):
-            # reset = self._run()
-            # if self.auto_read:
-            #    reset = reset or 'R' in self.board.end_auto_read_buttons()
-            pass
+            self.command('reset')
+            reset = self._run()
+            if self.auto_read:
+                reset = reset or 'R' in self.board.end_auto_read_buttons()
         self.board.set_comm_error_handler(self.init)
         self.board.set_configure_callback(None)
         duration = datetime.datetime.now() - start
@@ -54,7 +53,6 @@ class App:
         self.command('display')
 
         # ready for run()
-        self.command('reset')
         self.command(f'setTextSize 1')
         self.board.clear_buttons()
         if self.auto_read:
