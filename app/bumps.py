@@ -10,10 +10,10 @@ class Bumps(App):
 
     def _run(self) -> None:
         sprites = [
-            Sprite(self, 7,  1, 1),
-            Sprite(self, 2,  1, -1),
-            Sprite(self, 3, -1,  1),
-            Sprite(self, 2, -1, -1),
+            Sprite(self, 8,  1, 1),
+            Sprite(self, 6, -1,  1),
+            Sprite(self, 4,  1, -1),
+            Sprite(self, 3, -1, -1),
         ]
 
         escaper = TimeEscaper(self)
