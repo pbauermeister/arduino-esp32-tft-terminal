@@ -246,7 +246,8 @@ class Board:
     def fatal(self, msg: str) -> None:
         print(msg)
         self.command('home')
-        self.command('setTextSize 1')
+        w, h = 1, config.TEXT_SCALING
+        self.command(f'setTextSize {w} {h}')
         self.command('setTextWrap 1')
         self.command('reset')
 

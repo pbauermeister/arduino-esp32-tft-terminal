@@ -118,13 +118,13 @@ class Monitor(App):
             if cpus is not None:
                 self.show_header(title)
                 # CPUs
-                self.command(f'setCursor 0 12')
+                self.command(f'setCursor 0 {config.TEXT_SCALING*12}')
                 lines = cpus
                 for l in lines:
                     self.command(f'print {l}\\n')
                 # Mem
                 if len(lines) <= 4:
-                    self.command(f'setCursor 0 {6*8}')
+                    self.command(f'setCursor 0 {config.TEXT_SCALING*6*8}')
                     for l in mem:
                         self.command(f'print {l}\\n')
                 self.command(f'display')

@@ -42,7 +42,8 @@ class App:
         self.board.set_comm_error_handler(self.init)
         self.board.configure()
         assert config.WIDTH and config.HEIGHT
-        self.command(f'setTextSize 1 2')
+        self.command(
+            f'setTextSize {config.TEXT_SCALING} {config.TEXT_SCALING*2}')
         title = self.name.upper()
         x, y = self.get_title_pos(title)
 
@@ -53,7 +54,8 @@ class App:
         self.command('display')
 
         # ready for run()
-        self.command(f'setTextSize 1')
+        self.command(
+            f'setTextSize  {config.TEXT_SCALING} {config.TEXT_SCALING}')
         self.board.clear_buttons()
         if self.auto_read:
             self.board.begin_auto_read_buttons()
@@ -91,22 +93,25 @@ class App:
 
     def show_header(self, title: str, menu: str, with_banner: bool = False) -> None:
         self.command(f'reset')
-        self.command(f'setTextSize 1 1')
-        self.command(f'fillRect 0 0 {config.WIDTH} 8 1')
+        self.command(
+            f'setTextSize {config.TEXT_SCALING} {config.TEXT_SCALING}')
+        self.command(f'fillRect 0 0 {config.WIDTH} {config.TEXT_SCALING*8} 1')
         self.command(f'setTextColor 0')
         self.command(f'setCursor 1 0')
         self.command(f'print {title}')
         w, h = self.get_text_size(menu)
-        x = config.WIDTH - w - 3
-        self.command(f'setCursor {x} 0')
+        x = max(config.WIDTH - w - 3, 0)
+        self.command(f'setCursor {x} 1')
         self.command(f'print {menu}')
         self.command(f'setTextColor 1')
 
         if with_banner:
-            self.command(f'setTextSize 1 2')
+            self.command(
+                f'setTextSize {config.TEXT_SCALING} {config.TEXT_SCALING*2}')
             self.show_title(title)
             self.command(f'display')
-            self.command(f'setTextSize 1 1')
+            self.command(
+                f'setTextSize {config.TEXT_SCALING} {config.TEXT_SCALING}')
         else:
             self.command(f'home')
             self.command(f'print \\n')

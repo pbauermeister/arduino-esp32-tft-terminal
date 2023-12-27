@@ -3,6 +3,9 @@
 # To be adapted for your mechanical setup:
 SCREEN_ROTATION = 3
 
+TEXT_SCALING = 2
+GFX_SCALING = 1
+
 # Will be dynamically updated by asking board, meanwile invalid:
 WIDTH: int = None
 HEIGHT: int = None

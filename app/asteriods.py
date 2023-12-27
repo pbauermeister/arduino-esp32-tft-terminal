@@ -10,7 +10,7 @@ from lib import *
 from lib.board import Board
 
 # Parameters
-SHIP_RADIUS = 6
+SHIP_RADIUS = 6 * config.GFX_SCALING
 SHIP_SPEED = 2
 SHIP_ROT_STEP = .2
 
@@ -19,12 +19,12 @@ SHOT_DELAY = 2
 SHOT_MAX = 8
 
 ASTEROID_NB_MAX = 5
-ASTEROID_RADIUS = 2, 10
+ASTEROID_RADIUS = 2*config.GFX_SCALING, 10*config.GFX_SCALING
 ASTEROID_SPLIT_A = .4  # angle
 
 SHIELD_DURATION = 12
 SHIELD_TIMEOUT = 20
-SHIELD_RADIUS = SHIP_RADIUS + 6
+SHIELD_RADIUS = SHIP_RADIUS + 6*config.GFX_SCALING
 
 PROTECT_DURATION = 16
 
@@ -345,7 +345,7 @@ class Game:
             shot.add_renders(l)
 
     def add_renders_overlays(self, l: list[str]) -> None:
-        x = config.WIDTH - 12
+        x = config.WIDTH - 12*config.TEXT_SCALING
         l.append(f'setCursor {x} {0}')
         l.append(f'print L{self.player.lives}')
         if self.player.autoplay_enabled:
@@ -541,7 +541,7 @@ class Asteriods(App):
                     continue  # reset during playing returns to menu
 
     def menu(self) -> int:
-        self.show_header('', 'C:next B:start A:auto')
+        self.show_header('', 'C:next B:play A:auto')
         self.command(f'print \\n')
         self.command(f'print {self.name.upper()} keys:\\n')
         self.command(f'print   C   fire\\n')
@@ -615,3 +615,4 @@ class Asteriods(App):
                     # player crashed
                     autoplay.enable()
                     self.board.wait_no_button()
+            # time.sleep(1*10000)
