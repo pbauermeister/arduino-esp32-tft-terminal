@@ -1,14 +1,15 @@
 from typing import Callable
 
 import config
+from .command import Command
 
 
 class Gfx:
-    def __init__(self, send_command: Callable[[str, bool], str]):
-        self.send_command = send_command
+    def __init__(self, command: Command):
+        self.command = command
 
     def _command(self, cmd: str, ignore_error: bool = False) -> str:
-        return self.send_command(cmd, ignore_error)
+        return self.command.do_command(cmd, ignore_error)
 
     def reset(self) -> None:
         self._command('reset')

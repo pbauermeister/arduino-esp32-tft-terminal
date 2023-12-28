@@ -8,14 +8,17 @@ from lib import *
 from lib.gfx import Gfx
 
 from .channel import Channel
+from .command import Command
 
 
 class Board:
     def __init__(self, channel: Channel) -> None:
-        self.gfx = Gfx(self.do_command)
+        self.command = Command(channel)
+        self.command.set_auto_btn_handler(self.handle_auto_buttons)
+        self.gfx = Gfx(self.command)
+
         self.chan = channel
         self.configure_callback: Callable[[], None] | None = None
-        self.comm_error_handler: Callable[[], None] | None = None
         self.configured = False
         self.boots = 0
         self.last_command: str | None = None
@@ -25,68 +28,16 @@ class Board:
         self.read_buttons_boots = 0
 
         self.chan.open()
-        self.chan.set_callback('READY', self.on_ready)
+        self.chan.set_callback(READY, self.on_ready)
 
     def set_configure_callback(self, configure_callback: Callable[[], None] | None) -> None:
         self.configure_callback = configure_callback
 
     def set_comm_error_handler(self, handler: Callable[[], None]) -> None:
-        self.comm_error_handler = handler
+        self.command.set_comm_error_handler(handler)
 
     def close(self) -> None:
         self.chan.close()
-
-    def reopen(self) -> None:
-        self.chan.open()
-
-    def send_command(self, cmd: str, ignore_error: bool = False) -> str:
-        delay = config.SERIAL_ERROR_RETRY_DELAY
-        while True:
-            try:
-                return self._command(cmd, ignore_error)
-            except ArduinoCommExceptions as e:
-                print('Serial error:', e)
-                self.close()
-                while True:
-                    print('-- Board.command will retry in', delay)
-                    time.sleep(delay)
-                    try:
-                        self.reopen()
-                        if not self.comm_error_handler:
-                            print('Re-open OK.')
-                        else:
-                            self.comm_error_handler()
-                            print('Re-init OK.')
-                        break
-                    except ArduinoCommExceptions as e:
-                        print('Error:', e)
-
-    def _command(self, cmd: str, ignore_error: bool = False) -> str:
-        self._command_send(cmd)
-        try:
-            return self._command_response()
-        except:
-            if ignore_error:
-                return ''
-            raise
-
-    def _command_send(self, cmd: str) -> None:
-        assert not self.reading_buttons
-        self.chan.write(cmd)
-        self.last_command = cmd
-
-    def _command_response(self) -> str:
-        response = self.chan.read()
-        if not config.DEBUG:
-            if response.startswith(ERROR) or response.startswith(UNKNOWN):
-                print('<<<', self.last_command)
-                print('>>>', response)
-        assert not response.startswith('ERROR')
-        if response.startswith('OK '):
-            b = response.split(' ', 1)[1].strip()
-            if b != NONE:
-                self.auto_buttons |= set(b)
-        return response
 
     def on_ready(self, _: Any = None) -> None:
         time.sleep(0.2)
@@ -133,7 +84,7 @@ class Board:
         assert not self.reading_buttons
         if config.DEBUG:
             print('* begin_read_buttons')
-        self._command_send('waitButton -1 0')
+        self.command.command_send('waitButton -1 0')
         self.reading_buttons = True
         self.auto_buttons_boots = self.boots
 
@@ -142,8 +93,8 @@ class Board:
         if config.DEBUG:
             print('* end_read_buttons')
         self.reading_buttons = False
-        self._command_send('width')
-        resp = self._command_response()
+        self.command.command_send('width')
+        resp = self.command.command_response()
         self.chan.flush_in()
         val: set[str]
         if resp == NONE:
@@ -234,14 +185,9 @@ class Board:
             self.read_buttons_boots = self.boots
         return b
 
-    def do_command(self, cmd: str, ignore_error: bool = False) -> str:
-        # Since the board may be rebooted in the middle of a command,
-        # it is okay to retry once
-        try:
-            return self.send_command(cmd, ignore_error)
-        except:
-            self.chan.clear()
-            return self.send_command(cmd, ignore_error)
+    # overrides
+    def handle_auto_buttons(self, btns: set[str]) -> None:
+        self.auto_buttons |= btns
 
     def fatal(self, msg: str) -> None:
         print(msg)
