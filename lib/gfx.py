@@ -98,3 +98,9 @@ class Gfx:
 
     def set_auto_read_buttons_off(self) -> None:
         self._command('autoReadButtons 0')
+
+    def set_fg_color(self, r: int, g: int, b: int) -> None:
+        self._command(f'setFgColor {r} {g} {b}')
+
+    def set_bg_color(self, r: int, g: int, b: int) -> None:
+        self._command(f'setBgColor {r} {g} {b}')

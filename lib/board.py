@@ -247,11 +247,10 @@ class Board:
 
     def fatal(self, msg: str) -> None:
         print(msg)
-        self.gfx.home()
+        self.gfx.reset()
         w, h = 1, config.TEXT_SCALING
         self.gfx.set_text_size(0.5, 1)
         self.gfx.set_text_wrap_on()
-        self.gfx.reset()
 
         msg = ' '.join(msg.split())
         msg = msg[-20*8:]

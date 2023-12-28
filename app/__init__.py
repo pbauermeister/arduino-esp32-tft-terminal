@@ -49,12 +49,12 @@ class App:
         self.board.set_comm_error_handler(self.init)
         self.board.configure()
         assert config.WIDTH and config.HEIGHT
+        self.gfx.reset()
         self.gfx.set_text_size(1, 2)
         title = self.name.upper()
         x, y = self.get_title_pos(title)
 
         # title
-        self.gfx.reset()
         self.gfx.set_cursor(x, y)
         self.gfx.print(title)
         self.gfx.display()
@@ -64,25 +64,6 @@ class App:
         self.board.clear_buttons()
         if self.auto_read:
             self.board.begin_auto_read_buttons()
-
-    # def command(self, cmd: str, **kw: Any) -> str:
-    #     delay = config.SERIAL_ERROR_RETRY_DELAY
-    #     while True:
-    #         try:
-    #             return self.board.command(cmd, **kw)
-    #         except ArduinoCommExceptions as e:
-    #             print('Serial error:', e)
-    #             self.board.close()
-    #             while True:
-    #                 print('-- App.command will retry in', delay)
-    #                 time.sleep(delay)
-    #                 try:
-    #                     self.board.reopen()
-    #                     self.init()
-    #                     print('Re-init OK.')
-    #                     break
-    #                 except Exception as e:
-    #                     print('Error:', e)
 
     def get_title_pos(self, title: str) -> tuple[int, int]:
         w, h = self.get_text_size(title)
