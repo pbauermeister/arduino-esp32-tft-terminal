@@ -1,6 +1,4 @@
-import config
 from app import App
-from lib import *
 from lib.board import Board
 
 

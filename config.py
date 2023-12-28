@@ -7,11 +7,11 @@ TEXT_SCALING = 2
 GFX_SCALING = 1
 
 # Will be dynamically updated by asking board, meanwile invalid:
-WIDTH: int = None
-HEIGHT: int = None
+WIDTH: int = 0
+HEIGHT: int = 0
 
-COLUMNS: int = None
-ROWS: int = None
+COLUMNS: int = 0
+ROWS: int = 0
 
 # Communication setup
 SERIAL_PORT_BASE = "/dev/ttyACM"  # adapt dep on your OS

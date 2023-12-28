@@ -1,6 +1,5 @@
 import config
 from app import App, TimeEscaper
-from lib import *
 from lib.board import Board
 
 K = 0.65

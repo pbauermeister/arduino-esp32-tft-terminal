@@ -1,16 +1,11 @@
 import datetime
 import json
-import math
-import random
 import socket
 import subprocess
-import textwrap
 import threading
-import time
 
 import config
 from app import App
-from lib import *
 from lib.board import Board
 
 CHOICE_EXIT = 1

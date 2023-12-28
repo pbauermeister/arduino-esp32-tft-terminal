@@ -1,10 +1,6 @@
-import math
-import random
 import time
 
-import config
-from app import App, Bouncer, TimeEscaper
-from lib import *
+from app import App, TimeEscaper
 from lib.board import Board
 
 

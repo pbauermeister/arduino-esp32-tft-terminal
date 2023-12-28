@@ -3,8 +3,6 @@ import sys
 import time
 from typing import Any, Callable
 
-import serial  # pip3 install pyserial
-
 import config
 from lib import *
 from lib.gfx import Gfx

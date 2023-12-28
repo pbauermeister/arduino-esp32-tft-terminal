@@ -6,7 +6,6 @@ from dataclasses import dataclass
 
 import config
 from app import App
-from lib import *
 from lib.board import Board
 from lib.gfx import Gfx
 
@@ -349,6 +348,7 @@ class Game:
 
     def add_renders_overlays(self) -> None:
         x = config.WIDTH - 12*config.TEXT_SCALING
+        self.gfx.set_text_size(1, 1)
         self.gfx.set_cursor(x, 0)
         self.gfx.print(str(self.player.lives))
         if self.player.autoplay_enabled:

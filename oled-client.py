@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 """Program communicating with Arduino running oled-server.ino."""
 
-import datetime
-import math
-import os
-import random
-import sys
 import time
 import traceback
 from typing import Type
@@ -22,7 +17,7 @@ from app.road import Road
 from app.starfield import Starfield
 from app.thats_all import ThatsAll
 from app.tunnel import Tunnel
-from lib import *
+from lib import ArduinoCommExceptions, RebootedException
 from lib.args import get_args
 from lib.board import Board
 from lib.channel import Channel
@@ -36,7 +31,7 @@ def make_board(chan: Channel) -> Board:
         return board
     except ArduinoCommExceptions as e:
         try:
-            board.close()
+            chan.close()
         except:
             pass
         raise

@@ -1,10 +1,8 @@
-import math
+
 import random
 from dataclasses import dataclass
 
-import config
 from app import App, Bouncer, TimeEscaper
-from lib import *
 from lib.board import Board
 
 NB_LINES = 12
@@ -29,7 +27,7 @@ class ColorComponent:
     min:       int
     max:       int
 
-    def advance(self):
+    def advance(self) -> None:
         self.value += self.speed
         if self.value > self.max:
             self.value = self.max

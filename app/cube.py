@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 import config
 from app import App, TimeEscaper
-from lib import *
 from lib.board import Board
 
 

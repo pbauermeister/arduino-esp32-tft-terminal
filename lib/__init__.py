@@ -1,8 +1,7 @@
 import contextlib
 import datetime
-import sys
 import termios
-from typing import Any, Callable, Generator
+from typing import Callable, Generator
 
 import serial  # pip3 install pyserial
 
