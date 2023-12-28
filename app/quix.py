@@ -27,7 +27,7 @@ class Quix(App):
         a = Bouncer(2, -1, -1)
         b = Bouncer(2,  1, 1)
 
-        history: list[Segment] = [None] * NB_LINES
+        history: list[Segment | None] = [None] * NB_LINES
         i = 0
 
         escaper = TimeEscaper(self)
@@ -41,21 +41,20 @@ class Quix(App):
             history[i] = Segment(a.x, a.y, b.x, b.y)
             i = (i+1) % NB_LINES
             last = history[i]
-            if last:
-                self.command(
-                    f'drawLine {last.ax} {last.ay} {last.bx} {last.by} 0')
+            if last is not None:
+                self.gfx.draw_line(last.ax, last.ay, last.bx, last.by, 0)
 
             if REDRAW:
                 for j in range(NB_LINES-1):
                     last = history[(i-1-j) % NB_LINES]
                     if last:
-                        self.command(
-                            f'drawLine {last.ax} {last.ay} {last.bx} {last.by} 1')
+                        self.gfx.draw_line(
+                            last.ax, last.ay, last.bx, last.by, 1)
             else:
-                self.command(f'drawLine {a.x} {a.y} {b.x} {b.y} 1')
+                self.gfx.draw_line(a.x, a.y, b.x, b.y, 1)
 
             if escaper.check():
                 break
-            self.command('display')
+            self.gfx.display()
 
         return

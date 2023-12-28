@@ -15,15 +15,17 @@ UNKNOWN = 'UNKNOWN'
 
 
 @contextlib.contextmanager
-def until(timeout: int = None) -> Generator[Callable[[], bool], None, None]:
-    start = datetime.datetime.now()
+def until(timeout: int | None = None) -> Generator[Callable[[], bool], None, None]:
     if timeout is not None:
+        start = datetime.datetime.now()
         until = start + datetime.timedelta(seconds=timeout)
 
-    def done() -> bool:
-        if timeout is None:
+        def done() -> bool:
+            return datetime.datetime.now() >= until
+    else:
+        def done() -> bool:
             return False
-        return datetime.datetime.now() >= until
+
     yield done
 
 
@@ -36,7 +38,8 @@ class RebootedException(Exception):
 
 
 ArduinoCommExceptions = (
-    serial.serialutil.SerialException,
+    # serial.serialutil.SerialException,
+    serial.SerialException,
     OSError,
     termios.error,
     UnicodeDecodeError,

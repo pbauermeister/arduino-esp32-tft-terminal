@@ -44,7 +44,7 @@ class Tunnel(App):
 
             if escaper.check():
                 break
-            self.command('display')
+            self.gfx.display()
             i += 1
 
         return
@@ -83,8 +83,7 @@ class Tunnel(App):
         return x0, y0, x1, y1, x2, y2, x3, y3
 
     def draw(self, x0: int, y0: int, x1: int, y1: int, x2: int, y2: int, x3: int, y3: int, c: int) -> None:
-        # self.command(f'drawLine {x0} {y0} {x1} {y1} {c}')
-        self.command(f'drawLine {x1} {y1} {x2} {y2} {c}')
-        # self.command(f'drawLine {x2} {y2} {x3} {y3} {c}')
-        self.command(f'drawLine {x3} {y3} {x0} {y0} {c}')
+        self.gfx.draw_line(x1, y1, x2, y2, c)
+        self.gfx.draw_line(x3, y3, x0, y0, c)
+
         # self.command(f'drawRect {0} {0} {config.WIDTH} {config.HEIGHT} 1')

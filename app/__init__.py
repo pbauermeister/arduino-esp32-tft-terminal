@@ -2,19 +2,22 @@ import contextlib
 import datetime
 import random
 import time
+from abc import abstractmethod
 from typing import Any, Callable
 
 import config
 from lib import *
 from lib.board import Board
+from lib.gfx import Gfx
 
 
 class App:
     def __init__(self, board: Board, auto_read: bool = False,
-                 extra_configurator: Callable[[], None] = None,
-                 name: str = None) -> None:
+                 extra_configurator: Callable[[], None] | None = None,
+                 name: str | None = None) -> None:
         self.board = board
         self.name = name or self.__class__.__name__
+        self.gfx = board.gfx
         print(f'== {self.name} ==')
         self.board.set_comm_error_handler(self.init)
         self.auto_read = auto_read
@@ -22,13 +25,17 @@ class App:
         board.set_configure_callback(extra_configurator)
         self.init()
 
+    @abstractmethod
+    def _run(self) -> bool:
+        return False
+
     def run(self) -> bool:
         if self.board.read_buttons(flush=True):
             return False
         start = datetime.datetime.now()
         reset = False
         if not self.board.wait_no_button(2):
-            self.command('reset')
+            self.gfx.reset()
             reset = self._run()
             if self.auto_read:
                 reset = reset or 'R' in self.board.end_auto_read_buttons()
@@ -42,42 +49,40 @@ class App:
         self.board.set_comm_error_handler(self.init)
         self.board.configure()
         assert config.WIDTH and config.HEIGHT
-        self.command(
-            f'setTextSize {config.TEXT_SCALING} {config.TEXT_SCALING*2}')
+        self.gfx.set_text_size(1, 2)
         title = self.name.upper()
         x, y = self.get_title_pos(title)
 
         # title
-        self.command('reset')
-        self.command(f'setCursor {x} {y}')
-        self.command(f'print {title}')
-        self.command('display')
+        self.gfx.reset()
+        self.gfx.set_cursor(x, y)
+        self.gfx.print(title)
+        self.gfx.display()
 
         # ready for run()
-        self.command(
-            f'setTextSize  {config.TEXT_SCALING} {config.TEXT_SCALING}')
+        self.gfx.set_text_size(1, 1)
         self.board.clear_buttons()
         if self.auto_read:
             self.board.begin_auto_read_buttons()
 
-    def command(self, cmd: str, **kw: Any) -> str:
-        delay = config.SERIAL_ERROR_RETRY_DELAY
-        while True:
-            try:
-                return self.board.command(cmd, **kw)
-            except ArduinoCommExceptions as e:
-                print('Serial error:', e)
-                self.board.close()
-                while True:
-                    print('-- App.command will retry in', delay)
-                    time.sleep(delay)
-                    try:
-                        self.board.reopen()
-                        self.init()
-                        print('Re-init OK.')
-                        break
-                    except Exception as e:
-                        print('Error:', e)
+    # def command(self, cmd: str, **kw: Any) -> str:
+    #     delay = config.SERIAL_ERROR_RETRY_DELAY
+    #     while True:
+    #         try:
+    #             return self.board.command(cmd, **kw)
+    #         except ArduinoCommExceptions as e:
+    #             print('Serial error:', e)
+    #             self.board.close()
+    #             while True:
+    #                 print('-- App.command will retry in', delay)
+    #                 time.sleep(delay)
+    #                 try:
+    #                     self.board.reopen()
+    #                     self.init()
+    #                     print('Re-init OK.')
+    #                     break
+    #                 except Exception as e:
+    #                     print('Error:', e)
 
     def get_title_pos(self, title: str) -> tuple[int, int]:
         w, h = self.get_text_size(title)
@@ -86,44 +91,38 @@ class App:
         return x, y
 
     def get_text_size(self, text: str) -> tuple[int, int]:
-        ans = self.command(f'getTextBounds 0 0 {text}')
-        vals = [int(v) for v in ans.split()]
-        w, h = vals[-2:]
-        return w, h
+        return self.gfx.get_text_bounds(0, 0, text)
 
     def show_header(self, title: str, menu: str, with_banner: bool = False) -> None:
-        self.command(f'reset')
-        self.command(
-            f'setTextSize {config.TEXT_SCALING} {config.TEXT_SCALING}')
-        self.command(f'fillRect 0 0 {config.WIDTH} {config.TEXT_SCALING*8} 1')
-        self.command(f'setTextColor 0')
-        self.command(f'setCursor 1 0')
-        self.command(f'print {title}')
+        self.gfx.reset()
+        self.gfx.set_text_size(1, 1)
+        self.gfx.fill_rect(0, 0, config.WIDTH, config.TEXT_SCALING*8, 1)
+        self.gfx.set_text_color(0)
+        self.gfx.set_cursor(1, 0)
+        self.gfx.print(title)
         w, h = self.get_text_size(menu)
         x = max(config.WIDTH - w - 3, 0)
-        self.command(f'setCursor {x} 1')
-        self.command(f'print {menu}')
-        self.command(f'setTextColor 1')
+        self.gfx.set_cursor(x, 1)
+        self.gfx.print(menu)
+        self.gfx.set_text_color(1)
 
         if with_banner:
-            self.command(
-                f'setTextSize {config.TEXT_SCALING} {config.TEXT_SCALING*2}')
+            self.gfx.set_text_size(1, 2)
             self.show_title(title)
-            self.command(f'display')
-            self.command(
-                f'setTextSize {config.TEXT_SCALING} {config.TEXT_SCALING}')
+            self.gfx.display()
+            self.gfx.set_text_size(1, 2)
         else:
-            self.command(f'home')
-            self.command(f'print \\n')
+            self.gfx.home()
+            self.gfx.print('\\n')
 
     def show_title(self, title: str) -> None:
         x, y = self.get_title_pos(title)
-        self.command(f'setCursor {x} {y}')
-        self.command(f'print {title}')
+        self.gfx.set_cursor(x, y)
+        self.gfx.print(title)
 
 
 class TimeEscaper:
-    def __init__(self, app: App, timeout: int = None) -> None:
+    def __init__(self, app: App, timeout: int | None = None) -> None:
         self.app = app
         if timeout is None:
             timeout = config.APPS_TIMEOUT  # config is patched, so not in ctor
@@ -195,14 +194,14 @@ class Sprite(Bouncer):
 
     def erase(self) -> None:
         if self.was_filled:
-            self.app.command(f'fillCircle {self.x} {self.y} {self.size} 0')
+            self.app.gfx.fill_circle(self.x, self.y, self.size, 0)
         else:
-            self.app.command(f'drawCircle {self.x} {self.y} {self.size} 0')
+            self.app.gfx.draw_circle(self.x, self.y, self.size, 0)
 
     def advance(self) -> None:
         super().advance()
         if self.bumped:
-            self.app.command(f'fillCircle {self.x} {self.y} {self.size} 1')
+            self.app.gfx.fill_circle(self.x, self.y, self.size, 1)
         else:
-            self.app.command(f'drawCircle {self.x} {self.y} {self.size} 1')
+            self.app.gfx.draw_circle(self.x, self.y, self.size, 1)
         self.was_filled = self.bumped

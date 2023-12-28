@@ -62,10 +62,11 @@ class Cube(App):
         # at index 0, Y at 1, and Z at 2. These constants make our code more
         # readable when accessing the coordinates in these lists.
         i = 0
+        isometric = True
 
         def line(x1: float, y1: float, x2: float, y2: float, c: int) -> None:
-            self.command(
-                f'drawLine {int(x1+.5)} {int(y1+.5)} {int(x2+.5)} {int(y2+.5)} {c}')
+            self.gfx.draw_line(int(x1+.5), int(y1+.5),
+                               int(x2+.5), int(y2+.5), c)
 
         def rotate_point(p: Point, a: Vector) -> Point:
             """Returns an (x, y, z) tuple of the x, y, z arguments rotated.
@@ -98,7 +99,7 @@ class Cube(App):
             rotated_z = z
 
             # False perspective
-            k = 1 if alt else 1.5**z * .6 + .25
+            k = 1 if isometric else 1.5**z * .6 + .25
 
             return Point(rotated_x*k, rotated_y*k, rotated_z)
 
@@ -128,7 +129,7 @@ class Cube(App):
                 to_point = corners[to_corner_index]
                 src = adjust_point(from_point)
                 dst = adjust_point(to_point)
-                if alt:
+                if isometric:
                     if from_point.z == min_z or to_point.z == min_z:
                         continue  # bound to farthest point: hidden edge
                 line(src.x, src.y, dst.x, dst.y, c)
@@ -158,26 +159,22 @@ class Cube(App):
 
         # rotatedCorners stores the XYZ coordinates from CUBE_CORNERS after
         # they've been rotated by rx, ry, and rz amounts:
+        unset = Point(0, 0, 0)
         rotated_corners: list[Point] = [
-            None, None, None, None, None, None, None, None]
+            unset, unset, unset, unset, unset, unset, unset, unset]
         # Rotation amounts for each axis:
         rotation = Vector(0, 0, 0)
 
-        previous: Vector = None
-        undraw = False
+        previous: Vector | None = None
         escaper = TimeEscaper(self)
         start = datetime.datetime.now()
         while True:  # Main program loop.
             if self.board.auto_read_buttons():
                 break
 
-            alt = (i % 50) > 25
-            if not undraw:
-                self.command('clearDisplay')
+            self.gfx.reset()
 
-            if previous and undraw:
-                rotation = previous
-                cube(rotated_corners, rotation, 0)
+            isometric = True  # (i % 50) > 25
 
             # Rotate the cube along different axes by different amounts:
             rotation.x += X_ROTATE_SPEED
@@ -185,12 +182,10 @@ class Cube(App):
             rotation.z += Z_ROTATE_SPEED
             cube(rotated_corners, rotation, 1)
 
-            if undraw:
-                previous = rotation
-
             if escaper.check():
                 break
-            self.command('display')
+
+            self.gfx.display()
             i += 1
 
         return

@@ -29,6 +29,6 @@ class Bumps(App):
 
             if escaper.check():
                 break
-            self.command('display')
+            self.gfx.display()
 
         return

@@ -16,13 +16,13 @@ class Fill(App):
         escaper = TimeEscaper(self)
         alt = True
         while True:
-            self.board.command(f'home')
-            self.board.command(f'fillScreen {int(alt)}')
-            self.board.command(f'setTextColor {int(not alt)}')
+            self.gfx.home()
+            self.gfx.fill_screen(int(alt))
+            self.gfx.set_text_color(int(not alt))
             for i in range(ord('!'), 255):
                 c = chr(i)
-                self.command(f'print {c}')
-            self.command('display')
+                self.gfx.print(c)
+            self.gfx.display()
             if self.board.auto_read_buttons():
                 break
             if escaper.check():

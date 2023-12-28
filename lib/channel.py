@@ -14,9 +14,9 @@ class Channel:
                  baudrate: int = config.SERIAL_BAUDRATE) -> None:
         self.port_base = port_base
         self.baudrate = baudrate
-        self.ser: serial.Serial = None
-        self.on_message: str = None
-        self.on_fn: Callable[[Any], None] = None
+        self.ser: serial.Serial | None = None
+        self.on_message: str | None = None
+        self.on_fn: Callable[[Any], None] | None = None
 
     def open(self) -> None:
         port_nr = 0
@@ -35,11 +35,14 @@ class Channel:
             return
 
     def close(self) -> None:
+        assert self.ser
         self.ser.close()
 
     def clear(self) -> None:
-        self.ser.flushInput()
-        self.ser.flushOutput()
+        assert self.ser
+        self.ser.flush()
+        # self.ser.flushInput()
+        # self.ser.flushOutput()
         self.ser.reset_input_buffer()
         self.ser.reset_output_buffer()
         self.flush_in()
@@ -52,9 +55,12 @@ class Channel:
         if config.DEBUG:
             print('<<<', s)
         # self.ser.write(s.encode(ASCII) + b'\n')
+        assert self.ser
         self.ser.write(str.encode(s) + b'\n')
 
     def read(self) -> str:
+        assert self.ser
+        assert self.on_fn
         bytes = None
         message: str
         try:
@@ -72,16 +78,17 @@ class Channel:
         return message
 
     def flush_in(self) -> None:
+        assert self.ser
         if config.DEBUG:
             print('>flush> ', end='')
         while True:
-            if self.ser.inWaiting():
+            if self.ser.in_waiting:
                 c = self.ser.read()
                 if config.DEBUG:
                     print(c, end='')
             else:
                 time.sleep(0.1)
-                if not self.ser.inWaiting():
+                if not self.ser.in_waiting:
                     if config.DEBUG:
                         print()
                     return

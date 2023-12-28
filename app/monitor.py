@@ -30,6 +30,7 @@ class Monitor(App):
         self.stop = False
 
     def _run(self) -> None:
+        ans: int | None = None
         while True:
             if config.MONITOR_HOST_TIMEOUT:
                 ans = self.show_host()
@@ -47,10 +48,10 @@ class Monitor(App):
                 break
         return
 
-    def show_header(self, title: str, menu: str = None, with_banner: bool = False) -> None:
+    def show_header(self, title: str, menu: str | None = None, with_banner: bool = False) -> None:
         super().show_header(title, 'C:next R:exit', with_banner)
 
-    def wait_button(self, timeout: int) -> int:
+    def wait_button(self, timeout: int) -> int | None:
         if timeout == 0:
             ans = self.board.read_buttons()
         else:
@@ -61,10 +62,10 @@ class Monitor(App):
             return CHOICE_EXIT
         return None
 
-    def show_host(self) -> int:
+    def show_host(self) -> int | None:
         title = 'Host'
         self.show_header(title, with_banner=True)
-        self.command(f'display')
+        self.gfx.display()
         self.board.wait_no_button(timeout=1)
         if self.board.read_buttons(flush=True):
             return CHOICE_NEXT
@@ -89,12 +90,12 @@ class Monitor(App):
         self.show_header(title)
         for l in lines:
             l = shorten(l)
-            self.command(f'print {l}\\n')
-        self.command(f'display')
+            self.gfx.print(f'{l}\\n')
+        self.gfx.display()
 
         return self.wait_button(config.MONITOR_HOST_TIMEOUT)
 
-    def show_cpu(self) -> int:
+    def show_cpu(self) -> int | None:
         start = datetime.datetime.now()
         until = start + datetime.timedelta(seconds=config.MONITOR_CPU_TIMEOUT)
 
@@ -104,30 +105,31 @@ class Monitor(App):
 
         title = 'CPU %'
         self.show_header(title, with_banner=True)
-        self.command(f'display')
+        self.gfx.display()
         self.board.wait_no_button(timeout=1)
         if self.board.read_buttons(flush=True):
             return CHOICE_NEXT
 
         while True:
-            cpus, mem = None, None
+            cpus: list[str] = []
+            mem: list[str] = []
             with self.mutex:
                 if self.changed:
                     cpus, mem = self.cpus, self.mem
                     self.changed = False
-            if cpus is not None:
+            if cpus:
                 self.show_header(title)
                 # CPUs
-                self.command(f'setCursor 0 {config.TEXT_SCALING*12}')
+                self.gfx.set_cursor(0, config.TEXT_SCALING*12)
                 lines = cpus
                 for l in lines:
-                    self.command(f'print {l}\\n')
+                    self.gfx.print(f'{l}\\n')
                 # Mem
                 if len(lines) <= 4:
-                    self.command(f'setCursor 0 {config.TEXT_SCALING*6*8}')
+                    self.gfx.set_cursor(0, config.TEXT_SCALING*6*8)
                     for l in mem:
-                        self.command(f'print {l}\\n')
-                self.command(f'display')
+                        self.gfx.print(f'{l}\\n')
+                self.gfx.display()
 
             choice = self.wait_button(timeout=0)
             if choice:
@@ -154,7 +156,7 @@ class Monitor(App):
 
     def get_hostname(self) -> str:
         try:
-            return command(['hostname'])
+            return shell_command(['hostname'])
         except:
             return '<hostname unavail>'
 
@@ -167,7 +169,7 @@ class Monitor(App):
     def get_remote_ip(self) -> str:
         try:
             host = config.MONITOR_SSH_AUTHORITY.split('@')[-1]
-            out = command(['host', host], force_local=True, check=False)
+            out = shell_command(['host', host], force_local=True, check=False)
             return out.splitlines()[0].split(' ')[-1]
         except:
             return '<rmt ip addr unavail>'
@@ -180,23 +182,23 @@ class Monitor(App):
         except:
             return '<ip addr unavail>'
 
-    def get_nb_users(self) -> int:
+    def get_nb_users(self) -> int | None:
         try:
-            out = command(['who'])
+            out = shell_command(['who'])
             return len(out.splitlines())
         except:
             return None
 
     def get_date(self) -> str:
         try:
-            out = command(['date', '--rfc-3339=seconds'])
+            out = shell_command(['date', '--rfc-3339=seconds'])
             return out.split('+')[0]
         except:
             return '<date unavail>'
 
     def get_uptime(self) -> str:
         try:
-            uptime = command(['uptime', '-p'])
+            uptime = shell_command(['uptime', '-p'])
         except:
             return '<uptime unavail>'
         for unit in 'hour', 'minute', 'day', 'week', 'month', 'year':
@@ -207,7 +209,7 @@ class Monitor(App):
 
     def get_mem(self) -> list[str]:
         try:
-            out = command(['free', '--giga'])
+            out = shell_command(['free', '--giga'])
             stats = out.splitlines()[1].split()[1:]
 
             cols = 'Ttl Usd Fre Sha Buf Avg'.split()
@@ -219,8 +221,8 @@ class Monitor(App):
 
     def get_cpus_pcents(self) -> list[str]:
         try:
-            out = command((f'mpstat -P ALL {config.MONITOR_CPU_INTERVAL} 1 '
-                           f'-o JSON').split())
+            out = shell_command((f'mpstat -P ALL {config.MONITOR_CPU_INTERVAL} 1 '
+                                 f'-o JSON').split())
             data = json.loads(out)
             loads = data['sysstat']['hosts'][0]['statistics'][0]['cpu-load']
             cpus = [l for l in loads if l['cpu'] not in ('all', '-1')]
@@ -244,7 +246,7 @@ class Monitor(App):
         return lines
 
 
-def command(cmd: list[str], force_local: bool = False, check: bool = True) -> str:
+def shell_command(cmd: list[str], force_local: bool = False, check: bool = True) -> str:
     if config.MONITOR_SSH_AUTHORITY and not force_local:
         cmd = ['ssh', config.MONITOR_SSH_AUTHORITY] + cmd
     try:

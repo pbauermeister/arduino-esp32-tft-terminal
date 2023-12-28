@@ -11,18 +11,18 @@ class Star:
         self.reset(0)
 
     def reset(self, t: int) -> None:
-        self.vx = random.random()-.5
-        self.vy = random.random()-.5
+        self.vx = random.random() - .5
+        self.vy = random.random() - .5
         self.t0 = t
         self.k = random.random() + 1.75
 
-    def compute(self, t: int, check: bool = False) -> tuple[int, int]:
-        dt = t - self.t0
+    def compute(self, t: int, check: bool = False) -> tuple[int, int] | None:
+        dt = float(t - self.t0)
         x = int(self.vx * self.k**dt + .5 + config.WIDTH/2)
         y = int(self.vy * self.k**dt + .5 + config.HEIGHT/2)
         if check:
             if x > config.WIDTH or x < 0 or y > config.HEIGHT or y < 0:
-                return None, None
+                return None
         return x, y
 
 
@@ -42,22 +42,28 @@ class Starfield(App):
 
             # erase
             for star in stars:
-                x0, y0 = star.compute(t)
-                x1, y1 = star.compute(t+1)
-                self.command(f'drawLine {x0} {y0} {x1} {y1} 0')
+                pair0 = star.compute(t)
+                pair1 = star.compute(t+1)
+                if pair0 and pair1:
+                    x0, y0 = pair0
+                    x1, y1 = pair1
+                    self.gfx.draw_line(x0, y0, x1, y1, 0)
 
             # draw
             for star in stars:
-                x0, y0 = star.compute(t+1, True)
-                x1, y1 = star.compute(t+2)
-                if x0 is None:
-                    star.reset(t)
+                pair0 = star.compute(t+1, True)
+                pair1 = star.compute(t+2)
+
+                if pair0 and pair1:
+                    x0, y0 = pair0
+                    x1, y1 = pair1
+                    self.gfx.draw_line(x0, y0, x1, y1, 1)
                 else:
-                    self.command(f'drawLine {x0} {y0} {x1} {y1} 1')
+                    star.reset(t)
 
             if escaper.check():
                 break
-            self.command('display')
+            self.gfx.display()
             t += 1
 
         return

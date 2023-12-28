@@ -7,18 +7,20 @@ import serial  # pip3 install pyserial
 
 import config
 from lib import *
+from lib.gfx import Gfx
 
 from .channel import Channel
 
 
 class Board:
     def __init__(self, channel: Channel) -> None:
+        self.gfx = Gfx(self.do_command)
         self.chan = channel
-        self.configure_callback: Callable[[], None] = None
-        self.comm_error_handler: Callable[[], None] = None
+        self.configure_callback: Callable[[], None] | None = None
+        self.comm_error_handler: Callable[[], None] | None = None
         self.configured = False
         self.boots = 0
-        self.last_command: str = None
+        self.last_command: str | None = None
         self.reading_buttons = False
         self.auto_buttons: set[str] = set()
         self.auto_buttons_boots = 0
@@ -27,7 +29,7 @@ class Board:
         self.chan.open()
         self.chan.set_callback('READY', self.on_ready)
 
-    def set_configure_callback(self, configure_callback: Callable[[], None]) -> None:
+    def set_configure_callback(self, configure_callback: Callable[[], None] | None) -> None:
         self.configure_callback = configure_callback
 
     def set_comm_error_handler(self, handler: Callable[[], None]) -> None:
@@ -39,16 +41,7 @@ class Board:
     def reopen(self) -> None:
         self.chan.open()
 
-    # def command(self, cmd, ignore_error=False):
-    #     # Since the board may be rebooted in the middle of a command,
-    #     # it is okay to retry once
-    #     try:
-    #         return self._command(cmd, ignore_error)
-    #     except:
-    #         self.chan.clear()
-    #         return self._command(cmd, ignore_error)
-
-    def command(self, cmd: str, ignore_error: bool = False) -> str:
+    def send_command(self, cmd: str, ignore_error: bool = False) -> str:
         delay = config.SERIAL_ERROR_RETRY_DELAY
         while True:
             try:
@@ -112,12 +105,12 @@ class Board:
     def _configure(self) -> None:
         time.sleep(0.1)
         self.chan.clear()
-        self.command(f'setRotation {config.SCREEN_ROTATION}')
-        self.command('autoDisplay 0')
-        self.command('reset')
+        self.gfx.set_rotation(config.SCREEN_ROTATION)
+        self.gfx.set_auto_display_off()
+        self.gfx.reset()
 
-        w = int(self.command(f'width'))
-        h = int(self.command(f'height'))
+        w = self.gfx.get_width()
+        h = self.gfx.get_height()
         if not config.WIDTH:
             config.WIDTH = w
             config.HEIGHT = h
@@ -165,21 +158,21 @@ class Board:
             print('* end_read_buttons done:', val)
         return val
 
-    def wait_no_button(self, timeout: int = None) -> bool:
+    def wait_no_button(self, timeout: int | None = None) -> bool:
         self.chan.flush_in()
         if timeout is None:
-            while self.command('readButtons', ignore_error=True) != NONE:
+            while self.gfx.read_buttons() != NONE:
                 pass
         else:
             start = datetime.datetime.now()
             until = start + datetime.timedelta(seconds=timeout)
             while datetime.datetime.now() < until:
-                if self.command('readButtons', ignore_error=True) != NONE:
+                if self.gfx.read_buttons() != NONE:
                     break
         return False
 
     def begin_auto_read_buttons(self) -> None:
-        self.command('autoReadButtons 1')
+        self.gfx.set_auto_read_buttons_on()
         if config.DEBUG:
             print('* begin_auto_read_buttons')
         self.auto_buttons = set()
@@ -193,7 +186,7 @@ class Board:
         return b
 
     def end_auto_read_buttons(self) -> set[str]:
-        self.command('autoReadButtons 0')
+        self.gfx.set_auto_read_buttons_off()
         self.chan.flush_in()
         if config.DEBUG:
             print('* end_auto_read_buttons')
@@ -205,10 +198,10 @@ class Board:
         self.chan.flush_in()
         self.read_buttons_boots = self.boots
 
-    def wait_button_up(self, timeout: int = None) -> set[str]:
+    def wait_button_up(self, timeout: int | None = None) -> set[str]:
         return self.wait_button(timeout, wait_released=True)
 
-    def wait_button(self, timeout: int = None, wait_released: bool = False) -> set[str]:
+    def wait_button(self, timeout: int | None = None, wait_released: bool = False) -> set[str]:
         self.wait_no_button()
         b: set[str] = set()
         with until(timeout) as done:
@@ -229,7 +222,7 @@ class Board:
             self.chan.flush_in()
             self.read_buttons_boots = self.boots
 
-        ans = self.command('readButtons', ignore_error=True)
+        ans = self.gfx.read_buttons()
         b: set[str] = set()
         if ans != NONE:
             for c in ans:
@@ -243,17 +236,26 @@ class Board:
             self.read_buttons_boots = self.boots
         return b
 
+    def do_command(self, cmd: str, ignore_error: bool = False) -> str:
+        # Since the board may be rebooted in the middle of a command,
+        # it is okay to retry once
+        try:
+            return self.send_command(cmd, ignore_error)
+        except:
+            self.chan.clear()
+            return self.send_command(cmd, ignore_error)
+
     def fatal(self, msg: str) -> None:
         print(msg)
-        self.command('home')
+        self.gfx.home()
         w, h = 1, config.TEXT_SCALING
-        self.command(f'setTextSize {w} {h}')
-        self.command('setTextWrap 1')
-        self.command('reset')
+        self.gfx.set_text_size(0.5, 1)
+        self.gfx.set_text_wrap_on()
+        self.gfx.reset()
 
         msg = ' '.join(msg.split())
         msg = msg[-20*8:]
         for chunk in chunkize(msg.replace('\n', ' '), 20):
-            self.command(f'print {chunk}')
-        self.command('display')
+            self.gfx.print(chunk)
+        self.gfx.display()
         sys.exit(1)

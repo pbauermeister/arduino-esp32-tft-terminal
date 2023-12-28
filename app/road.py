@@ -32,7 +32,7 @@ class Road(App):
 
             if escaper.check():
                 break
-            self.command('display')
+            self.gfx.display()
             i += 1
 
         return
@@ -47,5 +47,6 @@ class Road(App):
         x1 = int(config.WIDTH/2 + w/2)
         y = int(config.HEIGHT/2 - h/2)
 
-        self.command(f'drawFastVLine {x0} {y} {h} {c}')
-        self.command(f'drawFastVLine {x1} {y} {h} {c}')
+        hh = int(h+.5)
+        self.gfx.draw_fast_vline(x0, y, hh, c)
+        self.gfx.draw_fast_vline(x1, y, hh, c)
