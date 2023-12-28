@@ -139,6 +139,24 @@ const char *interpret(char *input, const Config &config) {
       return ok();
     }
 
+    case hash("setFgColor"): {  // setFgColor 255 128 128
+      int r = read_int(&rest, error);
+      int g = read_int(&rest, error);
+      int b = read_int(&rest, error);
+      if (error.message) return error.message;
+      set_fg_color(r, g, b);
+      return ok();
+    }
+
+    case hash("setBgColor"): {  // setBgColor 255 128 128
+      int r = read_int(&rest, error);
+      int g = read_int(&rest, error);
+      int b = read_int(&rest, error);
+      if (error.message) return error.message;
+      set_bg_color(r, g, b);
+      return ok();
+    }
+
     case hash("drawPixel"): {  // drawPixel 100 10 1
       int16_t x = read_int(&rest, error);
       int16_t y = read_int(&rest, error);

@@ -58,10 +58,13 @@ void test_draw_text(char *text, uint16_t color) {
 }
 
 void display_reset() {
+  bg_color = ST77XX_BLACK;
+  fg_color = ST77XX_WHITE;
   display_clear();
   tft.setCursor(0, 0);
   tft.setTextColor(fg_color);
   tft.setTextWrap(true);
+  tft.setTextSize(1, 1);
 }
 
 void display_clear() { tft.fillScreen(bg_color); }
