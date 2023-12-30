@@ -10,17 +10,18 @@ from lib.board import Board
 from lib.gfx import Gfx
 
 # Parameters
-SHIP_RADIUS = 6 * config.GFX_SCALING
+SHIP_RADIUS = 8 * config.GFX_SCALING
 SHIP_SPEED = 2
 SHIP_ROT_STEP = .2
 
 SHOT_SPEED = 5
-SHOT_DELAY = 2
-SHOT_MAX = 16
+SHOT_DELAY = 2*2
+SHOT_MAX = 10
 
-ASTEROID_NB_MAX = 5
-ASTEROID_RADIUS = 2*config.GFX_SCALING, 10*config.GFX_SCALING
-ASTEROID_SPLIT_A = .4  # angle
+ASTEROID_NB_MAX = 8*2
+ASTEROID_RADIUS = 2*config.GFX_SCALING, 18*config.GFX_SCALING
+ASTEROID_RADIUS_MEAN = sum(ASTEROID_RADIUS)/2
+ASTEROID_SPLIT_A = .4*2  # angle
 
 SHIELD_DURATION = 12
 SHIELD_TIMEOUT = 20
@@ -124,16 +125,16 @@ class Ship:
 
     def compute(self) -> None:
         self.ca, self.sa = math.cos(self.a), math.sin(self.a)
-        self.x0 = int(self.r*self.ca + self.x + .5)
-        self.y0 = int(self.r*self.sa + self.y + .5)
+        self.x0 = self.r*self.ca + self.x
+        self.y0 = self.r*self.sa + self.y
 
         b = self.a + math.pi * .8
-        self.x1 = int(self.r*math.cos(b) + self.x + .5)
-        self.y1 = int(self.r*math.sin(b) + self.y + .5)
+        self.x1 = self.r*math.cos(b) + self.x
+        self.y1 = self.r*math.sin(b) + self.y
 
         b = self.a + math.pi * 1.2
-        self.x2 = int(self.r*math.cos(b) + self.x + .5)
-        self.y2 = int(self.r*math.sin(b) + self.y + .5)
+        self.x2 = self.r*math.cos(b) + self.x
+        self.y2 = self.r*math.sin(b) + self.y
 
     def shoot(self, shots: list[Shot]) -> None:
         if self.shield > 0:
@@ -145,40 +146,44 @@ class Ship:
         vx, vy = self.ca*SHOT_SPEED, self.sa*SHOT_SPEED
         shot = Shot(self.gfx, self.x0, self.y0, vx, vy)
         shots.append(shot)
-        shot = Shot(self.gfx, self.x0+vx, self.y0+vy, vx, vy)
+        shot = Shot(self.gfx, self.x0+vx*3, self.y0+vy*3, vx, vy)
         shots.append(shot)
         self.shot_reload = 0
 
     def add_renders(self) -> None:
-        x0 = self.x0
-        y0 = self.y0
-        x1 = self.x1
-        y1 = self.y1
-        x2 = self.x2
-        y2 = self.y2
+        x0 = int(self.x0 + .5)
+        y0 = int(self.y0 + .5)
+        x1 = int(self.x1 + .5)
+        y1 = int(self.y1 + .5)
+        x2 = int(self.x2 + .5)
+        y2 = int(self.y2 + .5)
         if self.shield > 0 and not self.protect:
             self.gfx.fill_triangle(x0, y0, x1, y1, x2, y2, 1)
         else:
             self.gfx.draw_triangle(x0, y0, x1, y1, x2, y2, 1)
 
         if self.shield > 0:
-            x = int(self.x + .5)
-            y = int(self.y + .5)
             if self.protect:
                 r = SHIELD_RADIUS
             else:
                 r = SHIELD_RADIUS - 3 + (self.i % 3)*3
+            x = int(self.x + .5)
+            y = int(self.y + .5)
             self.gfx.set_fg_color(64, 64, 255)
             self.gfx.draw_circle(x, y, r, 1)
             self.gfx.set_fg_color(255, 255, 255)
 
     def add_renders_boom(self, i: int) -> None:
         c = i % 2
+        x0 = int(self.x0 + .5)
+        y0 = int(self.y0 + .5)
+        x1 = int(self.x1 + .5)
+        y1 = int(self.y1 + .5)
+        x2 = int(self.x2 + .5)
+        y2 = int(self.y2 + .5)
+
         self.gfx.set_fg_color(255, 64, 64)
-        self.gfx.fill_triangle(self.x0, self.y0, self.x1,
-                               self.y1, self.x2, self.y2, c)
-        # self.gfx.draw_triangle(self.x0, self.y0, self.x1,
-        #                       self.y1, self.x2, self.y2, c)
+        self.gfx.fill_triangle(x0, y0, x1, y1, x2, y2, c)
         self.gfx.set_fg_color(255, 255, 255)
 
 
@@ -192,10 +197,10 @@ class Player:
 
 @dataclass
 class AsteriodData:
-    xx: float
     x: float
-    yy: float
+    # x: float
     y: float
+    # y: float
     r: float
     a: float
     hit: bool
@@ -207,8 +212,8 @@ class Asteroid(AsteriodData):
         if ship is not None:
             self.init(ship.x, ship.y)
         elif other is not None:
-            self.xx, self.x = other.xx, other.x
-            self.yy, self.y = other.yy, other.y
+            self.x = other.x
+            self.y = other.y
             self.r = other.r
             self.a = other.a
             self.hit = other.hit
@@ -236,8 +241,8 @@ class Asteroid(AsteriodData):
             x = config.WIDTH - x
             a += math.pi/2
 
-        self.xx = self.x = int(x+.5)
-        self.yy = self.y = int(y+.5)
+        self.x = x
+        self.y = y
         self.r = int(r+.5)
         self.a = a
         self.hit = False
@@ -249,23 +254,21 @@ class Asteroid(AsteriodData):
         vx = math.cos(self.a) * (dist or 0)
         vy = math.sin(self.a) * (dist or 0)
 
-        self.xx += vx
-        self.yy += vy
+        self.x += vx
+        self.y += vy
 
         # wrap around
-        if self.xx < -self.r:
-            self.xx = config.WIDTH + self.r
-        if self.xx > config.WIDTH + self.r:
-            self.xx = -self.r
-        if self.yy < -self.r:
-            self.yy = config.HEIGHT + self.r
-        if self.yy > config.HEIGHT + self.r:
-            self.yy = -self.r
-        self.x = int(self.xx+.5)
-        self.y = int(self.yy+.5)
+        if self.x < -self.r:
+            self.x = config.WIDTH + self.r
+        if self.x > config.WIDTH + self.r:
+            self.x = -self.r
+        if self.y < -self.r:
+            self.y = config.HEIGHT + self.r
+        if self.y > config.HEIGHT + self.r:
+            self.y = -self.r
 
     def shrink(self) -> None:
-        self.r -= 1
+        self.r = int(self.r * .67 + .5)
         if self.r < 4:
             self.r = 0
 
@@ -274,7 +277,9 @@ class Asteroid(AsteriodData):
         y = int(self.y + .5)
         r = int(self.r + .5)
         if self.hit:
+            self.gfx.set_fg_color(255, 64, 64)
             self.gfx.fill_circle(x, y, r, 1)
+            self.gfx.set_fg_color(255, 255, 255)
         else:
             self.gfx.draw_circle(x, y, r, 1)
 
@@ -284,11 +289,9 @@ class Asteroid(AsteriodData):
         r = int(self.r + .5)
         c = i % 2
 
-        self.gfx.set_fg_color(255, 255, 64)
-
+        self.gfx.set_fg_color(255, 64, 64)
         self.gfx.fill_circle(x, y, r, c)
         # self.gfx.draw_circle(x, y, r, c)
-
         self.gfx.set_fg_color(255, 255, 255)
 
 
@@ -310,9 +313,9 @@ class Game:
                     self.asteroids.remove(a)
 
     def create_asteroid(self) -> None:
-        if random.random() > .05:
-            return
         if len(self.asteroids) >= ASTEROID_NB_MAX:
+            return
+        if random.random() > .05:
             return
         self.asteroids.append(Asteroid(self.gfx, ship=self.player.ship))
 
@@ -390,10 +393,14 @@ class Game:
     def handle_crash(self) -> bool:
         if not self.player.ship.aster_crash:
             return False
+        self.gfx.set_fg_color(255, 64, 64)
+        self.gfx.set_text_color(1)
         self.boom(self.player.ship, self.player.ship.aster_crash)
         self.player.ship.aster_crash = None
         if self.player.lives:
             self.player.lives -= 1
+        self.gfx.set_fg_color(255, 255, 255)
+        self.gfx.set_text_color(1)
         return True
 
     def boom(self, ship: Ship, asteroid: Asteroid) -> None:
@@ -423,9 +430,10 @@ class Detect:
                     a.hit = True
                     score += int(a.r)
 
-                    if a.r >= sum(ASTEROID_RADIUS)/2:
+                    if a.r >= ASTEROID_RADIUS_MEAN:
+                        # a.r = int(a.r * .67 + .5)
+
                         # split in two
-                        a.r -= 1
                         a1 = Asteroid(gfx, other=a)
                         a1.a += ASTEROID_SPLIT_A
                         a1.move(a1.r+1)
@@ -468,11 +476,11 @@ class Detect:
             for b in asteroids:
                 if a is b:
                     continue
-                ah = a and a.__hash__
-                bh = b and b.__hash__
-                if (ah, bh) in pairs:
-                    continue
-                pairs[(ah, bh)] = True
+                # ah = a and a.__hash__
+                # bh = b and b.__hash__
+                # if (ah, bh) in pairs:
+                #     continue
+                # pairs[(ah, bh)] = True
                 if Detect.touch(a.x, a.y, b.x, b.y, a.r, b.r):
                     a.hit = True
                     b.hit = True

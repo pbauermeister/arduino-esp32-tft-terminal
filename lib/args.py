@@ -4,7 +4,7 @@ from typing import Any, Type
 import config
 from app import App
 
-APPS_DEMO_TIMEOUT = 5
+APPS_DEMO_TIMEOUT = 10
 
 
 class Arg:
