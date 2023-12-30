@@ -6,7 +6,7 @@ from app import App, Bouncer, TimeEscaper
 from lib.board import Board
 
 NB_LINES = 12
-REDRAW = False  # True looks cleaner but is slower
+REDRAW = not False  # True looks cleaner but is slower
 
 
 @dataclass
@@ -101,6 +101,6 @@ class Quix(App):
 
             if escaper.check():
                 break
-            self.gfx.display()
 
+            self.gfx.display()
         return

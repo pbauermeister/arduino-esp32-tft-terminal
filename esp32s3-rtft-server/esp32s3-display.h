@@ -150,4 +150,4 @@ inline int16_t get_cursor_x() { return tft.getCursorX(); }
 
 inline int16_t get_cursor_y() { return tft.getCursorY(); }
 
-#endif
+#endif  // ESP32S3_DISPLAY_H

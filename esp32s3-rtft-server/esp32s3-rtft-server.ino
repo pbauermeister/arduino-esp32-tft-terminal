@@ -43,7 +43,7 @@ void setup(void) {
   buttons_setup();
 
   config = Config{display_get_width(), display_get_height()};
-  //display_test(input_buffer);
+  // display_test(input_buffer);
 }
 
 char *get_input() {

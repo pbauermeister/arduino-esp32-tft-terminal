@@ -1,3 +1,5 @@
+#include "command.h"
+
 #include <Stream.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -5,6 +7,7 @@
 
 #include "config.h"
 #include "esp32s3-display.h"
+#include "transaction.h"
 
 // constants
 const char *ERR_EXTRA_ARG = "ERROR extra arg";
@@ -16,6 +19,8 @@ const char *NONE_MESSAGE = "NONE";
 // variables
 bool auto_read_buttons = false;
 char buffer[100];
+
+Transaction transaction = Transaction();
 
 // forward declarations
 const char *ok();
@@ -79,11 +84,6 @@ const char *read_last_str(char **rest_p, ErrorHolder &error) {
   return v;
 }
 
-// https://stackoverflow.com/a/46711735
-constexpr unsigned int hash(const char *s, int off = 0) {
-  return !s[off] ? 5381 : (hash(s, off + 1) * 33) ^ (s[off] | 0x20);
-}
-
 const char *interpret(char *input, const Config &config) {
   unescape_inplace(input);
 
@@ -91,12 +91,14 @@ const char *interpret(char *input, const Config &config) {
   char *rest = split(input);
   // char *error = NULL;
   ErrorHolder error = ErrorHolder();
+  int h = hash(cmd);
 
-  switch (hash(cmd)) {
+  switch (h) {
     case hash("autoDisplay"): {  // autoDisplay 1
       bool on = read_int(&rest, error);
       if (error.message) return error.message;
       // auto_display = on;
+      transaction.enable(!on);
       return ok();
     }
 
@@ -110,11 +112,13 @@ const char *interpret(char *input, const Config &config) {
     case hash("display"): {  // display
       no_arg(&rest, error);
       if (error.message) return error.message;
+      transaction.commit();
       return ok();
     }
 
     case hash("print"): {  // print HELLO\n
-      display_print(rest);
+      transaction.action()->set(h, rest);
+      transaction.add();
       return ok();
     }
 
@@ -136,6 +140,7 @@ const char *interpret(char *input, const Config &config) {
       no_arg(&rest, error);
       if (error.message) return error.message;
       display_reset();
+      transaction.reset();
       return ok();
     }
 

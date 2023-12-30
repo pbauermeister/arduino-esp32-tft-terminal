@@ -65,6 +65,7 @@ void display_reset() {
   tft.setTextColor(fg_color);
   tft.setTextWrap(true);
   tft.setTextSize(1, 1);
+  tft.setRotation(3);
 }
 
 void display_clear() { tft.fillScreen(bg_color); }
@@ -262,9 +263,9 @@ void next_tile(uint16_t *x, uint16_t *y, uint16_t width, uint16_t height,
 
 void display_test(char *buffer) {
   // Toggle un/commenting this line: suceeds/fails to boot
-  Serial.println("Starting tests");  // reason? code alignment/parity?
-  Serial.println("Starting tests");  // reason? code alignment/parity?
-  Serial.println("Starting tests");  // reason? code alignment/parity?
+  // Serial.println("Starting tests");  // reason? code alignment/parity?
+  // Serial.println("Starting tests");  // reason? code alignment/parity?
+  // Serial.println("Starting tests");  // reason? code alignment/parity?
 
   // Test color conversion
   // ---------------------

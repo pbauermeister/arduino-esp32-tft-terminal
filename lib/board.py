@@ -195,10 +195,10 @@ class Board:
         w, h = 1, config.TEXT_SCALING
         self.gfx.set_text_size(0.5, 1)
         self.gfx.set_text_wrap_on()
+        self.gfx.set_auto_display_on()
 
         msg = ' '.join(msg.split())
         msg = msg[-20*8:]
         for chunk in chunkize(msg.replace('\n', ' '), 20):
             self.gfx.print(chunk)
-        self.gfx.display()
         sys.exit(1)

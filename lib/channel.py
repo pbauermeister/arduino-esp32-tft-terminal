@@ -84,6 +84,10 @@ class Channel:
         while True:
             if self.ser.in_waiting:
                 c = self.ser.read()
+                try:
+                    c = c.decode('ascii')
+                except:
+                    pass
                 if config.DEBUG:
                     print(c, end='')
             else:
