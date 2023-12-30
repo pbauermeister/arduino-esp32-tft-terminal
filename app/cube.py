@@ -31,7 +31,7 @@ class Cube(App):
     def __init__(self, board: Board):
         super().__init__(board, auto_read=True)
 
-    def _run(self) -> None:
+    def _run(self) -> bool:
         """Rotating Cube, by Al Sweigart al@inventwithpython.com A rotating
         cube animation. Press Ctrl-C to stop.  This code is available
         at https://nostarch.com/big-book-small-python-programming
@@ -169,8 +169,13 @@ class Cube(App):
         start = datetime.datetime.now()
         self.gfx.reset()
         while True:  # Main program loop.
-            if self.board.auto_read_buttons():
-                break
+            btns = self.board.auto_read_buttons()
+            if 'R' in btns:
+                return True
+            if btns:
+                return False
+            if escaper.check():
+                return False
 
             self.gfx.clear()
             isometric = True  # (i % 50) > 25
@@ -181,10 +186,5 @@ class Cube(App):
             rotation.z += Z_ROTATE_SPEED
             cube(rotated_corners, rotation, 1)
 
-            if escaper.check():
-                break
-
             self.gfx.display()
             i += 1
-
-        return

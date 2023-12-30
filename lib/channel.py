@@ -6,6 +6,7 @@ import serial  # pip3 install pyserial
 import config
 from lib import *
 from lib import ArduinoCommExceptions
+import sys
 
 
 class Channel:
@@ -26,11 +27,12 @@ class Channel:
                 print('>open', port)
                 self.ser = serial.Serial(port, self.baudrate)
             # except ArduinoCommExceptions as e:
-            except Exception as e:
+            except ArduinoCommExceptions as e:
                 print('>open>error:', e)
                 port_nr = (port_nr + 1) % 10
-                time.sleep(0.1)
+                time.sleep(config.SERIAL_ERROR_RETRY_DELAY)
                 continue
+
             self.clear()
             return
 
@@ -83,7 +85,10 @@ class Channel:
             print('>flush> ', end='')
         while True:
             if self.ser.in_waiting:
-                c = self.ser.read()
+                try:
+                    c = self.ser.read()
+                except ArduinoCommExceptions:
+                    c = b''
                 try:
                     c = c.decode('ascii')
                 except:

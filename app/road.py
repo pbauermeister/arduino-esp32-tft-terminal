@@ -12,14 +12,19 @@ class Road(App):
     def __init__(self, board: Board):
         super().__init__(board, auto_read=True)
 
-    def _run(self) -> None:
+    def _run(self) -> bool:
         last = None
         escaper = TimeEscaper(self)
 
         i = 0
         while True:
-            if self.board.auto_read_buttons():
-                break
+            btns = self.board.auto_read_buttons()
+            if 'R' in btns:
+                return True
+            if btns:
+                return False
+            if escaper.check():
+                return False
 
             self.draw(i, 0)
             self.draw(i + NB2, 0)
@@ -29,12 +34,8 @@ class Road(App):
             self.draw(i+1 + NB2, 1)
             self.draw(i+1 + NB3, 1)
 
-            if escaper.check():
-                break
             self.gfx.display()
             i += 1
-
-        return
 
     def draw(self, i: int, c: int) -> None:
         i = NB - (i % NB)

@@ -85,7 +85,8 @@ while True:
     try:
         while True:
             if not config.MONITOR_SKIP:
-                Monitor(board).run()
+                if Monitor(board).run():
+                    break
             if config.MONITOR_ONLY:
                 continue
             if not config.APP_ASTERIODS_SKIP:

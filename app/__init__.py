@@ -20,6 +20,8 @@ class App:
         self.extra_configurator = extra_configurator
         board.set_configure_callback(extra_configurator)
         self.text_bound_cache: dict[str, tuple[int, int]] = {}
+        self.board.clear_buttons()
+        self.board.command.had_recoveries()
         self.init()
 
     @abstractmethod
@@ -58,7 +60,6 @@ class App:
 
         # ready for run()
         self.gfx.set_text_size(1, 1)
-        self.board.clear_buttons()
         if self.auto_read:
             self.board.begin_auto_read_buttons()
 

@@ -13,13 +13,19 @@ class Tunnel(App):
     def __init__(self, board: Board):
         super().__init__(board, auto_read=True)
 
-    def _run(self) -> None:
+    def _run(self) -> bool:
         escaper = TimeEscaper(self)
 
         i = 0
         while True:
-            if self.board.auto_read_buttons():
-                break
+            btns = self.board.auto_read_buttons()
+            if 'R' in btns:
+                return True
+            if btns:
+                return False
+            if escaper.check():
+                return False
+
             j = i
             w, h = self.make(j)
             x0, y0, x1, y1, x2, y2, x3, y3 = self.compute(w, h, j)
@@ -40,12 +46,8 @@ class Tunnel(App):
             x0, y0, x1, y1, x2, y2, x3, y3 = self.compute(w, h, j)
             self.draw(x0, y0, x1, y1, x2, y2, x3, y3, 1)
 
-            if escaper.check():
-                break
             self.gfx.display()
             i += 1
-
-        return
 
     def make(self, i: int) -> tuple[int, int]:
         i = NB - 1 - (i % NB)

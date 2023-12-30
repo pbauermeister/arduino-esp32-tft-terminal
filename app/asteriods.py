@@ -574,7 +574,7 @@ class Asteriods(App):
                 return False
             elif go == GOTO_QUIT:
                 if auto:
-                    return True
+                    return True  # first app
                 else:
                     continue  # reset during playing returns to menu
 
@@ -586,7 +586,6 @@ class Asteriods(App):
         self.gfx.print(f' {KEY_CCW}   cntr-clockwise\\n')
         self.gfx.print(f' {KEY_CW}   clockwise\\n')
         self.gfx.print(f' {KEY_SHIELD1}+{KEY_SHIELD2} shield\\n')
-        self.gfx.print(f' R   back to menu\\n\\n')
         self.gfx.display()
 
         k = self.board.wait_button_up(MENU_TIMEOUT)
@@ -596,7 +595,7 @@ class Asteriods(App):
             return MENU_NEXT
         elif 'A' in k:
             return MENU_AUTO
-        elif k:
+        elif 'B' in k:
             return MENU_PLAY
         return MENU_AUTO
 

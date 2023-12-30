@@ -13,8 +13,10 @@ from .command import Command
 
 class Board:
     def __init__(self, channel: Channel) -> None:
+        self.app_comm_error_handler: Callable[[], None] | None = None
         self.command = Command(channel)
         self.command.set_auto_btn_handler(self.handle_auto_buttons)
+        self.command.set_comm_error_handler(self.board_comm_error_handler)
         self.gfx = Gfx(self.command)
 
         self.chan = channel
@@ -24,8 +26,6 @@ class Board:
         self.last_command: str | None = None
         self.reading_buttons = False
         self.auto_buttons: set[str] = set()
-        self.auto_buttons_boots = 0
-        self.read_buttons_boots = 0
 
         self.chan.open()
         self.chan.set_callback(READY, self.on_ready)
@@ -33,8 +33,13 @@ class Board:
     def set_configure_callback(self, configure_callback: Callable[[], None] | None) -> None:
         self.configure_callback = configure_callback
 
+    def board_comm_error_handler(self) -> None:
+        self.boots += 1
+        if self.app_comm_error_handler:
+            self.app_comm_error_handler()
+
     def set_comm_error_handler(self, handler: Callable[[], None]) -> None:
-        self.command.set_comm_error_handler(handler)
+        self.app_comm_error_handler = handler
 
     def close(self) -> None:
         self.chan.close()
@@ -86,7 +91,6 @@ class Board:
             print('* begin_read_buttons')
         self.command.command_send('waitButton -1 0')
         self.reading_buttons = True
-        self.auto_buttons_boots = self.boots
 
     def end_read_buttons(self) -> set[str]:
         assert self.reading_buttons
@@ -101,7 +105,8 @@ class Board:
             val = set()
         else:
             val = set(resp)
-        if self.boots > self.auto_buttons_boots:
+        if self.boots:  # > self.auto_buttons_boots:
+            self.boots = 0
             val.add('R')
         if config.DEBUG:
             print('* end_read_buttons done:', val)
@@ -125,10 +130,10 @@ class Board:
         if config.DEBUG:
             print('* begin_auto_read_buttons')
         self.auto_buttons = set()
-        self.auto_buttons_boots = self.boots
 
     def auto_read_buttons(self) -> set[str]:
-        if self.boots > self.auto_buttons_boots:
+        if self.boots:
+            self.boots = 0
             self.auto_buttons.add('R')
         b = self.auto_buttons
         self.auto_buttons = set()
@@ -139,13 +144,14 @@ class Board:
         self.chan.flush_in()
         if config.DEBUG:
             print('* end_auto_read_buttons')
-        if self.boots > self.auto_buttons_boots:
+        if self.boots:
+            self.boots = 0
             self.auto_buttons.add('R')
         return self.auto_buttons
 
     def clear_buttons(self) -> None:
         self.chan.flush_in()
-        self.read_buttons_boots = self.boots
+        self.boots = 0
 
     def wait_button_up(self, timeout: int | None = None) -> set[str]:
         return self.wait_button(timeout, wait_released=True)
@@ -169,20 +175,19 @@ class Board:
     def read_buttons(self, flush: bool = False) -> set[str]:
         if flush:
             self.chan.flush_in()
-            self.read_buttons_boots = self.boots
 
         ans = self.gfx.read_buttons()
         b: set[str] = set()
         if ans != NONE:
             for c in ans:
-                if c in 'ABC':
+                if c in 'ABCR':
                     b.add(c)
                 else:
                     b = set()
                     break
-        if self.boots > self.read_buttons_boots:
+        if self.boots:
+            self.boots = 0
             b.add('R')
-            self.read_buttons_boots = self.boots
         return b
 
     # overrides

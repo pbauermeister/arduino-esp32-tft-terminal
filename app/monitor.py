@@ -11,11 +11,10 @@ from lib.board import Board
 
 CHOICE_EXIT = 1
 CHOICE_NEXT = 2
+CHOICE_RESET = 3
 
 
 class Monitor(App):
-    CHOICE_EXIT = 1
-    CHOICE_NEXT = 2
 
     def __init__(self, board: Board):
         super().__init__(board, auto_read=False)
@@ -28,37 +27,41 @@ class Monitor(App):
         self.changed = False
         self.stop = False
 
-    def set_pane_text_attr(self):
+    def set_pane_text_attr(self) -> None:
         # self.gfx.set_text_size(.5, 1)
         self.gfx.set_text_size(1, 1)
         self.gfx.set_fg_color(128, 128, 128)
         self.gfx.set_text_color(1)
 
-    def _run(self) -> None:
+    def _run(self) -> bool:
         ans: int | None = None
         while True:
             if config.MONITOR_HOST_TIMEOUT:
                 ans = self.show_host()
                 if ans == CHOICE_EXIT:
-                    break
+                    return False
+                if ans == CHOICE_RESET:
+                    return True
 
             if config.MONITOR_CPU_TIMEOUT:
                 ans = self.show_cpu()
                 if ans == CHOICE_EXIT:
-                    break
+                    return False
+                if ans == CHOICE_RESET:
+                    return True
 
             if ans is not None:
                 continue
             if not config.MONITOR_ONLY:
                 break
-        return
+        return False
 
     def show_header(self, title: str, menu: str | None = None, with_banner: bool = False) -> None:
         self.gfx.set_fg_color(255, 255, 255)
         self.gfx.set_text_color(1)
         self.gfx.set_text_size(1, 1)
 
-        super().show_header(title, 'C:next R:exit', with_banner)
+        super().show_header(title, 'A:next C:exit', with_banner)
 
         self.set_pane_text_attr()
 
@@ -67,10 +70,12 @@ class Monitor(App):
             ans = self.board.read_buttons()
         else:
             ans = self.board.wait_button(timeout)
-        if 'C' in ans:
+        if 'A' in ans:
             return CHOICE_NEXT
-        if 'R' in ans:
+        if 'C' in ans:
             return CHOICE_EXIT
+        if 'R' in ans:
+            return CHOICE_RESET
         return None
 
     def show_host(self) -> int | None:
@@ -95,7 +100,7 @@ class Monitor(App):
             self.get_uptime(),
         ] + self.get_mem()
 
-        if 'C' in self.board.end_read_buttons():
+        if 'A' in self.board.end_read_buttons():
             return CHOICE_NEXT
 
         self.show_header(title)

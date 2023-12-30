@@ -39,6 +39,7 @@ class RebootedException(Exception):
 ArduinoCommExceptions = (
     # serial.serialutil.SerialException,
     serial.SerialException,
+    serial.PortNotOpenError,
     OSError,
     termios.error,
     UnicodeDecodeError,

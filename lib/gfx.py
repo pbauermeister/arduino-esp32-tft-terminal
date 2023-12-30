@@ -95,7 +95,12 @@ class Gfx:
         return int(self._command(f'height'))
 
     def read_buttons(self) -> str:
-        return self._command('readButtons', ignore_error=True)
+        btns = self._command('readButtons', ignore_error=True)
+        if self.command.had_recoveries():
+            if btns == 'NONE':
+                btns = ''
+            btns += 'R'
+        return btns
 
     def set_auto_read_buttons_on(self) -> None:
         self._command('autoReadButtons 1')

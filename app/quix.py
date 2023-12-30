@@ -54,7 +54,7 @@ class Quix(App):
     def __init__(self, board: Board):
         super().__init__(board, auto_read=True)
 
-    def _run(self) -> None:
+    def _run(self) -> bool:
         p1 = Bouncer(2, -1, -1)
         p2 = Bouncer(2, +1, +1)
         p3 = Bouncer(3, +1, -1)
@@ -70,8 +70,13 @@ class Quix(App):
 
         escaper = TimeEscaper(self)
         while True:
-            if self.board.auto_read_buttons():
-                break
+            btns = self.board.auto_read_buttons()
+            if 'R' in btns:
+                return True
+            if btns:
+                return False
+            if escaper.check():
+                return False
 
             p1.advance()
             p2.advance()
@@ -98,9 +103,6 @@ class Quix(App):
                             last.ax, last.ay, last.bx, last.by, last.cx, last.cy, 1)
             else:
                 self.gfx.draw_triangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, 1)
-
-            if escaper.check():
-                break
 
             self.gfx.display()
         return
