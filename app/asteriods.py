@@ -46,6 +46,12 @@ GOTO_MENU = 1
 GOTO_NEXT = 2
 GOTO_QUIT = 3
 
+KEY_CW = 'C'
+KEY_CCW = 'A'
+KEY_FIRE = 'B'
+KEY_SHIELD1 = 'A'
+KEY_SHIELD2 = 'B'
+
 
 class Shot:
     def __init__(self, gfx: Gfx, x: float, y: float, vx: float, vy: float):
@@ -86,16 +92,16 @@ class Ship:
     def move(self, keys: set[str]) -> None:
         v = self.v
         # rotate & advance
-        if 'A' in keys and 'B' in keys:
+        if KEY_SHIELD1 in keys and KEY_SHIELD2 in keys:
             if self.shield < -SHIELD_TIMEOUT:
                 self.shield = SHIELD_DURATION
-        elif 'B' in keys:
+        elif KEY_CCW in keys:
             self.a -= SHIP_ROT_STEP
             v = self.v/2
-        elif 'A' in keys:
+        elif KEY_CW in keys:
             self.a += SHIP_ROT_STEP
             v = self.v/2
-        if 'C' in keys:
+        if KEY_FIRE in keys:
             pass  # v = self.v/4
 
         self.ca, self.sa = math.cos(self.a), math.sin(self.a)
@@ -174,7 +180,6 @@ class Ship:
             self.gfx.set_fg_color(255, 255, 255)
 
     def add_renders_boom(self, i: int) -> None:
-        c = i % 2
         x0 = int(self.x0 + .5)
         y0 = int(self.y0 + .5)
         x1 = int(self.x1 + .5)
@@ -182,8 +187,10 @@ class Ship:
         x2 = int(self.x2 + .5)
         y2 = int(self.y2 + .5)
 
+        c = i % 2
         self.gfx.set_fg_color(255, 64, 64)
         self.gfx.fill_triangle(x0, y0, x1, y1, x2, y2, c)
+        self.gfx.draw_triangle(x0, y0, x1, y1, x2, y2, c)
         self.gfx.set_fg_color(255, 255, 255)
 
 
@@ -198,9 +205,7 @@ class Player:
 @dataclass
 class AsteriodData:
     x: float
-    # x: float
     y: float
-    # y: float
     r: float
     a: float
     hit: bool
@@ -249,7 +254,7 @@ class Asteroid(AsteriodData):
 
     def move(self, dist: float | None = None) -> None:
         if dist is None:
-            v = max((ASTEROID_RADIUS[1] - self.r)**1.5 / 6, .5)
+            v = max((ASTEROID_RADIUS[1] - self.r)**1.4 / 6, .5)
             dist = v
         vx = math.cos(self.a) * (dist or 0)
         vy = math.sin(self.a) * (dist or 0)
@@ -287,12 +292,12 @@ class Asteroid(AsteriodData):
         x = int(self.x + .5)
         y = int(self.y + .5)
         r = int(self.r + .5)
-        c = i % 2
 
+        c = i % 2
         self.gfx.set_fg_color(255, 64, 64)
         self.gfx.fill_circle(x, y, r, c)
-        # self.gfx.draw_circle(x, y, r, c)
         self.gfx.set_fg_color(255, 255, 255)
+        # self.gfx.draw_circle(x, y, r, c)
 
 
 class Game:
@@ -323,21 +328,21 @@ class Game:
         p = random.random()
         if p < .1:
             if len(self.asteroids):
-                keys.add('C')
+                keys.add(KEY_FIRE)
         elif p < .2:
-            keys.add('A')
+            keys.add(KEY_CW)
         elif p < .4:
-            keys.add('B')
+            keys.add(KEY_CCW)
 
         x, y, r = self.player.ship.x, self.player.ship.y, SHIELD_RADIUS
         for a in self.asteroids:
             if Detect.touch(x, y, a.x, a.y, r, a.r):
                 # try shield
-                keys.add('B')
-                keys.add('C')
+                keys.add(KEY_SHIELD1)
+                keys.add(KEY_SHIELD2)
 
     def update_ship(self, keys: set[str]) -> None:
-        shoot = 'C' in keys
+        shoot = KEY_FIRE in keys
         self.player.ship.move(keys)
         if shoot:
             self.player.ship.shoot(self.shots)
@@ -406,11 +411,9 @@ class Game:
     def boom(self, ship: Ship, asteroid: Asteroid) -> None:
         self.gfx.home()
         self.gfx.print('Boom!')
-        i = 0
         for i in range(9):
-            i += 1
-            ship.add_renders_boom(i)
             asteroid.add_renders_boom(i)
+            ship.add_renders_boom(i)
             self.gfx.display()
             time.sleep(0.1)
         ship.protect = PROTECT_DURATION
@@ -436,12 +439,12 @@ class Detect:
                         # split in two
                         a1 = Asteroid(gfx, other=a)
                         a1.a += ASTEROID_SPLIT_A
-                        a1.move(a1.r+1)
+                        # a1.move(a1.r+1)
                         asteroids.append(a1)
 
                         a2 = Asteroid(gfx, other=a)
                         a2.a -= ASTEROID_SPLIT_A
-                        a2.move(a2.r+1)
+                        # a2.move(a2.r+1)
                         asteroids.append(a2)
 
                         if a in asteroids:
@@ -566,13 +569,13 @@ class Asteriods(App):
                     continue  # reset during playing returns to menu
 
     def menu(self) -> int:
-        self.show_header('', 'C:next B:play A:auto')
+        self.show_header('', 'C:next B:play A:demo')
         self.gfx.print(f'\\n')
         self.gfx.print(f'{self.name.upper()} keys:\\n')
-        self.gfx.print(f' C   fire\\n')
-        self.gfx.print(f' B   cntr-clockwise\\n')
-        self.gfx.print(f' A   clockwise\\n')
-        self.gfx.print(f' A+B shield\\n')
+        self.gfx.print(f' {KEY_FIRE}   fire\\n')
+        self.gfx.print(f' {KEY_CCW}   cntr-clockwise\\n')
+        self.gfx.print(f' {KEY_CW}   clockwise\\n')
+        self.gfx.print(f' {KEY_SHIELD1}+{KEY_SHIELD2} shield\\n')
         self.gfx.print(f' R   back to menu\\n\\n')
         self.gfx.display()
 
