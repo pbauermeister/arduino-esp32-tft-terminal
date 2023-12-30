@@ -16,7 +16,7 @@ SHIP_ROT_STEP = .2
 
 SHOT_SPEED = 5
 SHOT_DELAY = 2
-SHOT_MAX = 8
+SHOT_MAX = 16
 
 ASTEROID_NB_MAX = 5
 ASTEROID_RADIUS = 2*config.GFX_SCALING, 10*config.GFX_SCALING
@@ -61,7 +61,9 @@ class Shot:
             self.y >= 0 and self.y < config.HEIGHT
 
     def add_renders(self) -> None:
+        self.gfx.set_fg_color(255, 64, 0)
         self.gfx.draw_pixel(int(self.x + .5), int(self.y + .5), 1)
+        self.gfx.set_fg_color(255, 255, 255)
 
 
 class Ship:
@@ -166,14 +168,18 @@ class Ship:
                 r = SHIELD_RADIUS
             else:
                 r = SHIELD_RADIUS - 3 + (self.i % 3)*3
+            self.gfx.set_fg_color(64, 64, 255)
             self.gfx.draw_circle(x, y, r, 1)
+            self.gfx.set_fg_color(255, 255, 255)
 
     def add_renders_boom(self, i: int) -> None:
         c = i % 2
+        self.gfx.set_fg_color(255, 64, 64)
         self.gfx.fill_triangle(self.x0, self.y0, self.x1,
                                self.y1, self.x2, self.y2, c)
-        self.gfx.draw_triangle(self.x0, self.y0, self.x1,
-                               self.y1, self.x2, self.y2, 1)
+        # self.gfx.draw_triangle(self.x0, self.y0, self.x1,
+        #                       self.y1, self.x2, self.y2, c)
+        self.gfx.set_fg_color(255, 255, 255)
 
 
 class Player:
@@ -277,8 +283,13 @@ class Asteroid(AsteriodData):
         y = int(self.y + .5)
         r = int(self.r + .5)
         c = i % 2
+
+        self.gfx.set_fg_color(255, 255, 64)
+
         self.gfx.fill_circle(x, y, r, c)
-        self.gfx.draw_circle(x, y, r, 1)
+        # self.gfx.draw_circle(x, y, r, c)
+
+        self.gfx.set_fg_color(255, 255, 255)
 
 
 class Game:
@@ -347,15 +358,21 @@ class Game:
             shot.add_renders()
 
     def add_renders_overlays(self) -> None:
-        x = config.WIDTH - 12*config.TEXT_SCALING
         self.gfx.set_text_size(1, 1)
-        self.gfx.set_cursor(x, 0)
-        self.gfx.print(str(self.player.lives))
         if self.player.autoplay_enabled:
+            self.gfx.set_fg_color(64, 64, 64)
+            self.gfx.set_text_color(1)
             x, y = GAME_OVER_POS
             self.gfx.set_cursor(x, y)
             self.gfx.print(GAME_OVER_TITLE)
 
+        x = config.WIDTH - 12*config.TEXT_SCALING
+        self.gfx.set_cursor(x, 0)
+        self.gfx.set_fg_color(96, 96, 192)
+        self.gfx.set_text_color(1)
+        self.gfx.print(str(self.player.lives))
+
+        self.gfx.set_fg_color(255, 255, 255)
         if self.player.ship.aster_crash:
             return
 
@@ -383,11 +400,12 @@ class Game:
         self.gfx.home()
         self.gfx.print('Boom!')
         i = 0
-        for i in range(4):
+        for i in range(9):
             i += 1
             ship.add_renders_boom(i)
             asteroid.add_renders_boom(i)
             self.gfx.display()
+            time.sleep(0.1)
         ship.protect = PROTECT_DURATION
         ship.shield = SHIELD_DURATION
 
@@ -564,6 +582,7 @@ class Asteriods(App):
     def run_once(self, autoplay_enabled: bool) -> int:
         game = Game(self, autoplay_enabled)
         autoplay = Autoplay(game, autoplay_enabled)
+        self.gfx.reset()
         while True:
             keys = self.board.read_buttons()
             if 'R' in keys:
@@ -572,7 +591,7 @@ class Asteriods(App):
                 return GOTO_MENU
 
             # Erase
-            self.gfx.reset()
+            self.gfx.clear()
 
             # Update / create
             game.update_asteroids()

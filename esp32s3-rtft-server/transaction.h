@@ -13,6 +13,8 @@ class Action {
   any args[8];
   char str[100];
 
+  void set(int h) { hash = h; }
+
   void set(int h, char* text) {
     hash = h;
     strncpy(str, text, sizeof(str));
@@ -81,8 +83,8 @@ class Action {
     args[6] = (any)g;
   }
 
-  void set(int h, int a, int b, int c, int d, int e, int f, int g, int hh) {
-    hash = h;
+  void set(int hh, int a, int b, int c, int d, int e, int f, int g, int h) {
+    hash = hh;
     str[0] = 0;
     args[0] = (any)a;
     args[1] = (any)b;
@@ -91,7 +93,7 @@ class Action {
     args[4] = (any)e;
     args[5] = (any)f;
     args[6] = (any)g;
-    args[7] = (any)hh;
+    args[7] = (any)h;
   }
 };
 
@@ -106,7 +108,7 @@ class Transaction {
     enabled = true;
   };
 
-  void reset() { next = 0; }
+  void clear() { next = 0; }
   void enable(bool en) { enabled = en; }
   Action* action() { return &actions[next]; }
   void add();

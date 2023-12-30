@@ -91,13 +91,12 @@ const char *interpret(char *input, const Config &config) {
   char *rest = split(input);
   // char *error = NULL;
   ErrorHolder error = ErrorHolder();
-  int h = hash(cmd);
+  int hh = hash(cmd);
 
-  switch (h) {
+  switch (hh) {
     case hash("autoDisplay"): {  // autoDisplay 1
       bool on = read_int(&rest, error);
       if (error.message) return error.message;
-      // auto_display = on;
       transaction.enable(!on);
       return ok();
     }
@@ -117,7 +116,7 @@ const char *interpret(char *input, const Config &config) {
     }
 
     case hash("print"): {  // print HELLO\n
-      transaction.action()->set(h, rest);
+      transaction.action()->set(hh, rest);
       transaction.add();
       return ok();
     }
@@ -125,14 +124,26 @@ const char *interpret(char *input, const Config &config) {
     case hash("clearDisplay"): {
       no_arg(&rest, error);
       if (error.message) return error.message;
-      display_clear();
+
+      transaction.action()->set(hh);
+      transaction.add();
+      return ok();
+    }
+
+    case hash("clear"): {
+      no_arg(&rest, error);
+      if (error.message) return error.message;
+
+      transaction.action()->set(hh);
+      transaction.add();
       return ok();
     }
 
     case hash("home"): {
       no_arg(&rest, error);
       if (error.message) return error.message;
-      display_set_cursor(0, 0);
+      transaction.action()->set(hh);
+      transaction.add();
       return ok();
     }
 
@@ -140,7 +151,7 @@ const char *interpret(char *input, const Config &config) {
       no_arg(&rest, error);
       if (error.message) return error.message;
       display_reset();
-      transaction.reset();
+      transaction.clear();
       return ok();
     }
 
@@ -149,7 +160,9 @@ const char *interpret(char *input, const Config &config) {
       int g = read_int(&rest, error);
       int b = read_int(&rest, error);
       if (error.message) return error.message;
-      set_fg_color(r, g, b);
+
+      transaction.action()->set(hh, r, g, b);
+      transaction.add();
       return ok();
     }
 
@@ -158,7 +171,9 @@ const char *interpret(char *input, const Config &config) {
       int g = read_int(&rest, error);
       int b = read_int(&rest, error);
       if (error.message) return error.message;
-      set_bg_color(r, g, b);
+
+      transaction.action()->set(hh, r, g, b);
+      transaction.add();
       return ok();
     }
 
@@ -167,21 +182,27 @@ const char *interpret(char *input, const Config &config) {
       int16_t y = read_int(&rest, error);
       int16_t color = read_int(&rest, error);
       if (error.message) return error.message;
-      draw_pixel(x, y, color);
+
+      transaction.action()->set(hh, x, y, color);
+      transaction.add();
       return ok();
     }
 
     case hash("setRotation"): {  // setRotation 0 // ..3
       int m = read_int(&rest, error);
       if (error.message) return error.message;
-      set_rotation(m);
+
+      transaction.action()->set(hh, m);
+      transaction.add();
       return ok();
     }
 
     case hash("invertDisplay"): {  // invertDisplay / invertDisplay 0
       bool inv = read_bool(rest, error, true, true);
       if (error.message) return error.message;
-      invert_display(inv);
+
+      transaction.action()->set(hh, inv);
+      transaction.add();
       return ok();
     }
 
@@ -191,7 +212,9 @@ const char *interpret(char *input, const Config &config) {
       int16_t h = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      draw_fast_vline(x, y, h, color);
+
+      transaction.action()->set(hh, x, y, h, color);
+      transaction.add();
       return ok();
     }
 
@@ -201,14 +224,18 @@ const char *interpret(char *input, const Config &config) {
       int16_t w = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      draw_fast_hline(x, y, w, color);
+
+      transaction.action()->set(hh, x, y, w, color);
+      transaction.add();
       return ok();
     }
 
     case hash("fillScreen"): {  // fillScreen 1
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      fill_screen(color);
+
+      transaction.action()->set(hh, color);
+      transaction.add();
       return ok();
     }
 
@@ -219,7 +246,9 @@ const char *interpret(char *input, const Config &config) {
       int16_t y1 = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      draw_line(x0, y0, x1, y1, color);
+
+      transaction.action()->set(hh, x0, y0, x1, y1, color);
+      transaction.add();
       return ok();
     }
 
@@ -230,7 +259,9 @@ const char *interpret(char *input, const Config &config) {
       int16_t h = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      draw_rect(x, y, w, h, color);
+
+      transaction.action()->set(hh, x, y, w, h, color);
+      transaction.add();
       return ok();
     }
 
@@ -241,27 +272,33 @@ const char *interpret(char *input, const Config &config) {
       int16_t h = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      fill_rect(x, y, w, h, color);
+
+      transaction.action()->set(hh, x, y, w, h, color);
+      transaction.add();
       return ok();
     }
 
     case hash("drawCircle"): {  // drawCircle 50 30 25 1
-      int16_t x0 = read_int(&rest, error);
-      int16_t y0 = read_int(&rest, error);
+      int16_t x = read_int(&rest, error);
+      int16_t y = read_int(&rest, error);
       int16_t r = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      draw_circle(x0, y0, r, color);
+
+      transaction.action()->set(hh, x, y, r, color);
+      transaction.add();
       return ok();
     }
 
     case hash("fillCircle"): {  // fillCircle 50 30 25 1
-      int16_t x0 = read_int(&rest, error);
-      int16_t y0 = read_int(&rest, error);
+      int16_t x = read_int(&rest, error);
+      int16_t y = read_int(&rest, error);
       int16_t r = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      fill_circle(x0, y0, r, color);
+
+      transaction.action()->set(hh, x, y, r, color);
+      transaction.add();
       return ok();
     }
 
@@ -274,7 +311,9 @@ const char *interpret(char *input, const Config &config) {
       int16_t y2 = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      draw_triangle(x0, y0, x1, y1, x2, y2, color);
+
+      transaction.action()->set(hh, x0, y0, x1, y1, x2, y2, color);
+      transaction.add();
       return ok();
     }
 
@@ -287,7 +326,9 @@ const char *interpret(char *input, const Config &config) {
       int16_t y2 = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      fill_triangle(x0, y0, x1, y1, x2, y2, color);
+
+      transaction.action()->set(hh, x0, y0, x1, y1, x2, y2, color);
+      transaction.add();
       return ok();
     }
 
@@ -299,7 +340,9 @@ const char *interpret(char *input, const Config &config) {
       int16_t r = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      draw_round_rect(x, y, w, h, r, color);
+
+      transaction.action()->set(hh, x, y, w, h, r, color);
+      transaction.add();
       return ok();
     }
 
@@ -311,7 +354,9 @@ const char *interpret(char *input, const Config &config) {
       int16_t r = read_int(&rest, error);
       int color = read_int(&rest, error);
       if (error.message) return error.message;
-      fill_round_rect(x, y, w, h, r, color);
+
+      transaction.action()->set(hh, x, y, w, h, r, color);
+      transaction.add();
       return ok();
     }
 
@@ -323,7 +368,9 @@ const char *interpret(char *input, const Config &config) {
       bool bg = read_int(&rest, error);
       int8_t size = read_int(&rest, error);
       if (error.message) return error.message;
-      draw_char(x, y, c, fg, bg, size);
+
+      transaction.action()->set(hh, x, y, c, fg, bg, size);
+      transaction.add();
       return ok();
     }
 
@@ -332,6 +379,9 @@ const char *interpret(char *input, const Config &config) {
       int16_t y = read_int(&rest, error);
       const char *str = read_last_str(&rest, error);
       if (error.message) return error.message;
+
+      transaction.commit();
+
       int16_t x1;
       int16_t y1;
       uint16_t w;
@@ -342,10 +392,12 @@ const char *interpret(char *input, const Config &config) {
     }
 
     case hash("setTextSize"): {  // setTextSize 3  / setTextSize 1 4
-      int s = read_int(&rest, error);
+      int sx = read_int(&rest, error);
       int sy = read_int(&rest, error, true);
       if (error.message) return error.message;
-      set_text_size(s, sy);
+
+      transaction.action()->set(hh, sx, sy);
+      transaction.add();
       return ok();
     }
 
@@ -353,7 +405,9 @@ const char *interpret(char *input, const Config &config) {
       int x = read_int(&rest, error);
       int y = read_int(&rest, error);
       if (error.message) return error.message;
-      set_cursor(x, y);
+
+      transaction.action()->set(hh, x, y);
+      transaction.add();
       return ok();
     }
 
@@ -361,14 +415,18 @@ const char *interpret(char *input, const Config &config) {
       // fillScreen 1  /  setTextColor 0  /  print HELLO
       int c = read_int(&rest, error);
       if (error.message) return error.message;
-      set_text_color(c);
+
+      transaction.action()->set(hh, c);
+      transaction.add();
       return ok();
     }
 
     case hash("setTextWrap"): {  // setTextWrap 0
       int w = read_int(&rest, error);
       if (error.message) return error.message;
-      set_text_wrap((bool)w);
+
+      transaction.action()->set(hh, w);
+      transaction.add();
       return ok();
     }
 
@@ -381,14 +439,17 @@ const char *interpret(char *input, const Config &config) {
     }
 
     case hash("getRotation"): {  // getRotation
+      transaction.commit();
       return make_resp_buffer(&rest, get_rotation());
     }
 
     case hash("getCursorX"): {  // getCursorX
+      transaction.commit();
       return make_resp_buffer(&rest, get_cursor_x());
     }
 
     case hash("getCursorY"): {  // getCursorY
+      transaction.commit();
       return make_resp_buffer(&rest, get_cursor_y());
     }
 

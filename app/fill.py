@@ -11,7 +11,12 @@ class Fill(App):
     def _run(self) -> None:
         escaper = TimeEscaper(self)
         alt = True
-        while True:
+        self.gfx.set_auto_display_on()
+        sx = .5
+        sy = .5
+
+        def run_once(alt: bool, sx: float, sy: float) -> bool:
+            self.gfx.set_text_size(sx, sy)
             self.gfx.home()
             self.gfx.fill_screen(int(alt))
             self.gfx.set_text_color(int(not alt))
@@ -20,10 +25,14 @@ class Fill(App):
                 self.gfx.print(c)
             self.gfx.display()
             if self.board.auto_read_buttons():
-                break
+                return True
             if escaper.check():
-                break
+                return True
             time.sleep(.5)
-            alt = not alt
+            return False
 
-        return
+        while True:
+            for sx, sy in ((.5, .5), (.5, 1), (1, 1)):
+                for alt in True, False:
+                    if run_once(alt, sx, sy):
+                        return

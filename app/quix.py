@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from app import App, Bouncer, TimeEscaper
 from lib.board import Board
 
-NB_LINES = 12
+NB_LINES = 9
 REDRAW = not False  # True looks cleaner but is slower
 
 

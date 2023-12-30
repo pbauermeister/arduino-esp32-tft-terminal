@@ -15,6 +15,11 @@ void Transaction::do_action(Action *action) {
       break;
     }
 
+    case hash("clear"): {  // clear
+      display_clear();
+      break;
+    }
+
     case hash("home"): {  // home
       display_set_cursor(0, 0);
       break;
@@ -247,8 +252,8 @@ void Transaction::do_action(Action *action) {
 }
 
 void Transaction::commit() {
-  if (!next) return;
-  for (int i = 0; i <= next; ++i) {
+  // if (!next) return;
+  for (int i = 0; i < next; ++i) {
     Action *action = &actions[i];
     do_action(action);
   }

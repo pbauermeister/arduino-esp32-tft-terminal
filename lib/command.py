@@ -60,7 +60,15 @@ class Command:
         self.last_command = cmd
 
     def command_response(self) -> str:
-        response = self.chan.read()
+        response = ''
+        while True:
+            response = self.chan.read()
+            if response.startswith('#'):
+                if config.DEBUG:
+                    print('>>>', response)
+            else:
+                break
+
         if not config.DEBUG:
             if response.startswith(ERROR) or response.startswith(UNKNOWN):
                 print('<<<', self.last_command)

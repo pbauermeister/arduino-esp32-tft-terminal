@@ -3,7 +3,7 @@
 
 import time
 import traceback
-from typing import Type
+from typing import Type, Any
 
 import config
 from app import App
@@ -74,6 +74,12 @@ def start_app_maybe(cls: Type[App]) -> bool:
     return cls(board).run()
 
 
+def suppress_ctrl_c() -> None:
+    import signal
+    def handler(signum: int, frame: Any) -> None: pass
+    signal.signal(signal.SIGINT, handler)
+
+
 # Cycle through apps
 while True:
     try:
@@ -110,6 +116,7 @@ while True:
     except KeyboardInterrupt:
         print()
         board.fatal('Keyboard interrupt')
+        suppress_ctrl_c()
         raise
     except Exception as e:
         msg = traceback.format_exc()

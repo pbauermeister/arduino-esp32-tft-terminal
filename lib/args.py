@@ -85,7 +85,7 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
     for spec in specs:
         val = args.__dict__[spec.as_arg]
         if val is not None:
-            config.__setattr__(spec.name, val)
+            config.__dict__[spec.name] = val
         else:
             args.__dict__[spec.as_arg] = config.__dict__[spec.name]
 

@@ -167,12 +167,12 @@ class Cube(App):
         previous: Vector | None = None
         escaper = TimeEscaper(self)
         start = datetime.datetime.now()
+        self.gfx.reset()
         while True:  # Main program loop.
             if self.board.auto_read_buttons():
                 break
 
-            self.gfx.reset()
-
+            self.gfx.clear()
             isometric = True  # (i % 50) > 25
 
             # Rotate the cube along different axes by different amounts:

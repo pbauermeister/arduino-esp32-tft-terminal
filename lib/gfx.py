@@ -14,6 +14,9 @@ class Gfx:
     def reset(self) -> None:
         self._command('reset')
 
+    def clear(self) -> None:
+        self._command('clear')
+
     def set_text_size(self, w: float, h: float) -> None:
         w = int(config.TEXT_SCALING*w + .5)
         h = int(config.TEXT_SCALING*h + .5)
