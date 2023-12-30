@@ -22,6 +22,7 @@ ASTEROID_NB_MAX = 8*2
 ASTEROID_RADIUS = 2*config.GFX_SCALING, 18*config.GFX_SCALING
 ASTEROID_RADIUS_MEAN = sum(ASTEROID_RADIUS)/2
 ASTEROID_SPLIT_A = .4*2  # angle
+ASTEROID_SHRINK_FACTOR = .8
 
 SHIELD_DURATION = 12
 SHIELD_TIMEOUT = 20
@@ -163,10 +164,7 @@ class Ship:
         y1 = int(self.y1 + .5)
         x2 = int(self.x2 + .5)
         y2 = int(self.y2 + .5)
-        if self.shield > 0 and not self.protect:
-            self.gfx.fill_triangle(x0, y0, x1, y1, x2, y2, 1)
-        else:
-            self.gfx.draw_triangle(x0, y0, x1, y1, x2, y2, 1)
+        self.gfx.draw_triangle(x0, y0, x1, y1, x2, y2, 1)
 
         if self.shield > 0:
             if self.protect:
@@ -273,7 +271,7 @@ class Asteroid(AsteriodData):
             self.y = -self.r
 
     def shrink(self) -> None:
-        self.r = int(self.r * .67 + .5)
+        self.r = int(self.r*ASTEROID_SHRINK_FACTOR + .5)
         if self.r < 4:
             self.r = 0
 
@@ -298,6 +296,22 @@ class Asteroid(AsteriodData):
         self.gfx.fill_circle(x, y, r, c)
         self.gfx.set_fg_color(255, 255, 255)
         # self.gfx.draw_circle(x, y, r, c)
+
+
+@dataclass
+class Bonus:
+    x: int
+    y: int
+    value: int
+
+    def render(self, gfx: Gfx) -> None:
+        gfx.set_cursor(self.x + config.TEXT_SCALING*2,
+                       self.y - config.TEXT_SCALING*4)
+        # gfx.set_fg_color(96, 96, 192)
+        gfx.set_fg_color(255, 64, 0)
+        gfx.set_text_color(1)
+        gfx.print(str(self.value))
+        gfx.set_fg_color(255, 255, 255)
 
 
 class Game:
@@ -353,10 +367,11 @@ class Game:
             if not shot.valid():
                 self.shots.remove(shot)
 
-    def do_detections(self) -> None:
-        self.player.score += Detect.hits(self.gfx, self.shots, self.asteroids)
+    def do_detections(self) -> list[Bonus]:
+        bonuses = Detect.hits(self.gfx, self.shots, self.asteroids)
         Detect.collisions(self.asteroids)
         Detect.crash(self.player.ship, self.asteroids)
+        return bonuses
 
     def add_renders(self) -> None:
         self.player.ship.add_renders()
@@ -387,7 +402,7 @@ class Game:
         if self.player.ship.reloading:
             r = self.player.ship.reloading
             self.gfx.home()
-            self.gfx.print(f'Reload {r}')
+            self.gfx.print(f'Shield in {r}')
         elif self.player.ship.shield > 0 and not self.player.ship.protect:
             self.gfx.home()
             self.gfx.print('Shield')
@@ -415,23 +430,24 @@ class Game:
             asteroid.add_renders_boom(i)
             ship.add_renders_boom(i)
             self.gfx.display()
-            time.sleep(0.1)
+            time.sleep(0.05)
         ship.protect = PROTECT_DURATION
         ship.shield = SHIELD_DURATION
 
 
 class Detect:
     @staticmethod
-    def hits(gfx: Gfx, shots: list[Shot], asteroids: list[Asteroid]) -> int:
-        score = 0
+    def hits(gfx: Gfx, shots: list[Shot], asteroids: list[Asteroid]) -> list[Bonus]:
+        bonuses: list[Bonus] = []
         if not shots or not asteroids:
-            return 0
+            return []
         for a in asteroids:
             for s in shots:
                 if Detect.hit(s.x, s.y, a, .75):
                     shots.remove(s)
                     a.hit = True
-                    score += int(a.r)
+                    points = int(ASTEROID_RADIUS[1]-a.r) + 1
+                    bonuses.append(Bonus(int(a.x + a.r), int(a.y), points))
 
                     if a.r >= ASTEROID_RADIUS_MEAN:
                         # a.r = int(a.r * .67 + .5)
@@ -439,18 +455,18 @@ class Detect:
                         # split in two
                         a1 = Asteroid(gfx, other=a)
                         a1.a += ASTEROID_SPLIT_A
-                        # a1.move(a1.r+1)
+                        a1.move(a1.r/2)
                         asteroids.append(a1)
 
                         a2 = Asteroid(gfx, other=a)
                         a2.a -= ASTEROID_SPLIT_A
-                        # a2.move(a2.r+1)
+                        a2.move(a2.r/2)
                         asteroids.append(a2)
 
                         if a in asteroids:
                             asteroids.remove(a)
                     continue
-        return score
+        return bonuses
 
     @staticmethod
     def crash(ship: Ship, asteroids: list[Asteroid]) -> None:
@@ -474,16 +490,10 @@ class Detect:
 
     @staticmethod
     def collisions(asteroids: list[Asteroid]) -> None:
-        pairs = {}
         for a in asteroids:
             for b in asteroids:
                 if a is b:
                     continue
-                # ah = a and a.__hash__
-                # bh = b and b.__hash__
-                # if (ah, bh) in pairs:
-                #     continue
-                # pairs[(ah, bh)] = True
                 if Detect.touch(a.x, a.y, b.x, b.y, a.r, b.r):
                     a.hit = True
                     b.hit = True
@@ -613,7 +623,7 @@ class Asteriods(App):
             game.update_shots()
 
             # Hits
-            game.do_detections()
+            bonuses = game.do_detections()
 
             # Draw
 
@@ -622,6 +632,10 @@ class Asteriods(App):
 
             # - objects
             game.add_renders()
+
+            for bonus in bonuses:
+                game.player.score += bonus.value
+                bonus.render(self.gfx)
 
             # - show
             self.gfx.display()
