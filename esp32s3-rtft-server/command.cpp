@@ -18,7 +18,7 @@ const char *NONE_MESSAGE = "NONE";
 
 // variables
 bool auto_read_buttons = false;
-char buffer[100];
+char buffer[BUFFER_LENGTH];
 
 Transaction transaction = Transaction();
 
@@ -86,6 +86,9 @@ const char *read_last_str(char **rest_p, ErrorHolder &error) {
 
 const char *interpret(char *input, const Config &config) {
   unescape_inplace(input);
+
+  char buf[BUFFER_LENGTH];
+  strncpy(buf, input, sizeof(buf));
 
   char *cmd = input;
   char *rest = split(input);
@@ -502,6 +505,9 @@ const char *interpret(char *input, const Config &config) {
     default:
       break;
   }
+
+  Serial.printf("# %s: ", ERR_UNKNOWN_CMD);
+  Serial.println(buf);
   return ERR_UNKNOWN_CMD;
 }
 

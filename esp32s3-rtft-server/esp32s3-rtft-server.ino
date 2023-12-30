@@ -18,7 +18,7 @@
 Config config;
 bool inverted = true;
 int counter = 0;
-char input_buffer[100];
+char input_buffer[BUFFER_LENGTH];
 
 void setup(void) {
   // TFT

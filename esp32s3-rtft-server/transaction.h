@@ -5,13 +5,15 @@
 
 #include <cstdint>
 
+#include "config.h"
+
 typedef intptr_t any;
 
 class Action {
  public:
   unsigned int hash;
   any args[8];
-  char str[100];
+  char str[BUFFER_LENGTH];
 
   void set(int h) { hash = h; }
 

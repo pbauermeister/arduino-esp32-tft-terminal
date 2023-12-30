@@ -6,4 +6,6 @@ struct Config {
   int display_height;
 };
 
+#define BUFFER_LENGTH 200
+
 #endif
