@@ -64,8 +64,8 @@ class Command:
         while True:
             response = self.chan.read()
             if response.startswith('#'):
-                if config.DEBUG:
-                    print('>>>', response)
+                # if config.DEBUG:
+                print('>>>', response)
             else:
                 break
 
