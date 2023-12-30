@@ -3,6 +3,7 @@ import json
 import socket
 import subprocess
 import threading
+import time
 
 import config
 from app import App
@@ -18,11 +19,20 @@ class Monitor(App):
 
     def __init__(self, board: Board):
         super().__init__(board, auto_read=False)
-        self.chars_per_line = int(config.WIDTH / 6.4)
-        self.lines = int(config.WIDTH / 8)
+        self.set_pane_text_attr()
+        cw, ch = self.gfx.get_text_bounds(0, 0, '9')
+        self.chars_per_line = int(config.WIDTH / cw)
+        self.lines = int(config.WIDTH / ch)
+
         self.mutex = threading.Lock()
         self.changed = False
         self.stop = False
+
+    def set_pane_text_attr(self):
+        # self.gfx.set_text_size(.5, 1)
+        self.gfx.set_text_size(1, 1)
+        self.gfx.set_fg_color(128, 128, 128)
+        self.gfx.set_text_color(1)
 
     def _run(self) -> None:
         ans: int | None = None
@@ -44,7 +54,13 @@ class Monitor(App):
         return
 
     def show_header(self, title: str, menu: str | None = None, with_banner: bool = False) -> None:
+        self.gfx.set_fg_color(255, 255, 255)
+        self.gfx.set_text_color(1)
+        self.gfx.set_text_size(1, 1)
+
         super().show_header(title, 'C:next R:exit', with_banner)
+
+        self.set_pane_text_attr()
 
     def wait_button(self, timeout: int) -> int | None:
         if timeout == 0:
@@ -100,7 +116,6 @@ class Monitor(App):
 
         title = 'CPU %'
         self.show_header(title, with_banner=True)
-        self.gfx.display()
         self.board.wait_no_button(timeout=1)
         if self.board.read_buttons(flush=True):
             return CHOICE_NEXT
@@ -114,6 +129,7 @@ class Monitor(App):
                     self.changed = False
             if cpus:
                 self.show_header(title)
+
                 # CPUs
                 self.gfx.set_cursor(0, config.TEXT_SCALING*12)
                 lines = cpus

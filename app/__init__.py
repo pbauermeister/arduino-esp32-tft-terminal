@@ -19,6 +19,7 @@ class App:
         self.auto_read = auto_read
         self.extra_configurator = extra_configurator
         board.set_configure_callback(extra_configurator)
+        self.text_bound_cache: dict[str, tuple[int, int]] = {}
         self.init()
 
     @abstractmethod
@@ -68,10 +69,15 @@ class App:
         return x, y
 
     def get_text_size(self, text: str) -> tuple[int, int]:
-        return self.gfx.get_text_bounds(0, 0, text)
+        res = self.text_bound_cache.get(text)
+        if res is None:
+            res = self.gfx.get_text_bounds(0, 0, text)
+            self.text_bound_cache[text] = res
+        return res
 
     def show_header(self, title: str, menu: str, with_banner: bool = False) -> None:
-        self.gfx.reset()
+        # self.gfx.reset()
+        self.gfx.clear()
         self.gfx.set_text_size(1, 1)
         self.gfx.fill_rect(0, 0, config.WIDTH, config.TEXT_SCALING*8, 1)
         self.gfx.set_text_color(0)
