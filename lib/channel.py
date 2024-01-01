@@ -33,6 +33,8 @@ class Channel:
                 time.sleep(config.SERIAL_ERROR_RETRY_DELAY)
                 continue
 
+            self.ser.timeout = config.SERIAL_TIMEOUT
+            self.ser.write_timeout = config.SERIAL_TIMEOUT
             self.clear()
             return
 

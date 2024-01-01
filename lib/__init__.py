@@ -40,6 +40,7 @@ ArduinoCommExceptions = (
     # serial.serialutil.SerialException,
     serial.SerialException,
     serial.PortNotOpenError,
+    serial.SerialTimeoutException,
     OSError,
     termios.error,
     UnicodeDecodeError,

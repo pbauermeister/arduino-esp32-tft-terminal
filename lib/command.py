@@ -38,7 +38,6 @@ class Command:
             return self._send_command(cmd, ignore_error)
 
     def _send_command(self, cmd: str, ignore_error: bool = False) -> str:
-        delay = config.SERIAL_ERROR_RETRY_DELAY
         while True:
             try:
                 self.command_send(cmd)
@@ -66,7 +65,6 @@ class Command:
             self.recoveries += 1
 
     def command_send(self, cmd: str) -> None:
-        # assert not self.reading_buttons
         self.chan.write(cmd)
         self.last_command = cmd
 
