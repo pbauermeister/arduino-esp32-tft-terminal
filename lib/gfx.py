@@ -37,6 +37,9 @@ class Gfx:
         w, h = vals[-2:]
         return w, h
 
+    def draw_rect(self, x: int, y: int, w: int, h: int, fg: int) -> None:
+        self._command(f'drawRect {x} {y} {w} {h} {fg}')
+
     def fill_rect(self, x: int, y: int, w: int, h: int, fg: int) -> None:
         self._command(f'fillRect {x} {y} {w} {h} {fg}')
 
