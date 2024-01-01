@@ -10,6 +10,7 @@ from app import App
 from app.asteriods import Asteriods
 from app.bumps import Bumps
 from app.collisions import Collisions
+from app.collisions_2 import Collisions_2
 from app.cube import Cube
 from app.fill import Fill
 from app.monitor import Monitor
@@ -63,6 +64,7 @@ args, only_apps = get_args([
     Quix,
     # Bumps,
     Collisions,
+    Collisions_2,
     Fill,
 ])
 
@@ -108,6 +110,8 @@ while True:
             if start_app_maybe(Bumps):
                 break
             if start_app_maybe(Collisions):
+                break
+            if start_app_maybe(Collisions_2):
                 break
             if start_app_maybe(Fill):
                 break

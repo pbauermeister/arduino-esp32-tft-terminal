@@ -277,22 +277,27 @@ class Collisions(App):
     def __init__(self, board: Board):
         super().__init__(board, auto_read=True)
 
+    def set_collisions_params(self) -> None:
+        self.nb = 7
+        self.radius_min = 8
+        self.radius_max = 25
+        self.v_min = 100.0
+        self.v_max = 500.0
+
     def _run(self) -> bool:
+        self.set_collisions_params()
 
-        nb = 6
+        span = self.radius_max - self.radius_min
 
-        radius_min = 8
-        radius_max = 25
-        v_min = 100.0
-        v_max = 500.0
-
-        span = radius_max - radius_min
-
-        radii = self.rand(radius_min, radius_min+span/3, int(nb*2/3))
-        radii += self.rand(radius_max-span/3, radius_max, nb - len(radii))
+        radii = self.rand(self.radius_min,
+                          self.radius_min + span/3,
+                          int(self.nb*2/3))
+        radii += self.rand(self.radius_max-span/3,
+                           self.radius_max,
+                           self.nb - len(radii))
 
         sim = Simulation(self.board.gfx,
-                         v_min, v_max,
+                         self.v_min, self.v_max,
                          config.WIDTH, config.HEIGHT,
                          radii)
 
