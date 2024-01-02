@@ -14,6 +14,7 @@ from app.collisions_2 import Collisions_2
 from app.cube import Cube
 from app.fill import Fill
 from app.monitor import Monitor
+from app.monitor_graph import MonitorGraph
 from app.quix import Quix
 from app.road import Road
 from app.starfield import Starfield
@@ -55,8 +56,9 @@ def make_all() -> tuple[Channel, Board]:
 
 # Init
 args, only_apps = get_args([
-    Asteriods,
     Monitor,
+    MonitorGraph,
+    Asteriods,
     Cube,
     Road,
     Starfield,
@@ -75,7 +77,10 @@ chan, board = make_all()
 def start_app_maybe(cls: Type[App]) -> bool:
     if only_apps and cls not in only_apps:
         return False
-    return cls(board).run()
+    only_me = bool(only_apps) and cls in only_apps and len(only_apps) == 1
+    instance = cls(board)
+    instance.only_me = only_me
+    return instance.run()
 
 
 def suppress_ctrl_c() -> None:
@@ -88,15 +93,12 @@ def suppress_ctrl_c() -> None:
 while True:
     try:
         while True:
-            if not config.MONITOR_SKIP:
-                if Monitor(board).run():
-                    break
-            if config.MONITOR_ONLY:
-                continue
-            if not config.APP_ASTERIODS_SKIP:
-                if start_app_maybe(Asteriods):
-                    break
-
+            if start_app_maybe(Monitor):
+                break
+            if start_app_maybe(Asteriods):
+                break
+            if start_app_maybe(MonitorGraph):
+                break
             if start_app_maybe(Cube):
                 break
             if start_app_maybe(Road):

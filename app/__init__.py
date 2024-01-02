@@ -22,6 +22,7 @@ class App:
         self.text_bound_cache: dict[str, tuple[int, int]] = {}
         self.board.clear_buttons()
         self.board.command.had_recoveries()
+        self.only_me = False
         self.init()
 
     @abstractmethod
@@ -50,7 +51,7 @@ class App:
         assert config.WIDTH and config.HEIGHT
         self.gfx.reset()
         self.gfx.set_text_size(1, 2)
-        title = self.name.upper()
+        title = self.name.upper().replace('_', ' ')
         x, y = self.get_title_pos(title)
 
         # title
@@ -121,6 +122,8 @@ class TimeEscaper:
         if self.frames == nf:
             secs = elapsed.seconds + elapsed.microseconds/1000000
             print(self.app.name, 'FPS:', nf / secs)
+        if self.app.only_me:
+            return False
         if self.timeout:
             if elapsed > self.timeout:
                 return True
