@@ -1,21 +1,27 @@
 import json
 import re
-import subprocess
 import threading
+import time
 from dataclasses import dataclass
 
 import config
-from app import App, TimeEscaper
+from app import TimeEscaper
+from app.monitor_host import MonitorBase
 from lib.board import Board
 
 DX = 4
-Y_MARGIN = 9
+Y_MARGIN = 8 * config.TEXT_SCALING + 1
+Y_SPACING = 8
 
 COLOR_TX = 255, 64, 64
 COLOR_RX = 64, 255, 64
 COLOR_AXIS = COLOR_LABELS = 96, 96, 96
-
+COLOR_MARKER = 192, 192, 192
+COLOR_ERROR = 255, 64, 64
 TRAFFIC_SCALING = 20 * 1000.
+
+RX_REGEX = re.compile('RX packets .*bytes ([0-9]+)')
+TX_REGEX = re.compile('TX packets .*bytes ([0-9]+)')
 
 
 @dataclass
@@ -35,7 +41,19 @@ class Traffic:
     previous_tx_scaled = 0
 
 
-class MonitorGraph(App):
+class State:
+    def __init__(self) -> None:
+        self.last_bar_x: int | None = None
+        self.last_cpus_ttl: int | None = None
+        self.pcents: list[int] = []
+        self.cpu_infos: list[CpuInfo] = []
+        self.nb_cpus: int = 0
+        self.cpus_ttl: int = 0
+        self.traffic: Traffic = Traffic()
+        self.errors: set[int] = set()
+
+
+class MonitorGraph(MonitorBase):
 
     def __init__(self, board: Board):
         super().__init__(board, auto_read=False, name="Monitor Graph")
@@ -64,16 +82,77 @@ class MonitorGraph(App):
             cpu_infos.append(CpuInfo((r, g, b), 0, 0))
         return cpu_infos
 
+    def handle_cpus(self, cursor: int, state: State) -> None:
+        # get CPU percents
+        pcents, err = self.get_cpus_pcents()
+        if err:
+            y = self.make_cpu_y(0) - config.TEXT_SCALING * 10
+            self.gfx.set_cursor(00, y)
+            self.gfx.set_text_color(*COLOR_ERROR)
+            self.gfx.set_text_size(1, 1)
+            self.gfx.print(err)
+            state.errors.add(1)
+            return
+        state.errors.discard(1)
+
+        if len(pcents) != state.nb_cpus:
+            state.cpu_infos = self.make_cpu_infos(pcents)
+            state.nb_cpus = len(pcents)
+        for i, pcent in enumerate(pcents):
+            state.cpu_infos[i].pcent = pcent
+
+        # total CPUs
+        state.cpus_ttl = int(sum([cpu_graph.pcent/100. for cpu_graph in state.cpu_infos]
+                                 ) / state.nb_cpus * 100 + .5)
+        print(f'CPUs: {state.cpus_ttl}%', pcents)
+
+        # erase prev values
+        if cursor:
+            self.gfx.fill_rect(cursor+1, 0, DX, config.HEIGHT-1, 0)
+        else:
+            self.gfx.fill_rect(0, 0, DX+1, config.HEIGHT-1, 0)
+
+        # draw each CPUs
+        for cpu_graph in state.cpu_infos:
+            x0 = cursor
+            y0 = self.make_cpu_y(cpu_graph.previous_pcent)
+            x1 = cursor + DX
+            y1 = self.make_cpu_y(cpu_graph.pcent)
+            self.gfx.set_fg_color(*cpu_graph.rgb)
+            self.gfx.draw_line(x0, y0, x1, y1, 1)
+            cpu_graph.previous_pcent = cpu_graph.pcent
+
+    def handle_traffic(self, cursor: int, state: State) -> None:
+        # draw traffic
+        state.traffic.rx, state.traffic.tx, err = self.get_traffic()
+        if err:
+            y = self.make_net_y(0) - config.TEXT_SCALING * 10
+            self.gfx.set_cursor(00, y)
+            self.gfx.set_text_color(*COLOR_ERROR)
+            self.gfx.set_text_size(1, 1)
+            self.gfx.print(err)
+            state.errors.add(2)
+            return
+        state.errors.discard(2)
+
+        if state.traffic.previous_rx is not None and state.traffic.previous_tx is not None:
+            rx_delta = state.traffic.rx - state.traffic.previous_rx
+            tx_delta = state.traffic.tx - state.traffic.previous_tx
+            print(f'traffic: rx={rx_delta} tx={tx_delta}')
+
+            rx_scaled = min(int(rx_delta/TRAFFIC_SCALING * 100), 100)
+            tx_scaled = min(int(tx_delta/TRAFFIC_SCALING * 100), 100)
+            self.draw_traffic(cursor, state.traffic, rx_scaled, tx_scaled)
+
+            state.traffic.previous_rx_scaled = rx_scaled
+            state.traffic.previous_tx_scaled = tx_scaled
+        state.traffic.previous_rx = state.traffic.rx
+        state.traffic.previous_tx = state.traffic.tx
+
     def _run(self) -> bool:
         escaper = TimeEscaper(self)
         cursor = 0
-        last_bar_x: int | None = None
-        last_cpus_ttl: int | None = None
-
-        pcents = self.get_cpus_pcents()
-        cpu_infos: list[CpuInfo] = []
-        nb_cpus = len(pcents)
-        traffic = Traffic()
+        state = State()
 
         self.gfx.set_auto_read_buttons_on()
 
@@ -86,73 +165,40 @@ class MonitorGraph(App):
             if escaper.check():
                 return False
 
-            # get CPU percents
-            pcents = self.get_cpus_pcents()
-            if len(pcents) != len(cpu_infos):
-                cpu_infos = self.make_cpu_infos(pcents)
-                nb_cpus = len(pcents)
-            for i, pcent in enumerate(pcents):
-                cpu_infos[i].pcent = pcent
+            self.erase_marker(state)
 
-            # total CPUs
-            cpus_ttl = int(sum([cpu_graph.pcent/100. for cpu_graph in cpu_infos]
-                               ) / nb_cpus * 100 + .5)
-
-            # erase prev values
-            if cursor:
-                self.gfx.fill_rect(cursor+1, 0, DX, config.HEIGHT-1, 0)
-            else:
-                self.gfx.fill_rect(0, 0, DX+1, config.HEIGHT-1, 0)
-
-            # draw axis and current time
-            last_bar_x = self.render_axis(cursor, last_bar_x)
-
-            # draw each CPUs
-            for cpu_graph in cpu_infos:
-                x0 = cursor
-                y0 = self.make_cpu_y(cpu_graph.previous_pcent)
-                x1 = cursor + DX
-                y1 = self.make_cpu_y(cpu_graph.pcent)
-                self.gfx.set_fg_color(*cpu_graph.rgb)
-                self.gfx.draw_line(x0, y0, x1, y1, 1)
-                cpu_graph.previous_pcent = cpu_graph.pcent
-
-            # draw traffic
-            traffic.rx, traffic.tx = self.get_traffic()
-            if traffic.previous_rx is not None and traffic.previous_tx is not None:
-                rx_delta = traffic.rx - traffic.previous_rx
-                tx_delta = traffic.tx - traffic.previous_tx
-                print(f'traffic: rx={rx_delta} tx={tx_delta}')
-
-                rx_scaled = min(int(rx_delta/TRAFFIC_SCALING * 100), 100)
-                tx_scaled = min(int(tx_delta/TRAFFIC_SCALING * 100), 100)
-                self.render_traffic(cursor, traffic, rx_scaled, tx_scaled)
-
-                traffic.previous_rx_scaled = rx_scaled
-                traffic.previous_tx_scaled = tx_scaled
-            traffic.previous_rx, traffic.previous_tx = traffic.rx, traffic.tx
+            errs: set[int] = set()
+            errs |= state.errors
+            self.handle_cpus(cursor, state)
+            self.handle_traffic(cursor, state)
+            errs_changed = errs != state.errors
 
             # draw labels
-            self.render_labels(len(cpu_infos), cpus_ttl, last_cpus_ttl)
-            last_cpus_ttl = cpus_ttl
+            self.draw_labels(state)
+            state.last_cpus_ttl = state.cpus_ttl
+
+            # draw axis and current time
+            self.draw_axis_and_marker(cursor, state)
 
             # display
             self.gfx.display()
+            if (errs_changed):
+                self.gfx.clear()
+
             cursor += DX
             if cursor+DX >= config.WIDTH:
                 cursor = 0
 
-            print(f'CPUs: {cpus_ttl}%', pcents)
-
-    def render_axis(self, cursor: int, last_bar_x: int | None) -> int | None:
+    def erase_marker(self, state: State) -> None:
         # erase prev marker
-        if last_bar_x is not None:
-            x0 = last_bar_x
+        if state.last_bar_x is not None:
+            x0 = state.last_bar_x
             y0 = 0
-            x1 = last_bar_x
+            x1 = state.last_bar_x
             y1 = config.HEIGHT-1
             self.gfx.draw_line(x0, y0, x1, y1, 0)
 
+    def draw_axis_and_marker(self, cursor: int, state: State) -> None:
         # draw t axis
         self.gfx.set_fg_color(*COLOR_AXIS)
 
@@ -164,19 +210,19 @@ class MonitorGraph(App):
 
         # draw marker
         bar_x = cursor + DX + 1
+        self.gfx.set_fg_color(*COLOR_MARKER)
         if bar_x < config.WIDTH:
             x0 = bar_x
             y0 = 0
             x1 = bar_x
             y1 = config.HEIGHT-1
             self.gfx.draw_line(x0, y0, x1, y1, 1)
-            last_bar_x = bar_x
+            state.last_bar_x = bar_x
         else:
-            last_bar_x = None
-        return last_bar_x
+            state.last_bar_x = None
 
-    def render_traffic(self, cursor: int, traffic: Traffic,
-                       rx_scaled: int, tx_scaled: int) -> None:
+    def draw_traffic(self, cursor: int, traffic: Traffic,
+                     rx_scaled: int, tx_scaled: int) -> None:
         x0 = cursor
         x1 = cursor + DX
 
@@ -192,27 +238,27 @@ class MonitorGraph(App):
         self.gfx.set_fg_color(*COLOR_RX)
         self.gfx.draw_line(x0, y0, x1, y1, 1)
 
-    def render_labels(self, nb_cpus: int,  cpus_ttl: int, last_cpus_ttl: int | None) -> None:
+    def draw_labels(self, state: State) -> None:
         self.gfx.set_text_size(1, 1)
         self.gfx.set_text_color(*COLOR_LABELS)
         dy = 4
 
         # CPUs
-        cpus_label = f'{nb_cpus} CPUs '
+        cpus_label = f'{state.nb_cpus} CPUs '
         y = self.make_cpu_y(0)
         self.gfx.set_cursor(0,  y + dy)
         self.gfx.print(cpus_label)
 
-        if last_cpus_ttl is not None:
+        if state.last_cpus_ttl is not None:
             xy = self.gfx
             self.gfx.set_text_color(0, 0, 0)
-            self.gfx.print(f'{last_cpus_ttl}%')
+            self.gfx.print(f'{state.last_cpus_ttl}%')
             self.gfx.set_text_color(*COLOR_LABELS)
 
         self.gfx.set_cursor(0,  y + dy)
         self.gfx.print(cpus_label)
-        self.gfx.print(f'{cpus_ttl}%')
-        last_cpus_ttl = cpus_ttl
+        self.gfx.print(f'{state.cpus_ttl}%')
+        last_cpus_ttl = state.cpus_ttl
 
         # Net
         y = self.make_net_y(0)
@@ -232,59 +278,36 @@ class MonitorGraph(App):
         self.gfx.print('rx')
 
     def make_cpu_y(self, pcent: int) -> int:
-        h = config.HEIGHT/2 - Y_MARGIN*2
-        return int(h * (1 - pcent / 100.)+.5) + Y_MARGIN * 0
+        h = (config.HEIGHT - Y_SPACING)/2 - Y_MARGIN
+        return int(h * (1 - pcent / 100.)+.5)
 
     def make_net_y(self, pcent: int) -> int:
-        h = config.HEIGHT/2 - Y_MARGIN*2
-        return int(h * (2 - pcent / 100.)+.5) + Y_MARGIN * 2
+        h = (config.HEIGHT - Y_SPACING)/2 - Y_MARGIN
+        return int(h * (2 - pcent / 100.)+.5) + Y_MARGIN + Y_SPACING - 1
 
-    def get_mem(self) -> list[str]:
-        try:
-            out = _shell_command(['free', '--giga'])
-            stats = out.splitlines()[1].split()[1:]
-
-            cols = 'Ttl Usd Fre Sha Buf Avg'.split()
-            head = '  ' + ''.join([f'{s:3}' for s in cols])
-            vals = '   ' + ' '.join([f'{int(v):2}' for v in stats])
-            return [head, vals]
-        except:
-            return ['mem unavailable']
-
-    def get_cpus_pcents(self) -> list[int]:
+    def get_cpus_pcents(self) -> tuple[list[int], str]:
         try:
             # interval = config.MONITOR_CPU_INTERVAL
             interval = 1
-            out = _shell_command((f'mpstat -P ALL {interval} 1 '
-                                 f'-o JSON').split())
+            out = self.shell_command((f'mpstat -P ALL {interval} 1 '
+                                      f'-o JSON').split())
             data = json.loads(out)
             loads = data['sysstat']['hosts'][0]['statistics'][0]['cpu-load']
             cpus = [l for l in loads if l['cpu'] not in ('all', '-1')]
             pcents = [int(c['usr']+.5) for c in cpus]
             pcents = sorted(pcents)
         except:
-            return []
-        return pcents
+            return [], '<mpstat error>'
+        return pcents, ''
 
-    RX_REGEX = re.compile('RX packets .*bytes ([0-9]+)')
-    TX_REGEX = re.compile('TX packets .*bytes ([0-9]+)')
-
-    def get_traffic(self) -> tuple[int, int]:
-        out = _shell_command(['netstat', '-e', '-n',  '-i'])
-        rx = sum([int(m) for m in self.RX_REGEX.findall(out)])
-        tx = sum([int(m) for m in self.TX_REGEX.findall(out)])
-        return rx, tx
-
-
-def _shell_command(cmd: list[str], force_local: bool = False, check: bool = True) -> str:
-    if config.MONITOR_SSH_AUTHORITY and not force_local:
-        cmd = ['ssh', config.MONITOR_SSH_AUTHORITY] + cmd
-    try:
-        return subprocess.run(cmd, encoding='utf-8',
-                              check=check, stdout=subprocess.PIPE).stdout
-    except Exception as e:
-        print(f'Error >>> {cmd}')
-        raise
+    def get_traffic(self) -> tuple[int, int, str]:
+        try:
+            out = self.shell_command(['netstat', '-e', '-n',  '-i'])
+            rx = sum([int(m) for m in RX_REGEX.findall(out)])
+            tx = sum([int(m) for m in TX_REGEX.findall(out)])
+            return rx, tx, ''
+        except:
+            return 0, 0, '<netstat error>'
 
 
 def _hsv_to_rgb(hue: int | float, sat: int | float, val: int | float) -> tuple[int, int, int]:
