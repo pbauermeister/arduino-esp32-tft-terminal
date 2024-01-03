@@ -68,6 +68,13 @@ class MonitorGraph(MonitorBase):
         self.changed = False
         self.stop = False
 
+        self.ssh_authority_coords: tuple[int, int] | None = None
+        if config.MONITOR_SSH_AUTHORITY:
+            self.gfx.set_text_size(.5, 1)
+            w, _ = self.gfx.get_text_bounds(0, 0, config.MONITOR_SSH_AUTHORITY)
+            self.ssh_authority_coords = config.WIDTH-w, 0
+            self.gfx.set_text_size(1, 1)
+
     def set_pane_text_attr(self) -> None:
         self.gfx.set_text_size(1, 1)
         self.gfx.set_text_color(128, 128, 128)
@@ -254,6 +261,14 @@ class MonitorGraph(MonitorBase):
         self.gfx.set_text_size(1, 1)
         self.gfx.set_text_color(*COLOR_LABELS)
         dy = 4
+
+        # Host
+        if self.ssh_authority_coords is not None:
+            x, y = self.ssh_authority_coords
+            self.gfx.set_cursor(x, y)
+            self.gfx.set_text_size(.5, 1)
+            self.gfx.print(config.MONITOR_SSH_AUTHORITY)
+            self.gfx.set_text_size(1, 1)
 
         # CPUs
         cpus_label = f'{state.nb_cpus} CPUs '
