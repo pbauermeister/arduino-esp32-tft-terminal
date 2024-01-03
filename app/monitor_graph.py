@@ -1,3 +1,4 @@
+import datetime
 import json
 import re
 import threading
@@ -39,6 +40,7 @@ class Traffic:
     previous_tx: int | None = None
     previous_rx_scaled = 0
     previous_tx_scaled = 0
+    last_time: datetime.datetime | None = None
 
 
 class State:
@@ -135,19 +137,29 @@ class MonitorGraph(MonitorBase):
             return
         state.errors.discard(2)
 
-        if state.traffic.previous_rx is not None and state.traffic.previous_tx is not None:
+        now = datetime.datetime.now()
+
+        if \
+                state.traffic.previous_rx is not None and \
+                state.traffic.previous_tx is not None and \
+                state.traffic.last_time is not None:
             rx_delta = state.traffic.rx - state.traffic.previous_rx
             tx_delta = state.traffic.tx - state.traffic.previous_tx
-            print(f'traffic: rx={rx_delta} tx={tx_delta}')
 
-            rx_scaled = min(int(rx_delta/TRAFFIC_SCALING * 100), 100)
-            tx_scaled = min(int(tx_delta/TRAFFIC_SCALING * 100), 100)
+            secs = (now - state.traffic.last_time).total_seconds()
+
+            print(f'traffic: rx={rx_delta} tx={tx_delta} interval={secs}s')
+
+            rx_scaled = min(int(rx_delta/TRAFFIC_SCALING * 100/secs), 100)
+            tx_scaled = min(int(tx_delta/TRAFFIC_SCALING * 100/secs), 100)
             self.draw_traffic(cursor, state.traffic, rx_scaled, tx_scaled)
 
             state.traffic.previous_rx_scaled = rx_scaled
             state.traffic.previous_tx_scaled = tx_scaled
+
         state.traffic.previous_rx = state.traffic.rx
         state.traffic.previous_tx = state.traffic.tx
+        state.traffic.last_time = now
 
     def _run(self) -> bool:
         escaper = TimeEscaper(self)
