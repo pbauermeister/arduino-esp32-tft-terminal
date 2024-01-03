@@ -13,7 +13,7 @@ CHOICE_RESET = 3
 class MonitorCpus(MonitorBase):
 
     def __init__(self, board: Board):
-        super().__init__(board, auto_read=True, name="Monitor CPUs")
+        super().__init__(board, auto_read=True)
         self.set_pane_text_attr()
         cw, _ = self.gfx.get_text_bounds(0, 0, '9')
         self.chars_per_line = int(config.WIDTH / cw)

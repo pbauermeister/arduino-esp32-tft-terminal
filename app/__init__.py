@@ -1,3 +1,4 @@
+import re
 import datetime
 import random
 import time
@@ -7,15 +8,18 @@ from typing import Callable
 import config
 from lib.board import Board
 
+CAMEL_RX = re.compile('([a-z][A-Z0-9])')
+
 
 class App:
     def __init__(self, board: Board, auto_read: bool = False,
                  extra_configurator: Callable[[], None] | None = None,
                  name: str | None = None) -> None:
         self.board = board
-        self.name = name or self.__class__.__name__
         self.gfx = board.gfx
-        print(f'== {self.name} ==')
+        self.name = name or self.__class__.__name__
+        self.title = camel_to_title(self.name)
+        print(f'== {self.title} ==')
         self.board.set_comm_error_handler(self.init)
         self.auto_read = auto_read
         self.extra_configurator = extra_configurator
@@ -53,9 +57,10 @@ class App:
         self.board.set_comm_error_handler(self.init)
         self.board.configure()
         assert config.WIDTH and config.HEIGHT
+
         self.gfx.reset()
         self.gfx.set_text_size(1, 2)
-        title = self.name.upper().replace('_', ' ')
+        title = self.title.upper()
         x, y = self.get_title_pos(title)
 
         # title
@@ -196,3 +201,17 @@ class Sprite(Bouncer):
         else:
             self.app.gfx.draw_circle(self.x, self.y, self.size, 1)
         self.was_filled = self.bumped
+
+
+def camel_to_snake(s: str) -> str:
+    def replacer(m: re.Match[str]) -> str:
+        s = m[1]
+        return f'{s[0]}_{s[1]}'
+    return CAMEL_RX.sub(replacer, s).lower()
+
+
+def camel_to_title(s: str) -> str:
+    def replacer(m: re.Match[str]) -> str:
+        s = m[1]
+        return f'{s[0]} {s[1]}'
+    return CAMEL_RX.sub(replacer, s)

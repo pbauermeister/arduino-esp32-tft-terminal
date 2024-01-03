@@ -51,7 +51,7 @@ class MonitorBase(App):
 class MonitorHost(MonitorBase):
 
     def __init__(self, board: Board):
-        super().__init__(board, auto_read=False, name="Monitor Host")
+        super().__init__(board, auto_read=False)
         self.set_pane_text_attr()
 
     def _run(self) -> bool:

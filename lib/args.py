@@ -2,7 +2,7 @@ import argparse
 from typing import Any, Type
 
 import config
-from app import App
+from app import App, camel_to_snake
 
 APPS_DEMO_TIMEOUT = 10
 
@@ -50,8 +50,9 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
                                 help=f'default: {spec.value}')
     existing = [spec.as_flag for spec in specs]
 
-    names = sorted([a.__name__.lower() for a in apps])
+    names = sorted([a.__name__ for a in apps])
     for name in names:
+        name = camel_to_snake(name).replace('_', '-')
         flag = f'--{name}-only'
         if flag not in existing:
             parser.add_argument(f'--{name}-only',
@@ -62,7 +63,7 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
 
     only_apps = set()
     for app in apps:
-        k = f'{app.__name__.lower()}_only'
+        k = camel_to_snake(app.__name__) + '_only'
         if args.__dict__[k]:
             only_apps.add(app)
 

@@ -1,7 +1,7 @@
 from app.collisions import Collisions
 
 
-class Collisions_2(Collisions):
+class Collisions2(Collisions):
 
     def set_collisions_params(self) -> None:
         self.nb = 4
