@@ -4,8 +4,6 @@ from typing import Any, Type
 import config
 from app import App, camel_to_snake
 
-APPS_DEMO_TIMEOUT = 10
-
 
 class Arg:
     def __init__(self, name: str, value: Any) -> None:
@@ -32,13 +30,11 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
     specs = get_config_args_specs()
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--demo',
-                        help='run in demo mode',
-                        action='store_true')
-    parser.add_argument('--demo-once',
+    parser.add_argument('--once',
                         help='run in demo mode, only once',
                         action='store_true')
 
+    # make config.py declarations accessible as args
     for spec in specs:
         if spec.type == bool:
             parser.add_argument(spec.as_flag,
@@ -50,6 +46,7 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
                                 help=f'default: {spec.value}')
     existing = [spec.as_flag for spec in specs]
 
+    # make --APP-only flags
     names = sorted([a.__name__ for a in apps])
     for name in names:
         name = camel_to_snake(name).replace('_', '-')
@@ -61,28 +58,20 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
 
     args = parser.parse_args()
 
+    # collect apps matching --APP-only
     only_apps = set()
     for app in apps:
         k = camel_to_snake(app.__name__) + '_only'
         if args.__dict__[k]:
             only_apps.add(app)
 
-    if args.demo_once:
-        args.demo = True
-    if args.demo or args.demo_once:
-        args.apps_timeout = args.apps_timeout or APPS_DEMO_TIMEOUT
-        args.app_asteriods_autoplay_timeout = (
-            args.app_asteriods_autoplay_timeout or args.apps_timeout)
-
-        args.monitor_host_timeout = (
-            args.monitor_host_timeout or args.apps_timeout)
-        args.monitor_cpu_timeout = (
-            args.monitor_cpu_timeout or args.apps_timeout)
-        args.apps_timeout = (
-            args.apps_timeout or args.apps_timeout)
-
+    # handle --once
+    if args.once:
+        args.apps_timeout = args.apps_once_timeout or config.APPS_ONCE_TIMEOUT
+        args.app_asteriods_autoplay_timeout = args.apps_timeout
         args.app_asteriods_autoplay = True
 
+    # write back args to config.py
     for spec in specs:
         val = args.__dict__[spec.as_arg]
         if val is not None:

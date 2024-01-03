@@ -122,7 +122,7 @@ while True:
             if start_app_maybe(Fill):
                 break
 
-            if args.demo_once:
+            if args.once:
                 break
 
     except RebootedException:
@@ -137,8 +137,8 @@ while True:
         msg = traceback.format_exc()
         board.fatal(msg)
 
-    if args.demo_once:
+    if args.once:
         break
 
-if args.demo:
+if args.once:
     ThatsAll(board).run()
