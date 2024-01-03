@@ -43,6 +43,8 @@ class App:
         self.board.set_configure_callback(None)
         duration = datetime.datetime.now() - start
         print('Duration:', duration)
+        while self.board.read_buttons(flush=True):
+            pass
         return reset
 
     def init(self) -> None:

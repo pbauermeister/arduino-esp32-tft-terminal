@@ -13,7 +13,8 @@ from app.collisions import Collisions
 from app.collisions_2 import Collisions_2
 from app.cube import Cube
 from app.fill import Fill
-from app.monitor import Monitor
+from app.monitor_host import MonitorHost
+from app.monitor_cpus import MonitorCpus
 from app.monitor_graph import MonitorGraph
 from app.quix import Quix
 from app.road import Road
@@ -56,7 +57,8 @@ def make_all() -> tuple[Channel, Board]:
 
 # Init
 args, only_apps = get_args([
-    Monitor,
+    MonitorHost,
+    MonitorCpus,
     MonitorGraph,
     Asteriods,
     Cube,
@@ -93,7 +95,9 @@ def suppress_ctrl_c() -> None:
 while True:
     try:
         while True:
-            if start_app_maybe(Monitor):
+            if start_app_maybe(MonitorHost):
+                break
+            if start_app_maybe(MonitorCpus):
                 break
             if start_app_maybe(Asteriods):
                 break

@@ -76,6 +76,8 @@ class MonitorGraph(App):
         nb_cpus = len(pcents)
         traffic = Traffic()
 
+        self.gfx.set_auto_read_buttons_on()
+
         while True:
             btns = self.board.auto_read_buttons()
             if 'R' in btns:
