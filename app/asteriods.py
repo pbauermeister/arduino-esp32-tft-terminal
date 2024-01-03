@@ -47,11 +47,18 @@ GOTO_MENU = 1
 GOTO_NEXT = 2
 GOTO_QUIT = 3
 
-KEY_CW = 'C'
-KEY_CCW = 'A'
+KEY_CW = 'A'
+KEY_CCW = 'C'
 KEY_FIRE = 'B'
 KEY_SHIELD1 = 'A'
 KEY_SHIELD2 = 'B'
+
+COLOR_SHOT = 255, 64, 0
+COLOR_SHIELD = 64, 64, 255
+COLOR_BOOM = 255, 64, 64
+COLOR_GOVER_TEXT = 64, 64, 64
+COLOR_STATUS_TEXT = 96, 96, 192
+COLOR_DEFAULT = 255, 255, 255
 
 
 class Shot:
@@ -69,9 +76,9 @@ class Shot:
             self.y >= 0 and self.y < config.HEIGHT
 
     def add_renders(self) -> None:
-        self.gfx.set_fg_color(255, 64, 0)
+        # self.gfx.set_fg_color(*COLOR_SHOT)
         self.gfx.draw_pixel(int(self.x + .5), int(self.y + .5), 1)
-        self.gfx.set_fg_color(255, 255, 255)
+        # self.gfx.set_fg_color(*COLOR_DEFAULT)
 
 
 class Ship:
@@ -173,9 +180,9 @@ class Ship:
                 r = SHIELD_RADIUS - 3 + (self.i % 3)*3
             x = int(self.x + .5)
             y = int(self.y + .5)
-            self.gfx.set_fg_color(64, 64, 255)
+            self.gfx.set_fg_color(*COLOR_SHIELD)
             self.gfx.draw_circle(x, y, r, 1)
-            self.gfx.set_fg_color(255, 255, 255)
+            self.gfx.set_fg_color(*COLOR_DEFAULT)
 
     def add_renders_boom(self, i: int) -> None:
         x0 = int(self.x0 + .5)
@@ -186,10 +193,10 @@ class Ship:
         y2 = int(self.y2 + .5)
 
         c = i % 2
-        self.gfx.set_fg_color(255, 64, 64)
+        self.gfx.set_fg_color(*COLOR_BOOM)
         self.gfx.fill_triangle(x0, y0, x1, y1, x2, y2, c)
         self.gfx.draw_triangle(x0, y0, x1, y1, x2, y2, c)
-        self.gfx.set_fg_color(255, 255, 255)
+        self.gfx.set_fg_color(*COLOR_DEFAULT)
 
 
 class Player:
@@ -280,9 +287,9 @@ class Asteroid(AsteriodData):
         y = int(self.y + .5)
         r = int(self.r + .5)
         if self.hit:
-            self.gfx.set_fg_color(255, 64, 64)
+            self.gfx.set_fg_color(*COLOR_BOOM)
             self.gfx.fill_circle(x, y, r, 1)
-            self.gfx.set_fg_color(255, 255, 255)
+            self.gfx.set_fg_color(*COLOR_DEFAULT)
         else:
             self.gfx.draw_circle(x, y, r, 1)
 
@@ -292,10 +299,9 @@ class Asteroid(AsteriodData):
         r = int(self.r + .5)
 
         c = i % 2
-        self.gfx.set_fg_color(255, 64, 64)
+        self.gfx.set_fg_color(*COLOR_BOOM)
         self.gfx.fill_circle(x, y, r, c)
-        self.gfx.set_fg_color(255, 255, 255)
-        # self.gfx.draw_circle(x, y, r, c)
+        self.gfx.set_fg_color(*COLOR_DEFAULT)
 
 
 @dataclass
@@ -308,10 +314,10 @@ class Bonus:
         gfx.set_cursor(self.x + config.TEXT_SCALING*2,
                        self.y - config.TEXT_SCALING*4)
         # gfx.set_fg_color(96, 96, 192)
-        gfx.set_fg_color(255, 64, 0)
+        gfx.set_fg_color(*COLOR_BOOM)
         gfx.set_text_color(1)
         gfx.print(str(self.value))
-        gfx.set_fg_color(255, 255, 255)
+        gfx.set_fg_color(*COLOR_DEFAULT)
 
 
 class Game:
@@ -377,25 +383,31 @@ class Game:
         self.player.ship.add_renders()
         for a in self.asteroids:
             a.add_renders()
-        for shot in self.shots:
-            shot.add_renders()
+
+        if self.shots:
+            self.gfx.set_fg_color(*COLOR_SHOT)
+            for shot in self.shots:
+                shot.add_renders()
+            self.gfx.set_fg_color(*COLOR_DEFAULT)
+
+    def add_renders_gameover(self) -> None:
+        self.gfx.set_fg_color(*COLOR_GOVER_TEXT)
+        self.gfx.set_text_color(1)
+        x, y = GAME_OVER_POS
+        self.gfx.set_cursor(x, y)
+        self.gfx.print(GAME_OVER_TITLE)
 
     def add_renders_overlays(self) -> None:
-        self.gfx.set_text_size(1, 1)
         if self.player.autoplay_enabled:
-            self.gfx.set_fg_color(64, 64, 64)
-            self.gfx.set_text_color(1)
-            x, y = GAME_OVER_POS
-            self.gfx.set_cursor(x, y)
-            self.gfx.print(GAME_OVER_TITLE)
+            self.add_renders_gameover()
 
         x = config.WIDTH - 12*config.TEXT_SCALING
         self.gfx.set_cursor(x, 0)
-        self.gfx.set_fg_color(96, 96, 192)
+        self.gfx.set_fg_color(*COLOR_STATUS_TEXT)
         self.gfx.set_text_color(1)
         self.gfx.print(str(self.player.lives))
 
-        self.gfx.set_fg_color(255, 255, 255)
+        self.gfx.set_fg_color(*COLOR_DEFAULT)
         if self.player.ship.aster_crash:
             return
 
@@ -413,22 +425,31 @@ class Game:
     def handle_crash(self) -> bool:
         if not self.player.ship.aster_crash:
             return False
-        self.gfx.set_fg_color(255, 64, 64)
+        self.gfx.set_fg_color(*COLOR_BOOM)
         self.gfx.set_text_color(1)
         self.boom(self.player.ship, self.player.ship.aster_crash)
         self.player.ship.aster_crash = None
         if self.player.lives:
             self.player.lives -= 1
-        self.gfx.set_fg_color(255, 255, 255)
+        self.gfx.set_fg_color(*COLOR_DEFAULT)
         self.gfx.set_text_color(1)
         return True
 
     def boom(self, ship: Ship, asteroid: Asteroid) -> None:
-        self.gfx.home()
-        self.gfx.print('Boom!')
+
         for i in range(9):
             asteroid.add_renders_boom(i)
             ship.add_renders_boom(i)
+
+            self.gfx.home()
+            self.gfx.set_fg_color(*COLOR_STATUS_TEXT)
+            self.gfx.set_text_color(1)
+            self.gfx.print(f'{self.player.score:04d}')
+
+            self.gfx.set_fg_color(*COLOR_BOOM)
+            self.gfx.set_text_color(1)
+            self.gfx.print(' Boom!')
+
             self.gfx.display()
             time.sleep(0.05)
         ship.protect = PROTECT_DURATION
@@ -603,6 +624,7 @@ class Asteriods(App):
         game = Game(self, autoplay_enabled)
         autoplay = Autoplay(game, autoplay_enabled)
         self.gfx.reset()
+        self.gfx.set_text_size(1, 1)
         while True:
             keys = self.board.read_buttons()
             if 'R' in keys:
@@ -646,7 +668,9 @@ class Asteriods(App):
             # Crash
             crashed = game.handle_crash()
             if crashed and game.player.lives == 0:
-                time.sleep(1)
+                game.add_renders_gameover()
+                self.gfx.display()
+                time.sleep(3)
                 if autoplay.enabled:
                     # autoplay crashed
                     return GOTO_NEXT

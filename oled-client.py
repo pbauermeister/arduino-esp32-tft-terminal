@@ -99,9 +99,9 @@ while True:
                 break
             if start_app_maybe(MonitorCpus):
                 break
-            if start_app_maybe(Asteriods):
-                break
             if start_app_maybe(MonitorGraph):
+                break
+            if start_app_maybe(Asteriods):
                 break
             if start_app_maybe(Cube):
                 break
