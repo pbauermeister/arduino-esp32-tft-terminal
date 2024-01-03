@@ -2,7 +2,6 @@ import datetime
 import json
 import re
 import threading
-import time
 from dataclasses import dataclass
 
 import config
@@ -15,11 +14,12 @@ Y_MARGIN = 8 * config.TEXT_SCALING + 1
 Y_SPACING = 8
 
 COLOR_TX = 255, 64, 64
-COLOR_RX = 64, 255, 64
+COLOR_RX = 64, 64, 255
 COLOR_AXIS = COLOR_LABELS = 96, 96, 96
 COLOR_MARKER = 192, 192, 192
 COLOR_ERROR = 255, 64, 64
-TRAFFIC_SCALING = 20 * 1000.
+
+TRAFFIC_SCALING = 20 * 1000.  # TODO: adaptative rescaling
 
 RX_REGEX = re.compile('RX packets .*bytes ([0-9]+)')
 TX_REGEX = re.compile('TX packets .*bytes ([0-9]+)')
@@ -238,16 +238,16 @@ class MonitorGraph(MonitorBase):
         x0 = cursor
         x1 = cursor + DX
 
-        # tx
-        y0 = self.make_net_y(traffic.previous_tx_scaled)
-        y1 = self.make_net_y(tx_scaled)
-        self.gfx.set_fg_color(*COLOR_TX)
-        self.gfx.draw_line(x0, y0, x1, y1, 1)
-
         # rx
         y0 = self.make_net_y(traffic.previous_rx_scaled)
         y1 = self.make_net_y(rx_scaled)
         self.gfx.set_fg_color(*COLOR_RX)
+        self.gfx.draw_line(x0, y0, x1, y1, 1)
+
+        # tx
+        y0 = self.make_net_y(traffic.previous_tx_scaled)
+        y1 = self.make_net_y(tx_scaled)
+        self.gfx.set_fg_color(*COLOR_TX)
         self.gfx.draw_line(x0, y0, x1, y1, 1)
 
     def draw_labels(self, state: State) -> None:
