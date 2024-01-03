@@ -16,24 +16,31 @@ from app import App, TimeEscaper
 from lib.board import Board
 from lib.gfx import Gfx
 
+COLOR_BORDER = 127, 127, 125
+
+Color = tuple[int, int, int]
+
 
 @dataclass
 class Circle:
     x: float
     y: float
     r: float
-    hit: bool = False
+    rgb: Color
+    is_hit: bool = False
 
     @staticmethod
     def create_from(other: Circle) -> Circle:
-        return Circle(other.x, other.y, other.r, other.hit)
+        return Circle(other.x, other.y, other.r,
+                      other.rgb, other.is_hit)
 
 
 class Particle:
     """A class representing a two-dimensional particle."""
 
     def __init__(self, x: float, y: float, vx: float, vy: float,
-                 radius: float = 0.01) -> None:
+                 rgb: Color, rgb_hit: Color,
+                 radius: float = 0.01, ) -> None:
         """Initialize the particle's position, velocity, and radius.
 
         Any key-value pairs passed in the styles dictionary will be passed
@@ -45,6 +52,8 @@ class Particle:
         self.v = np.array((vx, vy))
         self.radius = radius
         self.mass = self.radius**2
+        self.rgb = rgb
+        self.rgb_hit = rgb_hit
 
     # For convenience, map the components of the particle's position and
     # velocity vector onto the attributes x, y, vx and vy.
@@ -87,7 +96,7 @@ class Particle:
 
     def draw(self) -> Circle:
         """Add this Particle's Circle patch to the Matplotlib Axes ax."""
-        return Circle(self.r[0], self.r[1], self.radius)
+        return Circle(self.r[0], self.r[1], self.radius, self.rgb)
 
     def advance(self, dt: float) -> None:
         """Advance the Particle's position forward in time by dt."""
@@ -129,7 +138,7 @@ class Simulation:
         self.dt = 0.01
         self.init()
 
-    def place_particle(self, rad: float) -> bool:
+    def place_particle(self, rad: float, rgb: Color, rgb_hit: Color) -> bool:
         # Choose x, y so that the Particle is entirely inside the
         # domain of the simulation.
         x = np.random.random()*(self.room_width - 2*rad) + rad
@@ -140,7 +149,7 @@ class Simulation:
         vr = (self.vmax-self.vmin) * np.sqrt(np.random.random()) + self.vmin
         vphi = 2*np.pi * np.random.random()
         vx, vy = vr * np.cos(vphi), vr * np.sin(vphi)
-        particle = self.ParticleClass(x, y, vx, vy, rad)
+        particle = self.ParticleClass(x, y, vx, vy, rgb, rgb_hit, rad)
 
         # Check that the Particle doesn't overlap one that's already
         # been placed.
@@ -161,9 +170,14 @@ class Simulation:
 
         self.n = len(radii)
         self.particles: list[Particle] = []
+
         for i, rad in enumerate(radii):
+            hue = 360/self.n * i
+            rgb = self.gfx.hsv_to_rgb(hue, 25, 100)
+            rgb_hit = self.gfx.hsv_to_rgb(hue, 25, 50)
+
             # Try to find a random initial position for this particle.
-            while not self.place_particle(rad):
+            while not self.place_particle(rad, rgb, rgb_hit):
                 pass
 
     def change_velocities(self, p1: Particle, p2: Particle) -> None:
@@ -246,14 +260,14 @@ class Simulation:
 
         for i, p in enumerate(self.particles):
             p.advance(self.dt)
-            self.circles[i].hit |= self.handle_boundary_collisions(p)
+            self.circles[i].is_hit |= self.handle_boundary_collisions(p)
 
             self.circles[i].x = p.r[0]
             self.circles[i].y = p.r[1]
 
         hits = self.handle_collisions()
         for i, _ in enumerate(self.particles):
-            self.circles[i].hit |= i in hits
+            self.circles[i].is_hit |= i in hits
 
         self.apply_forces()
         return self.circles
@@ -317,20 +331,23 @@ class Collisions(App):
 
             self.draw(previous_circles, erase=True)
             self.draw(circles)
+            self.gfx.set_fg_color(*COLOR_BORDER)
             self.gfx.draw_rect(0, 0, config.WIDTH-1, config.HEIGHT-1, 1)
             self.gfx.display()
 
             previous_circles = [Circle.create_from(c) for c in circles]
             for circle in circles:
-                circle.hit = False
+                circle.is_hit = False
 
     def draw(self, circles: list[Circle], erase: bool = False) -> None:
         c = 0 if erase else 1
         for circle in circles:
+            if not erase:
+                self.gfx.set_fg_color(*circle.rgb)
             x = int(circle.x)
             y = int(circle.y)
             r = int(circle.r)
-            if circle.hit:
+            if circle.is_hit:
                 self.gfx.fill_circle(x, y, r, c)
             else:
                 self.gfx.draw_circle(x, y, r, c)

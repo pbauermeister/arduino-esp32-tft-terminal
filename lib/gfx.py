@@ -116,3 +116,48 @@ class Gfx:
 
     def set_bg_color(self, r: int, g: int, b: int) -> None:
         self._command(f'setBgColor {r} {g} {b}')
+
+    @staticmethod
+    def hsv_to_rgb(hue: int | float, sat: int | float, val: int | float) -> tuple[int, int, int]:
+        hue = min(hue, 360)
+        hue = max(hue, 0)
+        sat = min(sat, 100)
+        sat = max(sat, 0)
+        val = min(val, 100)
+        val = max(val, 0)
+
+        s = sat / 100.
+        v = val / 100.
+        c = s * v
+        x = c * (1 - abs(((hue / 60.0) % 2.) - 1))
+        m = v - c
+
+        if hue >= 0 and hue < 60:
+            r = c
+            g = x
+            b = 0.
+        elif hue >= 60 and hue < 120:
+            r = x
+            g = c
+            b = 0.
+        elif hue >= 120 and hue < 180:
+            r = 0
+            g = c
+            b = x
+        elif hue >= 180 and hue < 240:
+            r = 0.
+            g = x
+            b = c
+        elif hue >= 240 and hue < 300:
+            r = x
+            g = 0.
+            b = c
+        else:
+            r = c
+            g = 0.
+            b = x
+
+        red = int((r + m) * 255+.5)
+        green = int((g + m) * 255+.5)
+        blue = int((b + m) * 255+.5)
+        return red, green, blue
