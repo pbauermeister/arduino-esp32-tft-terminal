@@ -22,8 +22,7 @@ class MonitorHost(App):
 
     def set_pane_text_attr(self) -> None:
         self.gfx.set_text_size(1, 1)
-        self.gfx.set_fg_color(128, 128, 128)
-        self.gfx.set_text_color(1)
+        self.gfx.set_text_color(128, 128, 128)
 
     def _run(self) -> bool:
         title = 'Host'
@@ -57,8 +56,7 @@ class MonitorHost(App):
                 return False
 
     def show_header(self, title: str, menu: str | None = None, with_banner: bool = False) -> None:
-        self.gfx.set_fg_color(255, 255, 255)
-        self.gfx.set_text_color(1)
+        self.gfx.set_text_color(255, 255, 255)
         self.gfx.set_text_size(1, 1)
         super().show_header(title, '', with_banner)
         self.set_pane_text_attr()

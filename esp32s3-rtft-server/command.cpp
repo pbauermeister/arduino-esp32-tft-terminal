@@ -414,12 +414,13 @@ const char *interpret(char *input, const Config &config) {
       return ok();
     }
 
-    case hash("setTextColor"): {
-      // fillScreen 1  /  setTextColor 0  /  print HELLO
-      int c = read_int(&rest, error);
+    case hash("setTextColor"): {  // setTextColor 255 128 128
+      int r = read_int(&rest, error);
+      int g = read_int(&rest, error);
+      int b = read_int(&rest, error);
       if (error.message) return error.message;
 
-      transaction.action()->set(hh, c);
+      transaction.action()->set(hh, r, g, b);
       transaction.add();
       return ok();
     }

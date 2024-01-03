@@ -138,8 +138,8 @@ inline void set_text_size(uint8_t s, uint8_t sy) {
 
 inline void set_cursor(int16_t x, int16_t y) { tft.setCursor(x, y); }
 
-inline void set_text_color(bool fg) {
-  tft.setTextColor(fg ? fg_color : bg_color);
+inline void set_text_color(uint8_t r, uint8_t g, uint8_t b) {
+  tft.setTextColor(make_rgb(r, g, b));
 }
 
 inline void set_text_wrap(bool enabled) { tft.setTextWrap(enabled); }

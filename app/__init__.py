@@ -1,5 +1,6 @@
 import datetime
 import random
+import time
 from abc import abstractmethod
 from typing import Callable
 
@@ -44,6 +45,7 @@ class App:
         duration = datetime.datetime.now() - start
         print('Duration:', duration)
         while self.board.read_buttons(flush=True):
+            time.sleep(.1)
             pass
         return reset
 
@@ -80,18 +82,18 @@ class App:
         return res
 
     def show_header(self, title: str, menu: str, with_banner: bool = False) -> None:
-        # self.gfx.reset()
         self.gfx.clear()
         self.gfx.set_text_size(1, 1)
         self.gfx.fill_rect(0, 0, config.WIDTH, config.TEXT_SCALING*8, 1)
-        self.gfx.set_text_color(0)
+        self.gfx.set_text_color(0, 0, 0)
         self.gfx.set_cursor(1, 0)
         self.gfx.print(title)
+
         w, h = self.get_text_size(menu)
         x = max(config.WIDTH - w - 3, 0)
         self.gfx.set_cursor(x, 1)
         self.gfx.print(menu)
-        self.gfx.set_text_color(1)
+        self.gfx.set_text_color(255, 255, 255)
 
         if with_banner:
             self.gfx.set_text_size(1, 2)

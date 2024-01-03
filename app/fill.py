@@ -27,7 +27,10 @@ class Fill(App):
             self.gfx.set_text_size(sx, sy)
             self.gfx.home()
             self.gfx.fill_screen(int(alt))
-            self.gfx.set_text_color(int(not alt))
+            if alt:
+                self.gfx.set_text_color(0, 0, 0)
+            else:
+                self.gfx.set_text_color(255, 255, 255)
             for i in range(ord('!'), 255):
                 c = chr(i)
                 self.gfx.print(c)

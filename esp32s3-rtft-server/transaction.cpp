@@ -204,10 +204,11 @@ void Transaction::do_action(Action *action) {
       break;
     }
 
-    case hash("setTextColor"): {
-      // fillScreen 1  /  setTextColor 0  /  print HELLO
-      bool c = (bool)action->args[0];
-      set_text_color(c);
+    case hash("setTextColor"): {  // setTextColor 255 128 128
+      int r = (int)action->args[0];
+      int g = (int)action->args[1];
+      int b = (int)action->args[2];
+      set_text_color(r, g, b);
       break;
     }
 

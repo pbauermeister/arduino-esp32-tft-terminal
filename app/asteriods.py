@@ -314,10 +314,9 @@ class Bonus:
         gfx.set_cursor(self.x + config.TEXT_SCALING*2,
                        self.y - config.TEXT_SCALING*4)
         # gfx.set_fg_color(96, 96, 192)
-        gfx.set_fg_color(*COLOR_BOOM)
-        gfx.set_text_color(1)
+        gfx.set_text_color(*COLOR_BOOM)
         gfx.print(str(self.value))
-        gfx.set_fg_color(*COLOR_DEFAULT)
+        gfx.set_text_color(*COLOR_DEFAULT)
 
 
 class Game:
@@ -391,8 +390,7 @@ class Game:
             self.gfx.set_fg_color(*COLOR_DEFAULT)
 
     def add_renders_gameover(self) -> None:
-        self.gfx.set_fg_color(*COLOR_GOVER_TEXT)
-        self.gfx.set_text_color(1)
+        self.gfx.set_text_color(*COLOR_GOVER_TEXT)
         x, y = GAME_OVER_POS
         self.gfx.set_cursor(x, y)
         self.gfx.print(GAME_OVER_TITLE)
@@ -403,11 +401,9 @@ class Game:
 
         x = config.WIDTH - 12*config.TEXT_SCALING
         self.gfx.set_cursor(x, 0)
-        self.gfx.set_fg_color(*COLOR_STATUS_TEXT)
-        self.gfx.set_text_color(1)
+        self.gfx.set_text_color(*COLOR_STATUS_TEXT)
         self.gfx.print(str(self.player.lives))
 
-        self.gfx.set_fg_color(*COLOR_DEFAULT)
         if self.player.ship.aster_crash:
             return
 
@@ -425,29 +421,24 @@ class Game:
     def handle_crash(self) -> bool:
         if not self.player.ship.aster_crash:
             return False
-        self.gfx.set_fg_color(*COLOR_BOOM)
-        self.gfx.set_text_color(1)
+        self.gfx.set_text_color(*COLOR_BOOM)
         self.boom(self.player.ship, self.player.ship.aster_crash)
         self.player.ship.aster_crash = None
         if self.player.lives:
             self.player.lives -= 1
-        self.gfx.set_fg_color(*COLOR_DEFAULT)
-        self.gfx.set_text_color(1)
+        self.gfx.set_text_color(*COLOR_DEFAULT)
         return True
 
     def boom(self, ship: Ship, asteroid: Asteroid) -> None:
-
         for i in range(9):
             asteroid.add_renders_boom(i)
             ship.add_renders_boom(i)
 
             self.gfx.home()
-            self.gfx.set_fg_color(*COLOR_STATUS_TEXT)
-            self.gfx.set_text_color(1)
+            self.gfx.set_text_color(*COLOR_STATUS_TEXT)
             self.gfx.print(f'{self.player.score:04d}')
 
-            self.gfx.set_fg_color(*COLOR_BOOM)
-            self.gfx.set_text_color(1)
+            self.gfx.set_text_color(*COLOR_BOOM)
             self.gfx.print(' Boom!')
 
             self.gfx.display()

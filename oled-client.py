@@ -8,14 +8,14 @@ from typing import Any, Type
 import config
 from app import App
 from app.asteriods import Asteriods
-from app.bumps import Bumps
+# from app.bumps import Bumps
 from app.collisions import Collisions
 from app.collisions_2 import Collisions_2
 from app.cube import Cube
 from app.fill import Fill
-from app.monitor_host import MonitorHost
 from app.monitor_cpus import MonitorCpus
 from app.monitor_graph import MonitorGraph
+from app.monitor_host import MonitorHost
 from app.quix import Quix
 from app.road import Road
 from app.starfield import Starfield
@@ -113,8 +113,8 @@ while True:
                 break
             if start_app_maybe(Quix):
                 break
-            if start_app_maybe(Bumps):
-                break
+            # if start_app_maybe(Bumps):
+            #    break
             if start_app_maybe(Collisions):
                 break
             if start_app_maybe(Collisions_2):

@@ -50,8 +50,7 @@ class MonitorGraph(App):
 
     def set_pane_text_attr(self) -> None:
         self.gfx.set_text_size(1, 1)
-        self.gfx.set_fg_color(128, 128, 128)
-        self.gfx.set_text_color(1)
+        self.gfx.set_text_color(128, 128, 128)
 
     def make_cpu_infos(self, pcents: list[int] | None) -> list[CpuInfo]:
         if not pcents:
@@ -195,8 +194,7 @@ class MonitorGraph(App):
 
     def render_labels(self, nb_cpus: int,  cpus_ttl: int, last_cpus_ttl: int | None) -> None:
         self.gfx.set_text_size(1, 1)
-        self.gfx.set_fg_color(*COLOR_LABELS)
-        self.gfx.set_text_color(1)
+        self.gfx.set_text_color(*COLOR_LABELS)
         dy = 4
 
         # CPUs
@@ -207,9 +205,9 @@ class MonitorGraph(App):
 
         if last_cpus_ttl is not None:
             xy = self.gfx
-            self.gfx.set_text_color(0)
+            self.gfx.set_text_color(0, 0, 0)
             self.gfx.print(f'{last_cpus_ttl}%')
-            self.gfx.set_text_color(1)
+            self.gfx.set_text_color(*COLOR_LABELS)
 
         self.gfx.set_cursor(0,  y + dy)
         self.gfx.print(cpus_label)
@@ -222,19 +220,15 @@ class MonitorGraph(App):
         self.gfx.print('Net')
 
         # - tx
-        self.gfx.set_fg_color(*COLOR_TX)
-        self.gfx.set_text_color(1)
+        self.gfx.set_text_color(*COLOR_TX)
         self.gfx.print(' -')
-        self.gfx.set_fg_color(*COLOR_LABELS)
-        self.gfx.set_text_color(1)
+        self.gfx.set_text_color(*COLOR_LABELS)
         self.gfx.print('tx')
 
         # - rx
-        self.gfx.set_fg_color(*COLOR_RX)
-        self.gfx.set_text_color(1)
+        self.gfx.set_text_color(*COLOR_RX)
         self.gfx.print(' -')
-        self.gfx.set_fg_color(*COLOR_LABELS)
-        self.gfx.set_text_color(1)
+        self.gfx.set_text_color(*COLOR_LABELS)
         self.gfx.print('rx')
 
     def make_cpu_y(self, pcent: int) -> int:

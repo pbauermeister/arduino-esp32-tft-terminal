@@ -43,8 +43,8 @@ class Gfx:
     def fill_rect(self, x: int, y: int, w: int, h: int, fg: int) -> None:
         self._command(f'fillRect {x} {y} {w} {h} {fg}')
 
-    def set_text_color(self, fg: int) -> None:
-        self._command(f'setTextColor {fg}')
+    def set_text_color(self, r: int, g: int, b: int) -> None:
+        self._command(f'setTextColor {r} {g} {b}')
 
     def home(self) -> None:
         self._command('home')
