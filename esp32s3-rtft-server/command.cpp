@@ -84,6 +84,8 @@ const char *read_last_str(char **rest_p, ErrorHolder &error) {
   return v;
 }
 
+void (*rebootF)(void) = 0;  // declare reboot function @ address 0
+
 const char *interpret(char *input, const Config &config) {
   unescape_inplace(input);
 
@@ -97,6 +99,11 @@ const char *interpret(char *input, const Config &config) {
   int hh = hash(cmd);
 
   switch (hh) {
+    case hash("reboot"): {  // reboot
+      rebootF();
+      return ok();
+    }
+
     case hash("autoDisplay"): {  // autoDisplay 1
       bool on = read_int(&rest, error);
       if (error.message) return error.message;

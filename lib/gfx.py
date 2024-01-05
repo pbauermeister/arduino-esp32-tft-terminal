@@ -8,8 +8,12 @@ class Gfx:
     def __init__(self, command: Command):
         self.command = command
 
-    def _command(self, cmd: str, ignore_error: bool = False) -> str:
-        return self.command.do_command(cmd, ignore_error)
+    def _command(self, cmd: str, ignore_error: bool = False,
+                 ignore_response: bool = False) -> str:
+        return self.command.do_command(cmd, ignore_error, ignore_response)
+
+    def reboot(self) -> None:
+        self._command('reboot', ignore_error=True, ignore_response=True)
 
     def reset(self) -> None:
         self._command('reset')

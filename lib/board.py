@@ -49,11 +49,21 @@ class Board:
         self.boots += 1
         self.configure()
 
+    def reboot(self) -> None:
+        self.chan.set_callback(READY, None)
+        print('>reboot')
+        self.gfx.reboot()
+        time.sleep(1)
+        self.chan.open()
+        time.sleep(1)
+        self.chan.clear()
+
     def configure(self) -> None:
         # normally called by callback
         try:
             self._configure()
         except:
+            self.reboot()
             self._configure()
 
     def _configure(self) -> None:

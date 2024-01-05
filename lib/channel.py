@@ -30,7 +30,8 @@ class Channel:
             except ArduinoCommExceptions as e:
                 print('>open>error:', e)
                 port_nr = (port_nr + 1) % 10
-                time.sleep(config.SERIAL_ERROR_RETRY_DELAY)
+                time.sleep(
+                    config.SERIAL_ERROR_RETRY_DELAY if port_nr else config.SERIAL_ERROR_RETRY_DELAY_2)
                 continue
 
             self.ser.timeout = config.SERIAL_TIMEOUT
@@ -51,7 +52,7 @@ class Channel:
         self.ser.reset_output_buffer()
         self.flush_in()
 
-    def set_callback(self, message: str, fn: Callable[[Any], None]) -> None:
+    def set_callback(self, message: str, fn: Callable[[Any], None] | None) -> None:
         self.on_message = message
         self.on_fn = fn
 
@@ -64,7 +65,6 @@ class Channel:
 
     def read(self) -> str:
         assert self.ser
-        assert self.on_fn
         bytes = None
         message: str
         try:
@@ -78,7 +78,8 @@ class Channel:
         if config.DEBUG:
             print(">>>", message)
         if message == self.on_message:
-            self.on_fn(message)
+            if self.on_fn:
+                self.on_fn(message)
         return message
 
     def flush_in(self) -> None:
