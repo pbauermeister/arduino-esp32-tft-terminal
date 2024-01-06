@@ -1,5 +1,3 @@
-
-
 INNER_LENGTH   = 52.0  - .3;
 INNER_WIDTH    = 23.5  - .1;
 INNER_HEIGHT   =  9.0  + .75;
@@ -39,6 +37,8 @@ module box() {
 }
 
 module chamber() {
+    dy = INNER_WIDTH/2 -INNER_WIDTH/5;
+
     // for plug
     pz = PILLAR_HEIGHT - PLUG_THICKNESS + PLAY*2;
     translate([0, 0, OUTER_HEIGHT - INNER_HEIGHT])
@@ -50,8 +50,20 @@ module chamber() {
     cube([INNER_LENGTH, INNER_WIDTH, INNER_HEIGHT]);
 
     // for bottom
-    translate([BORDER_X, BORDER_Y, -ATOM])
-    cube([INNER_LENGTH - 2*BORDER_X, INNER_WIDTH - 2*BORDER_Y, OUTER_HEIGHT + +ATOM*2]);
+    translate([BORDER_X, BORDER_Y + dy - BORDER_Y/2, -ATOM])
+    //cube([INNER_LENGTH - 2*BORDER_X, INNER_WIDTH - 2*BORDER_Y, OUTER_HEIGHT + ATOM*2]);
+    cube([INNER_LENGTH - 2*BORDER_X, INNER_WIDTH - 2*BORDER_Y -dy, OUTER_HEIGHT + ATOM*2]);
+
+    if(0)
+    translate([INNER_LENGTH/2, INNER_WIDTH/2, -ATOM])
+    cylinder(d=INNER_WIDTH/2,h=OUTER_HEIGHT+ ATOM*2, $fn=60);
+
+    
+    // corner cut
+    translate([0, dy , 0])
+    rotate([-45, 0, 0])
+    translate([-INNER_LENGTH, -INNER_WIDTH, -INNER_HEIGHT])
+    cube([INNER_LENGTH*3, INNER_WIDTH, INNER_HEIGHT]);
 }
 
 module case() {
