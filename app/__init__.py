@@ -29,6 +29,7 @@ class App:
         self.board.command.had_recoveries()
         self.only_me = False
         self.init()
+        self.show_main_title()
 
     @abstractmethod
     def _run(self) -> bool:
@@ -58,6 +59,12 @@ class App:
         self.board.configure()
         assert config.WIDTH and config.HEIGHT
 
+        # ready for run()
+        self.gfx.set_text_size(1, 1)
+        if self.auto_read:
+            self.board.begin_auto_read_buttons()
+
+    def show_main_title(self) -> None:
         self.gfx.reset()
         self.gfx.set_text_size(1, 2)
         title = self.title.upper()
@@ -67,11 +74,6 @@ class App:
         self.gfx.set_cursor(x, y)
         self.gfx.print(title)
         self.gfx.display()
-
-        # ready for run()
-        self.gfx.set_text_size(1, 1)
-        if self.auto_read:
-            self.board.begin_auto_read_buttons()
 
     def get_title_pos(self, title: str) -> tuple[int, int]:
         w, h = self.get_text_size(title)
