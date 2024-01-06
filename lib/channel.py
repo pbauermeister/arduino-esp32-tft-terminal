@@ -29,7 +29,7 @@ class Channel:
             # except ArduinoCommExceptions as e:
             except ArduinoCommExceptions as e:
                 print('>open>error:', e)
-                port_nr = (port_nr + 1) % 10
+                port_nr = (port_nr + 1) % 100
                 time.sleep(
                     config.SERIAL_ERROR_RETRY_DELAY if port_nr else config.SERIAL_ERROR_RETRY_DELAY_2)
                 continue
