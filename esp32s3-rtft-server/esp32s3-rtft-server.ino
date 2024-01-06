@@ -58,7 +58,7 @@ char *get_input() {
 }
 
 void loop() {
-  if (++counter % 50 == 0) {
+  if (++counter % 64 == 0) {
     digitalWrite(LED_BUILTIN, inverted ? HIGH : LOW);
     inverted = !inverted;
   }
@@ -71,20 +71,12 @@ void loop() {
     delay(10);
   }
 
-  // rotate hue and pusate value
-  const NUM k = (NUM)200 / (NUM)360;
-  const NUM val_period = 2.00 * k;
-  const NUM hue_period = .002 / k;
-  int v = (int)(counter * val_period) % 200;
-  if (v > 100) v = 200 - v;
+  // plusate value (sync'ed with LED) and slowly rotate hue
+  const NUM hue_period = .002;
+  int v = (counter * 2 + 144) % 256;
+  if (v > 127) v = 256 - v;
   int h = (int)(counter * hue_period) % 360;
-  np.set_color((NUM)h, (NUM)100, (NUM)v / 2 + 1);
-
-  // cycle r, g, b
-  // uint8_t r = triangle(counter / 1);
-  // uint8_t g = triangle(counter / 3);
-  // uint8_t b = triangle(counter / 5);
-  // np.set_color(r, g, b);
+  np.set_color((NUM)h, (NUM)100, (NUM)v * 100 / 128 / 2 + 1);
 
   yield();
 }
