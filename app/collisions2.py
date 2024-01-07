@@ -9,3 +9,4 @@ class Collisions2(Collisions):
         self.radius_max = 22
         self.v_min = 100.0
         self.v_max = 1000.0
+        self.dt = 0.01

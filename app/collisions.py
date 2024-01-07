@@ -119,7 +119,8 @@ class Simulation:
     def __init__(self, gfx: Gfx,
                  vmin: float, vmax: float,
                  room_width: int, room_height: int,
-                 radii: Floats) -> None:
+                 radii: Floats,
+                 dt: float) -> None:
         """Initialize the simulation with n Particles with radii radius.
 
         radius can be a single value or a sequence with n values.
@@ -135,7 +136,7 @@ class Simulation:
         self.room_width = room_width
         self.room_height = room_height
         self.init_particles(radii)
-        self.dt = 0.01
+        self.dt = dt
         self.init()
 
     def place_particle(self, rad: float, rgb: Color, rgb_hit: Color) -> bool:
@@ -210,7 +211,6 @@ class Simulation:
         # we are detecting collisions. combinations generates pairs of indexes
         # into the self.particles list of Particles on the fly.
         pairs = combinations(range(self.n), 2)
-        adv: set[Particle] = set()
         for i, j in pairs:
             a = self.particles[i]
             b = self.particles[j]
@@ -219,34 +219,33 @@ class Simulation:
                 hits.add(i)
                 hits.add(j)
 
-                # FIXME: reposition particcles so that they just touch
-                # otherwise for big size and velocity they tend to stick.
-
-                adv.add(a)
-                adv.add(b)
-
-        for p in adv:
-            p.advance(self.dt)
+                # Attempt to unstick particle pairs.
+                # FIXME: in very crowded area, may  leads to "teleportation"
+                while a.overlaps(b):
+                    a.advance(self.dt/2)
+                    b.advance(self.dt/2)
+                a.advance(-self.dt/2)
+                b.advance(-self.dt/2)
 
         return hits
 
     def handle_boundary_collisions(self, p: Particle) -> bool:
         """Bounce the particles off the walls elastically."""
         hit = False
-        if p.x - p.radius < 0:
-            p.x = p.radius
+        if p.x - p.radius <= 0:
+            p.x = p.radius+1
             p.vx = -p.vx
             hit = True
-        if p.x + p.radius > self.room_width:
-            p.x = self.room_width-p.radius
+        if p.x + p.radius >= self.room_width-1:
+            p.x = self.room_width-p.radius-1
             p.vx = -p.vx
             hit = True
-        if p.y - p.radius < 0:
-            p.y = p.radius
+        if p.y - p.radius <= 0:
+            p.y = p.radius+1
             p.vy = -p.vy
             hit = True
-        if p.y + p.radius > self.room_height:
-            p.y = self.room_height-p.radius
+        if p.y + p.radius >= self.room_height-1:
+            p.y = self.room_height-p.radius-1
             p.vy = -p.vy
             hit = True
         return hit
@@ -260,14 +259,15 @@ class Simulation:
 
         for i, p in enumerate(self.particles):
             p.advance(self.dt)
-            self.circles[i].is_hit |= self.handle_boundary_collisions(p)
-
-            self.circles[i].x = p.r[0]
-            self.circles[i].y = p.r[1]
 
         hits = self.handle_collisions()
         for i, _ in enumerate(self.particles):
             self.circles[i].is_hit |= i in hits
+
+        for i, p in enumerate(self.particles):
+            self.circles[i].is_hit |= self.handle_boundary_collisions(p)
+            self.circles[i].x = p.r[0]
+            self.circles[i].y = p.r[1]
 
         self.apply_forces()
         return self.circles
@@ -292,11 +292,12 @@ class Collisions(App):
         super().__init__(board, auto_read=True)
 
     def set_collisions_params(self) -> None:
-        self.nb = 7
+        self.nb = 9
         self.radius_min = 8
         self.radius_max = 25
         self.v_min = 100.0
         self.v_max = 500.0
+        self.dt = 0.01 / 2
 
     def _run(self) -> bool:
         self.set_collisions_params()
@@ -313,7 +314,7 @@ class Collisions(App):
         sim = Simulation(self.board.gfx,
                          self.v_min, self.v_max,
                          config.WIDTH, config.HEIGHT,
-                         radii)
+                         radii, self.dt)
 
         escaper = TimeEscaper(self)
         previous_circles: list[Circle] = []
