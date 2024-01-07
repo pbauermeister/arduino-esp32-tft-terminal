@@ -1,12 +1,14 @@
-from typing import Callable
+import time
 
 import config
+
 from .command import Command
 
 
 class Gfx:
     def __init__(self, command: Command):
         self.command = command
+        self.APPS_INTERFRAME_DELAY = config.APPS_INTERFRAME_DELAY_MS / 1000.
 
     def _command(self, cmd: str, ignore_error: bool = False,
                  ignore_response: bool = False) -> str:
@@ -34,6 +36,7 @@ class Gfx:
 
     def display(self) -> None:
         self._command('display')
+        time.sleep(self.APPS_INTERFRAME_DELAY)
 
     def get_text_bounds(self, x: int, y: int, text: str) -> tuple[int, int]:
         ans = self._command(f'getTextBounds 0 0 {text}')

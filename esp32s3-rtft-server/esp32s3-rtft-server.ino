@@ -58,7 +58,7 @@ char *get_input() {
 }
 
 void loop() {
-  if (++counter % 64 == 0) {
+  if (++counter % 2048 == 0) {
     digitalWrite(LED_BUILTIN, inverted ? HIGH : LOW);
     inverted = !inverted;
   }
@@ -68,12 +68,12 @@ void loop() {
     const char *result = interpret(buffer, config);
     if (result) Serial.println(result);
   } else {
-    delay(10);
+    // delay(10);
   }
 
   // plusate value (sync'ed with LED) and slowly rotate hue
   const NUM hue_period = .002;
-  int v = (counter * 2 + 144) % 256;
+  int v = ((counter * 2) / 32 + 144) % 256;
   if (v > 127) v = 256 - v;
   int h = (int)(counter * hue_period) % 360;
   np.set_color((NUM)h, (NUM)100, (NUM)v * 100 / 128 / 2 + 1);
