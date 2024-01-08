@@ -296,8 +296,8 @@ class Collisions(App):
         self.radius_min = 8
         self.radius_max = 25
         self.v_min = 100.0
-        self.v_max = 500.0
-        self.dt = 0.01 / 2
+        self.v_max = 1000.0
+        self.dt = 0.01 / 3
 
     def _run(self) -> bool:
         self.set_collisions_params()
