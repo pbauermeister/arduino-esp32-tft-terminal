@@ -58,20 +58,18 @@ char *get_input() {
 }
 
 void loop() {
-  if (++counter % 2048 == 0) {
-    digitalWrite(LED_BUILTIN, inverted ? HIGH : LOW);
-    inverted = !inverted;
-  }
-
   if (Serial.available() > 0) {
     char *buffer = get_input();
     const char *result = interpret(buffer, config);
     if (result) Serial.println(result);
+    digitalWrite(LED_BUILTIN, HIGH);
   } else {
     // delay(10);
+    digitalWrite(LED_BUILTIN, LOW);
   }
 
   // plusate value (sync'ed with LED) and slowly rotate hue
+  ++counter;
   const NUM hue_period = .002;
   int v = ((counter * 2) / 32 + 144) % 256;
   if (v > 127) v = 256 - v;
