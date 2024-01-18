@@ -157,8 +157,12 @@ class MonitorGraph(MonitorBase):
 
             print(f'traffic: rx={rx_delta} tx={tx_delta} interval={secs}s')
 
-            rx_scaled = min(int(rx_delta/TRAFFIC_SCALING * 100/secs), 100)
-            tx_scaled = min(int(tx_delta/TRAFFIC_SCALING * 100/secs), 100)
+            # rx_scaled = min(int(rx_delta/TRAFFIC_SCALING * 100/secs), 100)
+            # tx_scaled = min(int(tx_delta/TRAFFIC_SCALING * 100/secs), 100)
+            # self.draw_traffic(cursor, state.traffic, rx_scaled, tx_scaled)
+            k = 1. / TRAFFIC_SCALING * 100. / secs
+            rx_scaled = max(min(int(rx_delta * k), 100), 0)
+            tx_scaled = max(min(int(tx_delta * k), 100), 0)
             self.draw_traffic(cursor, state.traffic, rx_scaled, tx_scaled)
 
             state.traffic.previous_rx_scaled = rx_scaled
