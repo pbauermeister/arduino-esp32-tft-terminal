@@ -62,7 +62,7 @@ args, only_apps = get_args([
     MonitorGraph,
     Asteriods,
     Cube,
-    Road,
+    # Road,
     Starfield,
     Tunnel,
     Quix,
@@ -82,7 +82,12 @@ def start_app_maybe(cls: Type[App]) -> bool:
     only_me = bool(only_apps) and cls in only_apps and len(only_apps) == 1
     instance = cls(board)
     instance.only_me = only_me
-    return instance.run()
+
+    while True:
+        try:
+            return instance.run()
+        except ArduinoCommExceptions as e:
+            print('Serial error:', e)
 
 
 def suppress_ctrl_c() -> None:
@@ -105,8 +110,8 @@ while True:
                 break
             if start_app_maybe(Cube):
                 break
-            if start_app_maybe(Road):
-                break
+            # if start_app_maybe(Road):
+            #    break
             if start_app_maybe(Starfield):
                 break
             if start_app_maybe(Tunnel):
