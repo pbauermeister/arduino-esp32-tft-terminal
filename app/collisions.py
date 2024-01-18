@@ -17,8 +17,8 @@ from lib.board import Board
 from lib.gfx import Gfx
 
 COLOR_BORDER = 127, 127, 125
-
 Color = tuple[int, int, int]
+TIME_SUBQUANTAS = 20
 
 
 @dataclass
@@ -40,7 +40,7 @@ class Particle:
 
     def __init__(self, x: float, y: float, vx: float, vy: float,
                  rgb: Color, rgb_hit: Color,
-                 radius: float = 0.01, ) -> None:
+                 radius: float = 0.01) -> None:
         """Initialize the particle's position, velocity, and radius.
 
         Any key-value pairs passed in the styles dictionary will be passed
@@ -98,10 +98,13 @@ class Particle:
         """Add this Particle's Circle patch to the Matplotlib Axes ax."""
         return Circle(self.r[0], self.r[1], self.radius, self.rgb)
 
-    def advance(self, dt: float) -> None:
+    def advance(self, dt: float, friction: float, kick: float) -> None:
         """Advance the Particle's position forward in time by dt."""
-
-        self.r += self.v * dt
+        if friction > 0:
+            self.v *= (1 - friction/TIME_SUBQUANTAS)
+        if kick > 0:
+            self.v *= (1 + kick/TIME_SUBQUANTAS)
+        self.r += self.v * dt / TIME_SUBQUANTAS
 
 
 Floats = list[float]  # NDArray[np.float64]
@@ -120,7 +123,8 @@ class Simulation:
                  vmin: float, vmax: float,
                  room_width: int, room_height: int,
                  radii: Floats,
-                 dt: float) -> None:
+                 dt: float,
+                 g: float) -> None:
         """Initialize the simulation with n Particles with radii radius.
 
         radius can be a single value or a sequence with n values.
@@ -135,8 +139,9 @@ class Simulation:
         self.vmax = vmax
         self.room_width = room_width
         self.room_height = room_height
-        self.init_particles(radii)
         self.dt = dt
+        self.g = g
+        self.init_particles(radii)
         self.init()
 
     def place_particle(self, rad: float, rgb: Color, rgb_hit: Color) -> bool:
@@ -150,7 +155,8 @@ class Simulation:
         vr = (self.vmax-self.vmin) * np.sqrt(np.random.random()) + self.vmin
         vphi = 2*np.pi * np.random.random()
         vx, vy = vr * np.cos(vphi), vr * np.sin(vphi)
-        particle = self.ParticleClass(x, y, vx, vy, rgb, rgb_hit, rad)
+        particle = self.ParticleClass(
+            x, y, vx, vy, rgb, rgb_hit, rad)
 
         # Check that the Particle doesn't overlap one that's already
         # been placed.
@@ -222,10 +228,10 @@ class Simulation:
                 # Attempt to unstick particle pairs.
                 # FIXME: in very crowded area, may  leads to "teleportation"
                 while a.overlaps(b):
-                    a.advance(self.dt/2)
-                    b.advance(self.dt/2)
-                a.advance(-self.dt/2)
-                b.advance(-self.dt/2)
+                    a.advance(self.dt/2, 0, 0)
+                    b.advance(self.dt/2, 0, 0)
+                a.advance(-self.dt/2, 0, 0)
+                b.advance(-self.dt/2, 0, 0)
 
         return hits
 
@@ -252,13 +258,15 @@ class Simulation:
 
     def apply_forces(self) -> None:
         """Override this method to accelerate the particles."""
+        for p in self.particles:
+            p.vy += self.g
         pass
 
-    def advance_animation(self) -> list[Circle]:
+    def advance_animation(self, kick: float, friction: float) -> list[Circle]:
         """Advance the animation by dt, returning the updated Circles list."""
 
         for i, p in enumerate(self.particles):
-            p.advance(self.dt)
+            p.advance(self.dt, friction, kick)
 
         hits = self.handle_collisions()
         for i, _ in enumerate(self.particles):
@@ -280,10 +288,10 @@ class Simulation:
             self.circles.append(particle.draw())
         return self.circles
 
-    def animate(self, i: int) -> list[Circle]:
+    def animate(self, i: int, kick: float, friction: float) -> list[Circle]:
         """The function passed to Matplotlib's FuncAnimation routine."""
 
-        self.advance_animation()
+        self.advance_animation(kick, friction)
         return self.circles
 
 
@@ -292,12 +300,15 @@ class Collisions(App):
         super().__init__(board, auto_read=True)
 
     def set_collisions_params(self) -> None:
-        self.nb = 9
+        self.nb = 10
         self.radius_min = 8
         self.radius_max = 25
         self.v_min = 100.0
         self.v_max = 1000.0
         self.dt = 0.01 / 3
+        self.g = 0
+        self.friction = 0.1
+        self.kick = 0.1
 
     def _run(self) -> bool:
         self.set_collisions_params()
@@ -314,20 +325,30 @@ class Collisions(App):
         sim = Simulation(self.board.gfx,
                          self.v_min, self.v_max,
                          config.WIDTH, config.HEIGHT,
-                         radii, self.dt)
+                         radii, self.dt, self.g)
 
         escaper = TimeEscaper(self)
         previous_circles: list[Circle] = []
+        circles: list[Circle] = []
 
+        kick = 0.0
+        friction = 0.0
         while True:
-            circles = sim.animate(0)
+            for i in range(TIME_SUBQUANTAS):
+                circles = sim.animate(0, kick, friction)
 
+            kick = 0.0
+            friction = 0.0
             btns = self.board.auto_read_buttons()
             if 'R' in btns:
                 return True
-            if btns:
+            elif 'B' in btns:
+                kick = self.kick
+            elif 'C' in btns:
+                friction = self.friction
+            elif btns:
                 return False
-            if escaper.check():
+            elif escaper.check():
                 return False
 
             self.draw(previous_circles, erase=True)
