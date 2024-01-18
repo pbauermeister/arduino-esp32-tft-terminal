@@ -5,6 +5,9 @@ from app import App, TimeEscaper
 from lib.board import Board
 
 
+K = .75
+
+
 class Star:
     def __init__(self) -> None:
         self.reset(0)
@@ -13,7 +16,7 @@ class Star:
         self.vx = random.random() - .5
         self.vy = random.random() - .5
         self.t0 = t
-        self.k = random.random() + 1.75
+        self.k = (random.random() + 1.75) * K
 
     def compute(self, t: int, check: bool = False) -> tuple[int, int] | None:
         dt = float(t - self.t0)
@@ -26,7 +29,7 @@ class Star:
 
 
 class Starfield(App):
-    NB_STARS = 6
+    NB_STARS = 6 * 3
 
     def __init__(self, board: Board):
         super().__init__(board, auto_read=True)
