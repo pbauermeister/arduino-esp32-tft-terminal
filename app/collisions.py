@@ -40,7 +40,8 @@ class Particle:
         self.mass = self.radius**2
         self.rgb = rgb
         self.rgb_hit = rgb_hit
-        self.is_hit: bool = False
+        self.is_hit_by_wall: bool = False
+        self.is_hit_by_other: bool = False
 
     def __repr__(self) -> str:
         return str(self.__dict__)
@@ -52,7 +53,8 @@ class Particle:
             other.v[0], other.v[1],
             other.rgb, other.rgb_hit, other.radius
         )
-        p.is_hit = other.is_hit
+        p.is_hit_by_wall = other.is_hit_by_wall
+        p.is_hit_by_other = other.is_hit_by_other
         return p
 
     # For convenience, map the components of the particle's position and
@@ -229,7 +231,7 @@ class Simulation:
 
         return hits
 
-    def handle_boundary_collisions(self, p: Particle) -> bool:
+    def handle_wall_collisions(self, p: Particle) -> bool:
         """Bounce the particles off the walls elastically."""
         hit = False
         if p.x - p.radius <= 0:
@@ -260,6 +262,10 @@ class Simulation:
         """Override this method to mutate the particles."""
         pass
 
+    def after_draw(self) -> None:
+        """Override this method to do something after drawn."""
+        pass
+
     def advance_animation(self, kick: float, friction: float) -> None:
         """Advance the animation by dt, returning the updated Circles list."""
 
@@ -268,10 +274,10 @@ class Simulation:
 
         hits = self.handle_collisions()
         for i, _ in enumerate(self.particles):
-            self.particles[i].is_hit |= i in hits
+            self.particles[i].is_hit_by_other |= i in hits
 
         for i, p in enumerate(self.particles):
-            self.particles[i].is_hit |= self.handle_boundary_collisions(p)
+            self.particles[i].is_hit_by_wall |= self.handle_wall_collisions(p)
 
         self.apply_forces()
         self.mutate()
@@ -351,9 +357,11 @@ class Collisions(App):
             self.gfx.display()
 
             previous_particles = [Particle.create_from(p) for p in particles]
+            sim.after_draw()
 
             for p in particles:
-                p.is_hit = False
+                p.is_hit_by_wall = False
+                p.is_hit_by_other = False
 
     def draw(self, particles: list[Particle], erase: bool = False) -> None:
         c = 0 if erase else 1
@@ -363,7 +371,7 @@ class Collisions(App):
             x = int(p.r[0])
             y = int(p.r[1])
             r = int(p.radius)
-            if p.is_hit:
+            if p.is_hit_by_other:
                 self.gfx.fill_circle(x, y, r, c)
             else:
                 self.gfx.draw_circle(x, y, r, c)
