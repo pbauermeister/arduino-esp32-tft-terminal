@@ -11,6 +11,7 @@ from app.asteriods import Asteriods
 # from app.bumps import Bumps
 from app.collisions import Collisions
 from app.collisions2 import Collisions2
+from app.collisions3 import Collisions3
 from app.cube import Cube
 from app.fill import Fill
 from app.monitor_cpus import MonitorCpus
@@ -69,6 +70,7 @@ args, only_apps = get_args([
     # Bumps,
     Collisions,
     Collisions2,
+    Collisions3,
     Fill,
 ])
 
@@ -88,6 +90,8 @@ def start_app_maybe(cls: Type[App]) -> bool:
             return instance.run()
         except ArduinoCommExceptions as e:
             print('Serial error:', e)
+            time.sleep(1)
+            print('Please reset the board.')
 
 
 def suppress_ctrl_c() -> None:
@@ -123,6 +127,8 @@ while True:
             if start_app_maybe(Collisions):
                 break
             if start_app_maybe(Collisions2):
+                break
+            if start_app_maybe(Collisions3):
                 break
             if start_app_maybe(Fill):
                 break

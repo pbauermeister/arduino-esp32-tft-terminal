@@ -126,6 +126,9 @@ class TimeEscaper:
         self.frames = 0
         self.start = datetime.datetime.now()
 
+    def retrigger(self) -> None:
+        self.start = datetime.datetime.now()
+
     def check(self) -> bool:
         self.frames += 1
         elapsed = datetime.datetime.now() - self.start

@@ -339,8 +339,10 @@ class Collisions(App):
                 return True
             elif 'B' in btns:
                 kick = self.kick
+                escaper.retrigger()
             elif 'C' in btns:
                 friction = self.friction
+                escaper.retrigger()
             elif btns:
                 return False
             elif escaper.check():
