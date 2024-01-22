@@ -1,7 +1,12 @@
+"""Particles simulation.
+
+Quite crowded, no gravity, bubble grow with time and pop on mutual collision.
+"""
+
 from app.collisions import Collisions, Simulation, TIME_SUBQUANTAS, Color, Particle
 from lib.board import Board
 
-RADIUS_MIN = 1.0
+RADIUS_MIN = 0.5
 RADIUS_MAX = 25.0
 RADIUS_GROWTH = .5
 
@@ -25,6 +30,10 @@ class Simulation3(Simulation):
         p.v[1] = abs(p.v[1])
         return p
 
+    def resolve_collision(self, a: Particle, b: Particle) -> None:
+        # Do nothing. do not attempt to unstick particles, as they will pop
+        pass
+
 
 class Collisions3(Collisions):
     def __init__(self, board: Board):
@@ -36,4 +45,5 @@ class Collisions3(Collisions):
         self.radius_min = RADIUS_MIN
         self.radius_max = RADIUS_MIN
         self.v_min = 500.0
-        self.v_max = 1200.0
+        self.v_max = 1200.0 * .6
+        # TODO: avoid de-collision

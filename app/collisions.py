@@ -1,6 +1,11 @@
 # Program based on
 # https://scipython.com/blog/two-dimensional-collisions/?utm_source=pocket_saves
 
+"""Particles simulation.
+
+Quite crowded, no gravity, elastic bumps.
+"""
+
 from __future__ import annotations
 from dataclasses import dataclass
 
@@ -221,15 +226,18 @@ class Simulation:
                 hits.add(i)
                 hits.add(j)
 
-                # Attempt to unstick particle pairs.
-                # FIXME: in very crowded area, may  leads to "teleportation"
-                while a.overlaps(b):
-                    a.advance(self.dt/2, 0, 0)
-                    b.advance(self.dt/2, 0, 0)
-                a.advance(-self.dt/2, 0, 0)
-                b.advance(-self.dt/2, 0, 0)
+                self.resolve_collision(a, b)
 
         return hits
+
+    def resolve_collision(self, a: Particle, b: Particle) -> None:
+        # Attempt to unstick particle pairs.
+        # FIXME: in very crowded area, may  leads to "teleportation"
+        while a.overlaps(b):
+            a.advance(self.dt/2, 0, 0)
+            b.advance(self.dt/2, 0, 0)
+        a.advance(-self.dt/2, 0, 0)
+        b.advance(-self.dt/2, 0, 0)
 
     def handle_wall_collisions(self, p: Particle) -> bool:
         """Bounce the particles off the walls elastically."""

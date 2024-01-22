@@ -1,3 +1,8 @@
+"""Particles simulation.
+
+Sparsely crowded, gravity, elastic bumps.
+"""
+
 from app.collisions import Collisions
 
 
