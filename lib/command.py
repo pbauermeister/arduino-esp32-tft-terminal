@@ -57,6 +57,7 @@ class Command:
 
     def recover(self) -> None:
         delay = config.SERIAL_ERROR_RETRY_DELAY
+        time.sleep(delay)
         try:
             self.chan.close()
         except:
