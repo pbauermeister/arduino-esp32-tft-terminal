@@ -21,18 +21,12 @@ class Simulation3(Simulation):
         for i, _ in enumerate(self.particles):
             p = self.particles[i]
             if p.is_hit_by_other:
-                p = self.place_particle(RADIUS_MIN, p.rgb, p.rgb_hit)
+                p = self.create_particle(RADIUS_MIN, p.rgb, p.rgb_hit)
                 self.particles[i] = p
 
-    def _place_particle(self, rad: float, rgb: Color, rgb_hit: Color) -> Particle:
-        p = super().place_particle(rad, rgb, rgb_hit)
-        p.r[1] = self.room_height-1
-        p.v[1] = abs(p.v[1])
-        return p
-
     def resolve_collision(self, a: Particle, b: Particle) -> None:
-        # Do nothing. do not attempt to unstick particles, as they will pop
-        pass
+        a.is_hit_by_other = True
+        b.is_hit_by_other = True
 
 
 class Collisions3(Collisions):

@@ -48,6 +48,9 @@ class Particle:
         self.is_hit_by_wall: bool = False
         self.is_hit_by_other: bool = False
 
+    def set_from(self, other: Particle) -> None:
+        self.__dict__ = other.__dict__.copy()
+
     def __repr__(self) -> str:
         return str(self.__dict__)
 
@@ -99,6 +102,9 @@ class Particle:
     def overlaps(self, other: Particle) -> bool:
         """Does the circle of this Particle overlap that of other?"""
 
+        if self.radius == 0 or other.radius == 0:
+            return False
+
         return bool(np.hypot(*(self.r - other.r)) < self.radius + other.radius)
 
     def advance(self, dt: float, friction: float, kick: float) -> None:
@@ -145,9 +151,11 @@ class Simulation:
         self.dt = dt
         self.g = g
         self.particles: list[Particle] = []
+        self.started = False
         self.init_particles(radii)
+        self.started = True
 
-    def place_particle(self, rad: float, rgb: Color, rgb_hit: Color) -> Particle:
+    def create_particle(self, rad: float, rgb: Color, rgb_hit: Color) -> Particle:
         while True:
             # Choose x, y so that the Particle is entirely inside the
             # domain of the simulation.
@@ -185,7 +193,7 @@ class Simulation:
             rgb = self.gfx.hsv_to_rgb(hue, 25, 100)
             rgb_hit = self.gfx.hsv_to_rgb(hue, 25, 50)
 
-            p = self.place_particle(rad, rgb, rgb_hit)
+            p = self.create_particle(rad, rgb, rgb_hit)
             self.particles.append(p)
 
     def change_velocities(self, p1: Particle, p2: Particle) -> None:
@@ -205,15 +213,13 @@ class Simulation:
         p1.v = u1
         p2.v = u2
 
-    def handle_collisions(self) -> set[int]:
+    def handle_mutual_collisions(self) -> None:
         """Detect and handle any collisions between the Particles.
 
         When two Particles collide, they do so elastically: their velocities
         change such that both energy and momentum are conserved.
 
         """
-        hits: set[int] = set()
-
         # We're going to need a sequence of all of the pairs of particles when
         # we are detecting collisions. combinations generates pairs of indexes
         # into the self.particles list of Particles on the fly.
@@ -222,15 +228,10 @@ class Simulation:
             a = self.particles[i]
             b = self.particles[j]
             if a.overlaps(b):
-                self.change_velocities(a, b)
-                hits.add(i)
-                hits.add(j)
-
                 self.resolve_collision(a, b)
 
-        return hits
-
     def resolve_collision(self, a: Particle, b: Particle) -> None:
+        self.change_velocities(a, b)
         # Attempt to unstick particle pairs.
         # FIXME: in very crowded area, may  leads to "teleportation"
         while a.overlaps(b):
@@ -238,8 +239,10 @@ class Simulation:
             b.advance(self.dt/2, 0, 0)
         a.advance(-self.dt/2, 0, 0)
         b.advance(-self.dt/2, 0, 0)
+        a.is_hit_by_other = True
+        b.is_hit_by_other = True
 
-    def handle_wall_collisions(self, p: Particle) -> bool:
+    def handle_wall_collisions(self, p: Particle) -> None:
         """Bounce the particles off the walls elastically."""
         hit = False
         if p.x - p.radius <= 0:
@@ -258,7 +261,7 @@ class Simulation:
             p.y = self.room_height-p.radius-1
             p.vy = -p.vy
             hit = True
-        return hit
+        p.is_hit_by_wall |= hit
 
     def apply_forces(self) -> None:
         """Override this method to accelerate the particles."""
@@ -280,12 +283,10 @@ class Simulation:
         for i, p in enumerate(self.particles):
             p.advance(self.dt, friction, kick)
 
-        hits = self.handle_collisions()
-        for i, _ in enumerate(self.particles):
-            self.particles[i].is_hit_by_other |= i in hits
+        self.handle_mutual_collisions()
 
-        for i, p in enumerate(self.particles):
-            self.particles[i].is_hit_by_wall |= self.handle_wall_collisions(p)
+        for p in self.particles:
+            self.handle_wall_collisions(p)
 
         self.apply_forces()
         self.mutate()
@@ -311,6 +312,8 @@ class Collisions(App):
         self.g: float = 0.0
         self.friction: float = 0.1
         self.kick: float = 0.1
+        self.flash_on_hit_other = True
+        self.flash_on_hit_wall = False
 
     def _run(self) -> bool:
         self.set_collisions_params()
@@ -381,7 +384,9 @@ class Collisions(App):
             x = int(p.r[0])
             y = int(p.r[1])
             r = int(p.radius)
-            if p.is_hit_by_other:
+            flash = p.is_hit_by_other and self.flash_on_hit_other \
+                or p.is_hit_by_wall and self.flash_on_hit_wall
+            if flash:
                 self.gfx.fill_circle(x, y, r, c)
             else:
                 self.gfx.draw_circle(x, y, r, c)
