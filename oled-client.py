@@ -12,6 +12,7 @@ from app.asteriods import Asteriods
 from app.collisions import Collisions
 from app.collisions2 import Collisions2
 from app.collisions3 import Collisions3
+from app.collisions4 import Collisions4
 from app.cube import Cube
 from app.fill import Fill
 from app.monitor_cpus import MonitorCpus
@@ -71,6 +72,7 @@ args, only_apps = get_args([
     Collisions,
     Collisions2,
     Collisions3,
+    Collisions4,
     Fill,
 ])
 
@@ -129,6 +131,8 @@ while True:
             if start_app_maybe(Collisions2):
                 break
             if start_app_maybe(Collisions3):
+                break
+            if start_app_maybe(Collisions4):
                 break
             if start_app_maybe(Fill):
                 break
