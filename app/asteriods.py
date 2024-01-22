@@ -47,8 +47,8 @@ GOTO_MENU = 1
 GOTO_NEXT = 2
 GOTO_QUIT = 3
 
-KEY_CW = 'A'
-KEY_CCW = 'C'
+KEY_CW = 'C'
+KEY_CCW = 'A'
 KEY_FIRE = 'B'
 KEY_SHIELD1 = 'A'
 KEY_SHIELD2 = 'B'
@@ -669,4 +669,6 @@ class Asteriods(App):
                     # player crashed
                     autoplay.enable()
                     self.board.wait_no_button()
-            # time.sleep(1*10000)
+
+            if not autoplay.enabled:
+                time.sleep(.05)
