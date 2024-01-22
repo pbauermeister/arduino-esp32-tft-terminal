@@ -42,7 +42,7 @@ void setup(void) {
   Serial.println("READY");
 
   // Pins
-  pinMode(LED_BUILTIN, OUTPUT);  // init LED *AFTER* Serial
+  pinMode(LED_BUILTIN, OUTPUT); // init LED *AFTER* Serial
   buttons_setup();
   np.init();
 

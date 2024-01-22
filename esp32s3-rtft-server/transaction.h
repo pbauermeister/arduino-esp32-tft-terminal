@@ -101,7 +101,7 @@ class Action {
 
 class Transaction {
  public:
-  Action actions[100];  // FIFO
+  Action actions[1000];  // FIFO
   int next;
   bool enabled;
 
