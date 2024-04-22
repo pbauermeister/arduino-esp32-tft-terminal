@@ -41,8 +41,8 @@ class Cube(App):
 
         # Set up the constants:
         SIZE = min(config.WIDTH, config.HEIGHT)
-        OFFSET_X = (config.WIDTH-SIZE) // 2
-        OFFSET_Y = (config.HEIGHT-SIZE) // 2
+        OFFSET_X = (config.WIDTH - SIZE) // 2
+        OFFSET_Y = (config.HEIGHT - SIZE) // 2
         SCALEX = SCALEY = SIZE // 4
 
         TRANSLATEX = (config.WIDTH - 4) // 2
@@ -64,8 +64,9 @@ class Cube(App):
         isometric = True
 
         def line(x1: float, y1: float, x2: float, y2: float, c: int) -> None:
-            self.gfx.draw_line(int(x1+.5), int(y1+.5),
-                               int(x2+.5), int(y2+.5), c)
+            self.gfx.draw_line(
+                int(x1 + 0.5), int(y1 + 0.5), int(x2 + 0.5), int(y2 + 0.5), c
+            )
 
         def rotate_point(p: Point, a: Vector) -> Point:
             """Returns an (x, y, z) tuple of the x, y, z arguments rotated.
@@ -98,16 +99,17 @@ class Cube(App):
             rotated_z = z
 
             # False perspective
-            k = 1 if isometric else 1.5**z * .6 + .25
+            k = 1 if isometric else 1.5**z * 0.6 + 0.25
 
-            return Point(rotated_x*k, rotated_y*k, rotated_z)
+            return Point(rotated_x * k, rotated_y * k, rotated_z)
 
         def adjust_point(p: Point) -> Point2:
             """Adjusts the 3D XYZ point to a 2D XY point fit for displaying on
             the screen. This resizes this 2D point by a scale of SCALEX and
             SCALEY, then moves the point by TRANSLATEX and TRANSLATEY."""
-            return Point2(int(p.x * SCALEX + TRANSLATEX),
-                          int(p.y * SCALEY + TRANSLATEY))
+            return Point2(
+                int(p.x * SCALEX + TRANSLATEX), int(p.y * SCALEY + TRANSLATEY)
+            )
 
         def cube(corners: list[Point], rotation: Vector, c: int) -> None:
             # apply rotations
@@ -142,25 +144,44 @@ class Cube(App):
             |/     |/
             6------7
         """
-        CUBE_CORNERS: list[Point] = [Point(-1, -1, -1),  # Point 0
-                                     Point(+1, -1, -1),  # Point 1
-                                     Point(-1, -1, +1),  # Point 2
-                                     Point(+1, -1, +1),  # Point 3
-                                     Point(-1, +1, -1),  # Point 4
-                                     Point(+1, +1, -1),  # Point 5
-                                     Point(-1, +1, +1),  # Point 6
-                                     Point(+1, +1, +1)]  # Point 7
+        CUBE_CORNERS: list[Point] = [
+            Point(-1, -1, -1),  # Point 0
+            Point(+1, -1, -1),  # Point 1
+            Point(-1, -1, +1),  # Point 2
+            Point(+1, -1, +1),  # Point 3
+            Point(-1, +1, -1),  # Point 4
+            Point(+1, +1, -1),  # Point 5
+            Point(-1, +1, +1),  # Point 6
+            Point(+1, +1, +1),
+        ]  # Point 7
         CUBE_EDGES: list[tuple[int, int]] = [
-            (0, 1), (1, 3), (3, 2), (2, 0),
-            (0, 4), (1, 5), (2, 6), (3, 7),
-            (4, 5), (5, 7), (7, 6), (6, 4),
+            (0, 1),
+            (1, 3),
+            (3, 2),
+            (2, 0),
+            (0, 4),
+            (1, 5),
+            (2, 6),
+            (3, 7),
+            (4, 5),
+            (5, 7),
+            (7, 6),
+            (6, 4),
         ]
 
         # rotatedCorners stores the XYZ coordinates from CUBE_CORNERS after
         # they've been rotated by rx, ry, and rz amounts:
         unset = Point(0, 0, 0)
         rotated_corners: list[Point] = [
-            unset, unset, unset, unset, unset, unset, unset, unset]
+            unset,
+            unset,
+            unset,
+            unset,
+            unset,
+            unset,
+            unset,
+            unset,
+        ]
         # Rotation amounts for each axis:
         rotation = Vector(0, 0, 0)
 

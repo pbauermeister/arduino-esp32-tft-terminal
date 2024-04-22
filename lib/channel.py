@@ -10,9 +10,11 @@ import sys
 
 
 class Channel:
-    def __init__(self,
-                 port_base: str = config.SERIAL_PORT_BASE,
-                 baudrate: int = config.SERIAL_BAUDRATE) -> None:
+    def __init__(
+        self,
+        port_base: str = config.SERIAL_PORT_BASE,
+        baudrate: int = config.SERIAL_BAUDRATE,
+    ) -> None:
         self.port_base = port_base
         self.baudrate = baudrate
         self.ser: serial.Serial | None = None
@@ -31,7 +33,9 @@ class Channel:
                 print('>open>error:', e)
                 port_nr = (port_nr + 1) % 25
                 time.sleep(
-                    config.SERIAL_ERROR_RETRY_DELAY if port_nr else config.SERIAL_ERROR_RETRY_DELAY_2
+                    config.SERIAL_ERROR_RETRY_DELAY
+                    if port_nr
+                    else config.SERIAL_ERROR_RETRY_DELAY_2
                 )
                 continue
 

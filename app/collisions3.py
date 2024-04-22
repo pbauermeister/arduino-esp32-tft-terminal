@@ -8,7 +8,7 @@ from lib.board import Board
 
 RADIUS_MIN = 0.5
 RADIUS_MAX = 25.0
-RADIUS_GROWTH = .5
+RADIUS_GROWTH = 0.5
 
 
 class Simulation3(Simulation):
@@ -34,6 +34,7 @@ class Simulation3(Simulation):
         if p.is_hit_by_wall:
             p.is_hit_by_other = True
 
+
 class Collisions3(Collisions):
     def __init__(self, board: Board):
         super().__init__(board, Simulation3, name="Soap bubbles")
@@ -44,5 +45,5 @@ class Collisions3(Collisions):
         self.radius_min = RADIUS_MIN
         self.radius_max = RADIUS_MIN
         self.v_min = 500.0
-        self.v_max = 1200.0 * .6
+        self.v_max = 1200.0 * 0.6
         # TODO: avoid de-collision

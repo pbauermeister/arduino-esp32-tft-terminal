@@ -9,9 +9,9 @@ class Bumps(App):
 
     def _run(self) -> bool:
         sprites = [
-            Sprite(self, 8,  1, 1),
-            Sprite(self, 6, -1,  1),
-            Sprite(self, 4,  1, -1),
+            Sprite(self, 8, 1, 1),
+            Sprite(self, 6, -1, 1),
+            Sprite(self, 4, 1, -1),
             Sprite(self, 3, -1, -1),
         ]
 

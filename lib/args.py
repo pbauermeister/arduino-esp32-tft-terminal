@@ -21,8 +21,11 @@ def get_config_args_specs() -> list[Arg]:
     """
     names = dir(config)
     args = [Arg(n, config.__dict__.get(n)) for n in names]
-    args = [a for a in args
-            if not a.name.startswith('__') and a.type in (str, bool, int, float)]
+    args = [
+        a
+        for a in args
+        if not a.name.startswith('__') and a.type in (str, bool, int, float)
+    ]
     return args
 
 
@@ -30,20 +33,21 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
     specs = get_config_args_specs()
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--once',
-                        help='run in demo mode, only once',
-                        action='store_true')
+    parser.add_argument(
+        '--once', help='run in demo mode, only once', action='store_true'
+    )
 
     # make config.py declarations accessible as args
     for spec in specs:
         if spec.type == bool:
-            parser.add_argument(spec.as_flag,
-                                action='store_true')
+            parser.add_argument(spec.as_flag, action='store_true')
         else:
-            parser.add_argument(spec.as_flag,
-                                type=spec.type,
-                                metavar=spec.type.__name__.upper(),
-                                help=f'default: {spec.value}')
+            parser.add_argument(
+                spec.as_flag,
+                type=spec.type,
+                metavar=spec.type.__name__.upper(),
+                help=f'default: {spec.value}',
+            )
     existing = [spec.as_flag for spec in specs]
 
     # make --APP-only flags
@@ -52,9 +56,9 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
         name = camel_to_snake(name).replace('_', '-')
         flag = f'--{name}-only'
         if flag not in existing:
-            parser.add_argument(f'--{name}-only',
-                                help='run only this app',
-                                action='store_true')
+            parser.add_argument(
+                f'--{name}-only', help='run only this app', action='store_true'
+            )
 
     args = parser.parse_args()
 
