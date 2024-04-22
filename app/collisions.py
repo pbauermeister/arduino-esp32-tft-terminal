@@ -7,11 +7,11 @@ Quite crowded, no gravity, elastic bumps.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
 
 import random
+from dataclasses import dataclass
 from itertools import combinations
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 from numpy.typing import NDArray
@@ -155,7 +155,8 @@ class Simulation:
         self.init_particles(radii)
         self.started = True
 
-    def create_particle(self, rad: float, rgb: Color, rgb_hit: Color) -> Particle:
+    def create_particle(self, rad: float, rgb: Color, rgb_hit: Color,
+                        post_create_fn: Callable[[Particle], None]|None=None) -> Particle:
         while True:
             # Choose x, y so that the Particle is entirely inside the
             # domain of the simulation.
@@ -170,6 +171,8 @@ class Simulation:
             vx, vy = vr * np.cos(vphi), vr * np.sin(vphi)
             particle = self.ParticleClass(
                 x, y, vx, vy, rgb, rgb_hit, rad)
+            if post_create_fn:
+                post_create_fn(particle)
 
             # Check that the Particle doesn't overlap one that's already
             # been placed.
@@ -237,8 +240,8 @@ class Simulation:
         while a.overlaps(b):
             a.advance(self.dt/2, 0, 0)
             b.advance(self.dt/2, 0, 0)
-        a.advance(-self.dt/2, 0, 0)
-        b.advance(-self.dt/2, 0, 0)
+        a.advance(-self.dt, 0, 0)
+        b.advance(-self.dt, 0, 0)
         a.is_hit_by_other = True
         b.is_hit_by_other = True
 
@@ -298,8 +301,9 @@ class Simulation:
 
 
 class Collisions(App):
-    def __init__(self, board: Board, simulation_cls: type[Simulation] = Simulation):
-        super().__init__(board, auto_read=True)
+    def __init__(self, board: Board, simulation_cls: type[Simulation] = Simulation,
+                 name="elastic collisions"):
+        super().__init__(board, auto_read=True, name=name)
         self.simulation_cls = simulation_cls
 
     def set_collisions_params(self) -> None:

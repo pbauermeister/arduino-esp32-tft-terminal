@@ -28,10 +28,15 @@ class Simulation3(Simulation):
         a.is_hit_by_other = True
         b.is_hit_by_other = True
 
+    def handle_wall_collisions(self, p: Particle) -> None:
+        """Bounce the particles off the walls elastically."""
+        super().handle_wall_collisions(p)
+        if p.is_hit_by_wall:
+            p.is_hit_by_other = True
 
 class Collisions3(Collisions):
     def __init__(self, board: Board):
-        super().__init__(board, Simulation3)
+        super().__init__(board, Simulation3, name="Soap bubbles")
 
     def set_collisions_params(self) -> None:
         super().set_collisions_params()
