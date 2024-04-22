@@ -8,10 +8,11 @@ from .command import Command
 class Gfx:
     def __init__(self, command: Command):
         self.command = command
-        self.APPS_INTERFRAME_DELAY = config.APPS_INTERFRAME_DELAY_MS / 1000.
+        self.APPS_INTERFRAME_DELAY = config.APPS_INTERFRAME_DELAY_MS / 1000.0
 
-    def _command(self, cmd: str, ignore_error: bool = False,
-                 ignore_response: bool = False) -> str:
+    def _command(
+        self, cmd: str, ignore_error: bool = False, ignore_response: bool = False
+    ) -> str:
         return self.command.do_command(cmd, ignore_error, ignore_response)
 
     def reboot(self) -> None:
@@ -24,8 +25,8 @@ class Gfx:
         self._command('clear')
 
     def set_text_size(self, w: float, h: float) -> None:
-        w = int(config.TEXT_SCALING*w + .5)
-        h = int(config.TEXT_SCALING*h + .5)
+        w = int(config.TEXT_SCALING * w + 0.5)
+        h = int(config.TEXT_SCALING * h + 0.5)
         self._command(f'setTextSize {w} {h}')
 
     def set_cursor(self, x: int, y: int) -> None:
@@ -56,7 +57,7 @@ class Gfx:
     def home(self) -> None:
         self._command('home')
 
-    def draw_pixel(self,  x: int, y: int, fg: int) -> None:
+    def draw_pixel(self, x: int, y: int, fg: int) -> None:
         self._command(f'drawPixel {x} {y} {fg}')
 
     def draw_circle(self, x: int, y: int, r: int, fg: int) -> None:
@@ -65,10 +66,14 @@ class Gfx:
     def fill_circle(self, x: int, y: int, r: int, fg: int) -> None:
         self._command(f'fillCircle {x} {y} {r} {fg}')
 
-    def draw_triangle(self, x0: int, y0: int, x1: int, y1: int, x2: int, y2: int, fg: int) -> None:
+    def draw_triangle(
+        self, x0: int, y0: int, x1: int, y1: int, x2: int, y2: int, fg: int
+    ) -> None:
         self._command(f'drawTriangle {x0} {y0} {x1} {y1} {x2} {y2} {fg}')
 
-    def fill_triangle(self, x0: int, y0: int, x1: int, y1: int, x2: int, y2: int, fg: int) -> None:
+    def fill_triangle(
+        self, x0: int, y0: int, x1: int, y1: int, x2: int, y2: int, fg: int
+    ) -> None:
         self._command(f'fillTriangle {x0} {y0} {x1} {y1} {x2} {y2} {fg}')
 
     def set_text_wrap_on(self) -> None:
@@ -125,7 +130,9 @@ class Gfx:
         self._command(f'setBgColor {r} {g} {b}')
 
     @staticmethod
-    def hsv_to_rgb(hue: int | float, sat: int | float, val: int | float) -> tuple[int, int, int]:
+    def hsv_to_rgb(
+        hue: int | float, sat: int | float, val: int | float
+    ) -> tuple[int, int, int]:
         hue = min(hue, 360)
         hue = max(hue, 0)
         sat = min(sat, 100)
@@ -133,38 +140,38 @@ class Gfx:
         val = min(val, 100)
         val = max(val, 0)
 
-        s = sat / 100.
-        v = val / 100.
+        s = sat / 100.0
+        v = val / 100.0
         c = s * v
-        x = c * (1 - abs(((hue / 60.0) % 2.) - 1))
+        x = c * (1 - abs(((hue / 60.0) % 2.0) - 1))
         m = v - c
 
         if hue >= 0 and hue < 60:
             r = c
             g = x
-            b = 0.
+            b = 0.0
         elif hue >= 60 and hue < 120:
             r = x
             g = c
-            b = 0.
+            b = 0.0
         elif hue >= 120 and hue < 180:
             r = 0
             g = c
             b = x
         elif hue >= 180 and hue < 240:
-            r = 0.
+            r = 0.0
             g = x
             b = c
         elif hue >= 240 and hue < 300:
             r = x
-            g = 0.
+            g = 0.0
             b = c
         else:
             r = c
-            g = 0.
+            g = 0.0
             b = x
 
-        red = int((r + m) * 255+.5)
-        green = int((g + m) * 255+.5)
-        blue = int((b + m) * 255+.5)
+        red = int((r + m) * 255 + 0.5)
+        green = int((g + m) * 255 + 0.5)
+        blue = int((b + m) * 255 + 0.5)
         return red, green, blue

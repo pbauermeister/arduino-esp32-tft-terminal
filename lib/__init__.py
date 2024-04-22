@@ -21,7 +21,9 @@ def until(timeout: int | None = None) -> Generator[Callable[[], bool], None, Non
 
         def done() -> bool:
             return datetime.datetime.now() >= until
+
     else:
+
         def done() -> bool:
             return False
 
@@ -29,7 +31,7 @@ def until(timeout: int | None = None) -> Generator[Callable[[], bool], None, Non
 
 
 def chunkize(str: str, n: int) -> list[str]:
-    return [str[i:i+n] for i in range(0, len(str), n)]
+    return [str[i : i + n] for i in range(0, len(str), n)]
 
 
 class RebootedException(Exception):

@@ -14,7 +14,7 @@ class Command:
     def __init__(self, channel: Channel):
         self.chan = channel
         self.comm_error_handler: Callable[[], None] | None = None
-        self.auto_btn_handler:  Callable[[set[str]], None] | None = None
+        self.auto_btn_handler: Callable[[set[str]], None] | None = None
         self.recoveries = 0
 
     def had_recoveries(self) -> bool:
@@ -28,9 +28,9 @@ class Command:
     def set_auto_btn_handler(self, handler: Callable[[set[str]], None]) -> None:
         self.auto_btn_handler = handler
 
-    def do_command(self, cmd: str,
-                   ignore_error: bool = False,
-                   ignore_response: bool = False) -> str:
+    def do_command(
+        self, cmd: str, ignore_error: bool = False, ignore_response: bool = False
+    ) -> str:
         # Since the board may be rebooted in the middle of a command,
         # it is okay to retry once
         try:
@@ -39,9 +39,9 @@ class Command:
             self.chan.clear()
             return self._send_command(cmd, ignore_error, ignore_response)
 
-    def _send_command(self, cmd: str,
-                      ignore_error: bool = False,
-                      ignore_response: bool = False) -> str:
+    def _send_command(
+        self, cmd: str, ignore_error: bool = False, ignore_response: bool = False
+    ) -> str:
         while True:
             try:
                 self.command_send(cmd)

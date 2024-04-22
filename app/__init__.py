@@ -12,9 +12,13 @@ CAMEL_RX = re.compile('([a-z][A-Z0-9])')
 
 
 class App:
-    def __init__(self, board: Board, auto_read: bool = False,
-                 extra_configurator: Callable[[], None] | None = None,
-                 name: str | None = None) -> None:
+    def __init__(
+        self,
+        board: Board,
+        auto_read: bool = False,
+        extra_configurator: Callable[[], None] | None = None,
+        name: str | None = None,
+    ) -> None:
         self.board = board
         self.gfx = board.gfx
         self.name = name or self.__class__.__name__
@@ -50,7 +54,7 @@ class App:
         duration = datetime.datetime.now() - start
         print('Duration:', duration)
         while self.board.read_buttons(flush=True):
-            time.sleep(.1)
+            time.sleep(0.1)
             pass
         return reset
 
@@ -77,8 +81,8 @@ class App:
 
     def get_title_pos(self, title: str) -> tuple[int, int]:
         w, h = self.get_text_size(title)
-        x = int(config.WIDTH/2 - w/2 + .5)
-        y = int(config.HEIGHT/2 - h/2 + .5)
+        x = int(config.WIDTH / 2 - w / 2 + 0.5)
+        y = int(config.HEIGHT / 2 - h / 2 + 0.5)
         return x, y
 
     def get_text_size(self, text: str) -> tuple[int, int]:
@@ -91,7 +95,7 @@ class App:
     def show_header(self, title: str, menu: str, with_banner: bool = False) -> None:
         self.gfx.clear()
         self.gfx.set_text_size(1, 1)
-        self.gfx.fill_rect(0, 0, config.WIDTH, config.TEXT_SCALING*8, 1)
+        self.gfx.fill_rect(0, 0, config.WIDTH, config.TEXT_SCALING * 8, 1)
         self.gfx.set_text_color(0, 0, 0)
         self.gfx.set_cursor(1, 0)
         self.gfx.print(title)
@@ -134,7 +138,7 @@ class TimeEscaper:
         elapsed = datetime.datetime.now() - self.start
         nf = 30
         if self.frames == nf:
-            secs = elapsed.seconds + elapsed.microseconds/1000000
+            secs = elapsed.seconds + elapsed.microseconds / 1000000
             print(self.app.name, 'FPS:', nf / secs)
         if self.app.only_me:
             return False
@@ -147,21 +151,21 @@ class TimeEscaper:
 class Bouncer:
     def __init__(self, size: int, vx: float, vy: float) -> None:
         self.size = size
-        k = .5
+        k = 0.5
         v: float = (4 + 7**1.25 - size**1.25) * k
-        self.xx: float = size if vx > 0 else config.WIDTH-size
-        self.yy: float = size if vy > 0 else config.HEIGHT-size
+        self.xx: float = size if vx > 0 else config.WIDTH - size
+        self.yy: float = size if vy > 0 else config.HEIGHT - size
 
-        self.x, self.y = int(self.xx + .5), int(self.yy + .5)
+        self.x, self.y = int(self.xx + 0.5), int(self.yy + 0.5)
 
-        self.vx, self.vy = vx*v, vy*v
-        self.vx0, self.vy0 = abs(vx*v), abs(vy*v)
+        self.vx, self.vy = vx * v, vy * v
+        self.vx0, self.vy0 = abs(vx * v), abs(vy * v)
 
         self.bumped = False
 
     @staticmethod
     def bump(v: float, v0: float) -> float:
-        nv = (1 + (random.random()-.5)/2)*v0
+        nv = (1 + (random.random() - 0.5) / 2) * v0
         return nv if v < 0 else -nv
 
     def advance(self) -> None:
@@ -184,7 +188,7 @@ class Bouncer:
             self.yy = self.size
             self.vy = self.bump(self.vy, self.vy0)
             self.bumped = True
-        self.x, self.y = int(self.xx + .5), int(self.yy + .5)
+        self.x, self.y = int(self.xx + 0.5), int(self.yy + 0.5)
 
 
 class Sprite(Bouncer):
@@ -212,6 +216,7 @@ def camel_to_snake(s: str) -> str:
     def replacer(m: re.Match[str]) -> str:
         s = m[1]
         return f'{s[0]}_{s[1]}'
+
     return CAMEL_RX.sub(replacer, s).lower()
 
 
@@ -219,4 +224,5 @@ def camel_to_title(s: str) -> str:
     def replacer(m: re.Match[str]) -> str:
         s = m[1]
         return f'{s[0]} {s[1]}'
+
     return CAMEL_RX.sub(replacer, s)
