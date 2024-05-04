@@ -27,6 +27,17 @@ class Point2:
     y: int
 
 
+@dataclass
+class Line:
+    x1: int
+    y1: int
+    x2: int
+    y2: int
+
+
+ISOMETRIC = not True
+
+
 class Cube(App):
     def __init__(self, board: Board):
         super().__init__(board, auto_read=True)
@@ -56,12 +67,6 @@ class Cube(App):
         X_ROTATE_SPEED = 0.03
         Y_ROTATE_SPEED = 0.08
         Z_ROTATE_SPEED = 0.13
-
-        # This program stores XYZ coordinates in lists, with the X coordinate
-        # at index 0, Y at 1, and Z at 2. These constants make our code more
-        # readable when accessing the coordinates in these lists.
-        i = 0
-        isometric = True
 
         def line(x1: float, y1: float, x2: float, y2: float, c: int) -> None:
             self.gfx.draw_line(
@@ -99,7 +104,7 @@ class Cube(App):
             rotated_z = z
 
             # False perspective
-            k = 1 if isometric else 1.5**z * 0.6 + 0.25
+            k = 1 if ISOMETRIC else 1.5**z * 0.6 + 0.25
 
             return Point(rotated_x * k, rotated_y * k, rotated_z)
 
@@ -111,7 +116,7 @@ class Cube(App):
                 int(p.x * SCALEX + TRANSLATEX), int(p.y * SCALEY + TRANSLATEY)
             )
 
-        def cube(corners: list[Point], rotation: Vector, c: int) -> None:
+        def cube(corners: list[Point], rotation: Vector, lines: list[Line]) -> None:
             # apply rotations
             for i, point in enumerate(CUBE_CORNERS):
                 corners[i] = rotate_point(point, rotation)
@@ -130,10 +135,10 @@ class Cube(App):
                 to_point = corners[to_corner_index]
                 src = adjust_point(from_point)
                 dst = adjust_point(to_point)
-                if isometric:
+                if ISOMETRIC:
                     if from_point.z == min_z or to_point.z == min_z:
                         continue  # bound to farthest point: hidden edge
-                line(src.x, src.y, dst.x, dst.y, c)
+                lines.append(Line(src.x, src.y, dst.x, dst.y))
 
         """CUBE_CORNERS stores the XYZ coordinates of the corners of a cube.
         The indexes for each corner in CUBE_CORNERS are marked in this diagram:
@@ -188,7 +193,9 @@ class Cube(App):
         previous: Vector | None = None
         escaper = TimeEscaper(self)
         start = datetime.datetime.now()
-        self.gfx.reset()
+        # self.gfx.reset()
+
+        lines: list[Line] = []
         while True:  # Main program loop.
             btns = self.board.auto_read_buttons()
             if 'R' in btns:
@@ -198,14 +205,20 @@ class Cube(App):
             if escaper.check():
                 return False
 
-            self.gfx.clear()
-            isometric = True  # (i % 50) > 25
+            # self.gfx.clear()
 
             # Rotate the cube along different axes by different amounts:
             rotation.x += X_ROTATE_SPEED
             rotation.y += Y_ROTATE_SPEED
             rotation.z += Z_ROTATE_SPEED
-            cube(rotated_corners, rotation, 1)
 
+            # Erase old
+            for l in lines:
+                line(l.x1, l.y1, l.x2, l.y2, 0)
+
+            # Compute and display new
+            lines.clear()
+            cube(rotated_corners, rotation, lines)
+            for l in lines:
+                line(l.x1, l.y1, l.x2, l.y2, 1)
             self.gfx.display()
-            i += 1
