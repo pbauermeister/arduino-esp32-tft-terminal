@@ -116,16 +116,36 @@ module case() {
     }
 }
 
-case();
 
-if (0)
-  %translate([0, 0, THICKNESS])
-  cube([INNER_LENGTH, INNER_WIDTH, INNER_HEIGHT]);
+module cap() {
+    difference() {
+        /*
+        union() {
+            translate([-THICKNESS*2, -THICKNESS, 0])
+            cube([INNER_LENGTH + THICKNESS*4, INNER_WIDTH + THICKNESS*2, THICKNESS*2]);
 
-if (0) {
-    l = INNER_LENGTH + THICKNESS*2;
-    w = INNER_WIDTH  + THICKNESS*2;
-    h = w;
-    translate([-THICKNESS, -THICKNESS, 0])
-    %cube([l, w, h]);
+            for (x=[-THICKNESS*2, INNER_LENGTH+THICKNESS]) {
+                translate([x, -THICKNESS, 0 + THICKNESS*2])
+                cube([THICKNESS, INNER_WIDTH + THICKNESS*2, THICKNESS*2]);
+            }
+        }
+        */
+        translate([-THICKNESS*2, -THICKNESS*2, 0])
+        cube([INNER_LENGTH + THICKNESS*4, INNER_WIDTH + THICKNESS*4, THICKNESS*4]);
+
+        translate([-THICKNESS, -THICKNESS, THICKNESS*2])
+        cube([INNER_LENGTH + THICKNESS*2, INNER_WIDTH + THICKNESS*2, THICKNESS*4+1]);
+
+
+        
+        translate([0, -INNER_WIDTH/20*0, THICKNESS*.5]) {
+            translate([0, INNER_WIDTH/2+.5 +.2, -THICKNESS*2.5 + .2]) rotate([45, 0, 0]) case();
+            translate([0, INNER_WIDTH/2+.5, -THICKNESS*2.5]) rotate([45, 0, 0]) case();
+            translate([0, INNER_WIDTH/2, -THICKNESS*2.5]) rotate([45, 0, 0]) case();
+        }
+    }
 }
+
+
+case();
+//cap();
