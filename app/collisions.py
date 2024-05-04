@@ -7,11 +7,11 @@ Quite crowded, no gravity, elastic bumps.
 """
 
 from __future__ import annotations
-from dataclasses import dataclass
 
 import random
+from dataclasses import dataclass
 from itertools import combinations
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 from numpy.typing import NDArray
@@ -29,9 +29,16 @@ TIME_SUBQUANTAS = 20
 class Particle:
     """A class representing a two-dimensional particle."""
 
-    def __init__(self, x: float, y: float, vx: float, vy: float,
-                 rgb: Color, rgb_hit: Color,
-                 radius: float = 0.01) -> None:
+    def __init__(
+        self,
+        x: float,
+        y: float,
+        vx: float,
+        vy: float,
+        rgb: Color,
+        rgb_hit: Color,
+        radius: float = 0.01,
+    ) -> None:
         """Initialize the particle's position, velocity, and radius.
 
         Any key-value pairs passed in the styles dictionary will be passed
@@ -57,9 +64,13 @@ class Particle:
     @staticmethod
     def create_from(other: Particle) -> Particle:
         p = Particle(
-            other.r[0], other.r[1],
-            other.v[0], other.v[1],
-            other.rgb, other.rgb_hit, other.radius
+            other.r[0],
+            other.r[1],
+            other.v[0],
+            other.v[1],
+            other.rgb,
+            other.rgb_hit,
+            other.radius,
         )
         p.is_hit_by_wall = other.is_hit_by_wall
         p.is_hit_by_other = other.is_hit_by_other
@@ -110,9 +121,9 @@ class Particle:
     def advance(self, dt: float, friction: float, kick: float) -> None:
         """Advance the Particle's position forward in time by dt."""
         if friction > 0:
-            self.v *= (1 - friction/TIME_SUBQUANTAS)
+            self.v *= 1 - friction / TIME_SUBQUANTAS
         if kick > 0:
-            self.v *= (1 + kick/TIME_SUBQUANTAS)
+            self.v *= 1 + kick / TIME_SUBQUANTAS
         self.r += self.v * dt / TIME_SUBQUANTAS
 
 
@@ -128,12 +139,17 @@ class Simulation:
 
     ParticleClass = Particle
 
-    def __init__(self, gfx: Gfx,
-                 vmin: float, vmax: float,
-                 room_width: int, room_height: int,
-                 radii: Floats,
-                 dt: float,
-                 g: float) -> None:
+    def __init__(
+        self,
+        gfx: Gfx,
+        vmin: float,
+        vmax: float,
+        room_width: int,
+        room_height: int,
+        radii: Floats,
+        dt: float,
+        g: float,
+    ) -> None:
         """Initialize the simulation with n Particles with radii radius.
 
         radius can be a single value or a sequence with n values.
@@ -155,21 +171,27 @@ class Simulation:
         self.init_particles(radii)
         self.started = True
 
-    def create_particle(self, rad: float, rgb: Color, rgb_hit: Color) -> Particle:
+    def create_particle(
+        self,
+        rad: float,
+        rgb: Color,
+        rgb_hit: Color,
+        post_create_fn: Callable[[Particle], None] | None = None,
+    ) -> Particle:
         while True:
             # Choose x, y so that the Particle is entirely inside the
             # domain of the simulation.
-            x = np.random.random()*(self.room_width - 2*rad) + rad
-            y = np.random.random()*(self.room_height - 2*rad) + rad
+            x = np.random.random() * (self.room_width - 2 * rad) + rad
+            y = np.random.random() * (self.room_height - 2 * rad) + rad
 
             # Choose a random velocity (within some reasonable range of
             # values) for the Particle.
-            vr = (self.vmax-self.vmin) * \
-                np.sqrt(np.random.random()) + self.vmin
-            vphi = 2*np.pi * np.random.random()
+            vr = (self.vmax - self.vmin) * np.sqrt(np.random.random()) + self.vmin
+            vphi = 2 * np.pi * np.random.random()
             vx, vy = vr * np.cos(vphi), vr * np.sin(vphi)
-            particle = self.ParticleClass(
-                x, y, vx, vy, rgb, rgb_hit, rad)
+            particle = self.ParticleClass(x, y, vx, vy, rgb, rgb_hit, rad)
+            if post_create_fn:
+                post_create_fn(particle)
 
             # Check that the Particle doesn't overlap one that's already
             # been placed.
@@ -189,7 +211,7 @@ class Simulation:
         self.particles = []
 
         for i, rad in enumerate(radii):
-            hue = 360/self.n * i
+            hue = 360 / self.n * i
             rgb = self.gfx.hsv_to_rgb(hue, 25, 100)
             rgb_hit = self.gfx.hsv_to_rgb(hue, 25, 50)
 
@@ -206,10 +228,10 @@ class Simulation:
         m1, m2 = p1.mass, p2.mass
         M = m1 + m2
         r1, r2 = p1.r, p2.r
-        d = np.linalg.norm(r1 - r2)**2  # type: ignore
+        d = np.linalg.norm(r1 - r2) ** 2  # type: ignore
         v1, v2 = p1.v, p2.v
-        u1 = v1 - 2*m2 / M * np.dot(v1-v2, r1-r2) / d * (r1-r2)  # type:ignore
-        u2 = v2 - 2*m1 / M * np.dot(v2-v1, r2-r1) / d * (r2-r1)  # type:ignore
+        u1 = v1 - 2 * m2 / M * np.dot(v1 - v2, r1 - r2) / d * (r1 - r2)  # type:ignore
+        u2 = v2 - 2 * m1 / M * np.dot(v2 - v1, r2 - r1) / d * (r2 - r1)  # type:ignore
         p1.v = u1
         p2.v = u2
 
@@ -235,10 +257,10 @@ class Simulation:
         # Attempt to unstick particle pairs.
         # FIXME: in very crowded area, may  leads to "teleportation"
         while a.overlaps(b):
-            a.advance(self.dt/2, 0, 0)
-            b.advance(self.dt/2, 0, 0)
-        a.advance(-self.dt/2, 0, 0)
-        b.advance(-self.dt/2, 0, 0)
+            a.advance(self.dt / 2, 0, 0)
+            b.advance(self.dt / 2, 0, 0)
+        a.advance(-self.dt, 0, 0)
+        b.advance(-self.dt, 0, 0)
         a.is_hit_by_other = True
         b.is_hit_by_other = True
 
@@ -246,19 +268,19 @@ class Simulation:
         """Bounce the particles off the walls elastically."""
         hit = False
         if p.x - p.radius <= 0:
-            p.x = p.radius+1
+            p.x = p.radius + 1
             p.vx = -p.vx
             hit = True
-        if p.x + p.radius >= self.room_width-1:
-            p.x = self.room_width-p.radius-1
+        if p.x + p.radius >= self.room_width - 1:
+            p.x = self.room_width - p.radius - 1
             p.vx = -p.vx
             hit = True
         if p.y - p.radius <= 0:
-            p.y = p.radius+1
+            p.y = p.radius + 1
             p.vy = -p.vy
             hit = True
-        if p.y + p.radius >= self.room_height-1:
-            p.y = self.room_height-p.radius-1
+        if p.y + p.radius >= self.room_height - 1:
+            p.y = self.room_height - p.radius - 1
             p.vy = -p.vy
             hit = True
         p.is_hit_by_wall |= hit
@@ -298,8 +320,13 @@ class Simulation:
 
 
 class Collisions(App):
-    def __init__(self, board: Board, simulation_cls: type[Simulation] = Simulation):
-        super().__init__(board, auto_read=True)
+    def __init__(
+        self,
+        board: Board,
+        simulation_cls: type[Simulation] = Simulation,
+        name="elastic collisions",
+    ):
+        super().__init__(board, auto_read=True, name=name)
         self.simulation_cls = simulation_cls
 
     def set_collisions_params(self) -> None:
@@ -320,17 +347,23 @@ class Collisions(App):
 
         span = self.radius_max - self.radius_min
 
-        radii = self.rand(self.radius_min,
-                          self.radius_min + span/3,
-                          int(self.nb*2/3))
-        radii += self.rand(self.radius_max-span/3,
-                           self.radius_max,
-                           self.nb - len(radii))
+        radii = self.rand(
+            self.radius_min, self.radius_min + span / 3, int(self.nb * 2 / 3)
+        )
+        radii += self.rand(
+            self.radius_max - span / 3, self.radius_max, self.nb - len(radii)
+        )
 
-        sim = self.simulation_cls(self.board.gfx,
-                                  self.v_min, self.v_max,
-                                  config.WIDTH, config.HEIGHT,
-                                  radii, self.dt, self.g)
+        sim = self.simulation_cls(
+            self.board.gfx,
+            self.v_min,
+            self.v_max,
+            config.WIDTH,
+            config.HEIGHT,
+            radii,
+            self.dt,
+            self.g,
+        )
 
         escaper = TimeEscaper(self)
         previous_particles: list[Particle] = []
@@ -364,7 +397,7 @@ class Collisions(App):
             self.draw(previous_particles, erase=True)
 
             self.gfx.set_fg_color(*COLOR_BORDER)
-            self.gfx.draw_rect(0, 0, config.WIDTH-1, config.HEIGHT-1, 1)
+            self.gfx.draw_rect(0, 0, config.WIDTH - 1, config.HEIGHT - 1, 1)
 
             self.draw(particles)
             self.gfx.display()
@@ -384,12 +417,16 @@ class Collisions(App):
             x = int(p.r[0])
             y = int(p.r[1])
             r = int(p.radius)
-            flash = p.is_hit_by_other and self.flash_on_hit_other \
-                or p.is_hit_by_wall and self.flash_on_hit_wall
+            flash = (
+                p.is_hit_by_other
+                and self.flash_on_hit_other
+                or p.is_hit_by_wall
+                and self.flash_on_hit_wall
+            )
             if flash:
                 self.gfx.fill_circle(x, y, r, c)
             else:
                 self.gfx.draw_circle(x, y, r, c)
 
     def rand(self, min: float, max: float, nb: int) -> Floats:
-        return [random.random() * (max-min) + min for i in range(nb)]
+        return [random.random() * (max - min) + min for i in range(nb)]

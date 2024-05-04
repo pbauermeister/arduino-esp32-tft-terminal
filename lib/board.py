@@ -30,7 +30,9 @@ class Board:
         self.chan.open()
         self.chan.set_callback(READY, self.on_ready)
 
-    def set_configure_callback(self, configure_callback: Callable[[], None] | None) -> None:
+    def set_configure_callback(
+        self, configure_callback: Callable[[], None] | None
+    ) -> None:
         self.configure_callback = configure_callback
 
     def board_comm_error_handler(self) -> None:
@@ -166,7 +168,9 @@ class Board:
     def wait_button_up(self, timeout: int | None = None) -> set[str]:
         return self.wait_button(timeout, wait_released=True)
 
-    def wait_button(self, timeout: int | None = None, wait_released: bool = False) -> set[str]:
+    def wait_button(
+        self, timeout: int | None = None, wait_released: bool = False
+    ) -> set[str]:
         self.wait_no_button()
         b: set[str] = set()
         with until(timeout) as done:
@@ -213,7 +217,7 @@ class Board:
         self.gfx.set_text_wrap_on()
 
         msg = ' '.join(msg.split())
-        msg = msg[-20*8:]
+        msg = msg[-20 * 8 :]
         for chunk in chunkize(msg.replace('\n', ' '), 20):
             self.gfx.print(chunk)
         sys.exit(1)

@@ -12,21 +12,21 @@ from lib.gfx import Gfx
 # Parameters
 SHIP_RADIUS = 8 * config.GFX_SCALING
 SHIP_SPEED = 2
-SHIP_ROT_STEP = .2
+SHIP_ROT_STEP = 0.2
 
 SHOT_SPEED = 5
-SHOT_DELAY = 2*2
+SHOT_DELAY = 2 * 2
 SHOT_MAX = 10
 
-ASTEROID_NB_MAX = 8*2
-ASTEROID_RADIUS = 2*config.GFX_SCALING, 18*config.GFX_SCALING
-ASTEROID_RADIUS_MEAN = sum(ASTEROID_RADIUS)/2
-ASTEROID_SPLIT_A = .4*2  # angle
-ASTEROID_SHRINK_FACTOR = .8
+ASTEROID_NB_MAX = 8 * 2
+ASTEROID_RADIUS = 2 * config.GFX_SCALING, 18 * config.GFX_SCALING
+ASTEROID_RADIUS_MEAN = sum(ASTEROID_RADIUS) / 2
+ASTEROID_SPLIT_A = 0.4 * 2  # angle
+ASTEROID_SHRINK_FACTOR = 0.8
 
 SHIELD_DURATION = 12
 SHIELD_TIMEOUT = 20
-SHIELD_RADIUS = SHIP_RADIUS + 6*config.GFX_SCALING
+SHIELD_RADIUS = SHIP_RADIUS + 6 * config.GFX_SCALING
 
 PROTECT_DURATION = 16
 
@@ -71,13 +71,16 @@ class Shot:
         self.y += self.vy
 
     def valid(self) -> bool:
-        return \
-            self.x >= 0 and self.x < config.WIDTH and \
-            self.y >= 0 and self.y < config.HEIGHT
+        return (
+            self.x >= 0
+            and self.x < config.WIDTH
+            and self.y >= 0
+            and self.y < config.HEIGHT
+        )
 
     def add_renders(self) -> None:
         # self.gfx.set_fg_color(*COLOR_SHOT)
-        self.gfx.draw_pixel(int(self.x + .5), int(self.y + .5), 1)
+        self.gfx.draw_pixel(int(self.x + 0.5), int(self.y + 0.5), 1)
         # self.gfx.set_fg_color(*COLOR_DEFAULT)
 
 
@@ -105,10 +108,10 @@ class Ship:
                 self.shield = SHIELD_DURATION
         elif KEY_CCW in keys:
             self.a -= SHIP_ROT_STEP
-            v = self.v/2
+            v = self.v / 2
         elif KEY_CW in keys:
             self.a += SHIP_ROT_STEP
-            v = self.v/2
+            v = self.v / 2
         if KEY_FIRE in keys:
             pass  # v = self.v/4
 
@@ -139,16 +142,16 @@ class Ship:
 
     def compute(self) -> None:
         self.ca, self.sa = math.cos(self.a), math.sin(self.a)
-        self.x0 = self.r*self.ca + self.x
-        self.y0 = self.r*self.sa + self.y
+        self.x0 = self.r * self.ca + self.x
+        self.y0 = self.r * self.sa + self.y
 
-        b = self.a + math.pi * .8
-        self.x1 = self.r*math.cos(b) + self.x
-        self.y1 = self.r*math.sin(b) + self.y
+        b = self.a + math.pi * 0.8
+        self.x1 = self.r * math.cos(b) + self.x
+        self.y1 = self.r * math.sin(b) + self.y
 
         b = self.a + math.pi * 1.2
-        self.x2 = self.r*math.cos(b) + self.x
-        self.y2 = self.r*math.sin(b) + self.y
+        self.x2 = self.r * math.cos(b) + self.x
+        self.y2 = self.r * math.sin(b) + self.y
 
     def shoot(self, shots: list[Shot]) -> None:
         if self.shield > 0:
@@ -157,40 +160,40 @@ class Ship:
             return
         if len(shots) >= SHOT_MAX:
             return
-        vx, vy = self.ca*SHOT_SPEED, self.sa*SHOT_SPEED
+        vx, vy = self.ca * SHOT_SPEED, self.sa * SHOT_SPEED
         shot = Shot(self.gfx, self.x0, self.y0, vx, vy)
         shots.append(shot)
-        shot = Shot(self.gfx, self.x0+vx*3, self.y0+vy*3, vx, vy)
+        shot = Shot(self.gfx, self.x0 + vx * 3, self.y0 + vy * 3, vx, vy)
         shots.append(shot)
         self.shot_reload = 0
 
     def add_renders(self) -> None:
-        x0 = int(self.x0 + .5)
-        y0 = int(self.y0 + .5)
-        x1 = int(self.x1 + .5)
-        y1 = int(self.y1 + .5)
-        x2 = int(self.x2 + .5)
-        y2 = int(self.y2 + .5)
+        x0 = int(self.x0 + 0.5)
+        y0 = int(self.y0 + 0.5)
+        x1 = int(self.x1 + 0.5)
+        y1 = int(self.y1 + 0.5)
+        x2 = int(self.x2 + 0.5)
+        y2 = int(self.y2 + 0.5)
         self.gfx.draw_triangle(x0, y0, x1, y1, x2, y2, 1)
 
         if self.shield > 0:
             if self.protect:
                 r = SHIELD_RADIUS
             else:
-                r = SHIELD_RADIUS - 3 + (self.i % 3)*3
-            x = int(self.x + .5)
-            y = int(self.y + .5)
+                r = SHIELD_RADIUS - 3 + (self.i % 3) * 3
+            x = int(self.x + 0.5)
+            y = int(self.y + 0.5)
             self.gfx.set_fg_color(*COLOR_SHIELD)
             self.gfx.draw_circle(x, y, r, 1)
             self.gfx.set_fg_color(*COLOR_DEFAULT)
 
     def add_renders_boom(self, i: int) -> None:
-        x0 = int(self.x0 + .5)
-        y0 = int(self.y0 + .5)
-        x1 = int(self.x1 + .5)
-        y1 = int(self.y1 + .5)
-        x2 = int(self.x2 + .5)
-        y2 = int(self.y2 + .5)
+        x0 = int(self.x0 + 0.5)
+        y0 = int(self.y0 + 0.5)
+        x1 = int(self.x1 + 0.5)
+        y1 = int(self.y1 + 0.5)
+        x2 = int(self.x2 + 0.5)
+        y2 = int(self.y2 + 0.5)
 
         c = i % 2
         self.gfx.set_fg_color(*COLOR_BOOM)
@@ -217,7 +220,9 @@ class AsteriodData:
 
 
 class Asteroid(AsteriodData):
-    def __init__(self, gfx: Gfx, ship: Ship | None = None, other: AsteriodData | None = None):
+    def __init__(
+        self, gfx: Gfx, ship: Ship | None = None, other: AsteriodData | None = None
+    ):
         self.gfx = gfx
         if ship is not None:
             self.init(ship.x, ship.y)
@@ -232,34 +237,34 @@ class Asteroid(AsteriodData):
 
     def init(self, ship_x: float, ship_y: float) -> None:
         r = random.randrange(*ASTEROID_RADIUS)
-        a = random.random() * math.pi + math.pi/2
+        a = random.random() * math.pi + math.pi / 2
 
         p = random.random()
         x: float
         y: float
-        if p > .5:
+        if p > 0.5:
             x = config.WIDTH + r
             y = config.HEIGHT * random.random()
-        elif p < .25:
+        elif p < 0.25:
             y = -r
-            x = config.WIDTH * (.75 + random.random() * .25)
+            x = config.WIDTH * (0.75 + random.random() * 0.25)
         else:
             y = config.HEIGHT + r
-            x = config.WIDTH * (.75 + random.random() * .25)
+            x = config.WIDTH * (0.75 + random.random() * 0.25)
 
         if ship_x > config.WIDTH / 2:
             x = config.WIDTH - x
-            a += math.pi/2
+            a += math.pi / 2
 
         self.x = x
         self.y = y
-        self.r = int(r+.5)
+        self.r = int(r + 0.5)
         self.a = a
         self.hit = False
 
     def move(self, dist: float | None = None) -> None:
         if dist is None:
-            v = max((ASTEROID_RADIUS[1] - self.r)**1.4 / 6, .5)
+            v = max((ASTEROID_RADIUS[1] - self.r) ** 1.4 / 6, 0.5)
             dist = v
         vx = math.cos(self.a) * (dist or 0)
         vy = math.sin(self.a) * (dist or 0)
@@ -278,14 +283,14 @@ class Asteroid(AsteriodData):
             self.y = -self.r
 
     def shrink(self) -> None:
-        self.r = int(self.r*ASTEROID_SHRINK_FACTOR + .5)
+        self.r = int(self.r * ASTEROID_SHRINK_FACTOR + 0.5)
         if self.r < 4:
             self.r = 0
 
     def add_renders(self) -> None:
-        x = int(self.x + .5)
-        y = int(self.y + .5)
-        r = int(self.r + .5)
+        x = int(self.x + 0.5)
+        y = int(self.y + 0.5)
+        r = int(self.r + 0.5)
         if self.hit:
             self.gfx.set_fg_color(*COLOR_BOOM)
             self.gfx.fill_circle(x, y, r, 1)
@@ -294,9 +299,9 @@ class Asteroid(AsteriodData):
             self.gfx.draw_circle(x, y, r, 1)
 
     def add_renders_boom(self, i: int) -> None:
-        x = int(self.x + .5)
-        y = int(self.y + .5)
-        r = int(self.r + .5)
+        x = int(self.x + 0.5)
+        y = int(self.y + 0.5)
+        r = int(self.r + 0.5)
 
         c = i % 2
         self.gfx.set_fg_color(*COLOR_BOOM)
@@ -311,8 +316,9 @@ class Bonus:
     value: int
 
     def render(self, gfx: Gfx) -> None:
-        gfx.set_cursor(self.x + config.TEXT_SCALING*2,
-                       self.y - config.TEXT_SCALING*4)
+        gfx.set_cursor(
+            self.x + config.TEXT_SCALING * 2, self.y - config.TEXT_SCALING * 4
+        )
         # gfx.set_fg_color(96, 96, 192)
         gfx.set_text_color(*COLOR_BOOM)
         gfx.print(str(self.value))
@@ -339,18 +345,18 @@ class Game:
     def create_asteroid(self) -> None:
         if len(self.asteroids) >= ASTEROID_NB_MAX:
             return
-        if random.random() > .05:
+        if random.random() > 0.05:
             return
         self.asteroids.append(Asteroid(self.gfx, ship=self.player.ship))
 
     def autoplay(self, keys: set[str]) -> None:
         p = random.random()
-        if p < .1:
+        if p < 0.1:
             if len(self.asteroids):
                 keys.add(KEY_FIRE)
-        elif p < .2:
+        elif p < 0.2:
             keys.add(KEY_CW)
-        elif p < .4:
+        elif p < 0.4:
             keys.add(KEY_CCW)
 
         x, y, r = self.player.ship.x, self.player.ship.y, SHIELD_RADIUS
@@ -399,7 +405,7 @@ class Game:
         if self.player.autoplay_enabled:
             self.add_renders_gameover()
 
-        x = config.WIDTH - 12*config.TEXT_SCALING
+        x = config.WIDTH - 12 * config.TEXT_SCALING
         self.gfx.set_cursor(x, 0)
         self.gfx.set_text_color(*COLOR_STATUS_TEXT)
         self.gfx.print(str(self.player.lives))
@@ -455,10 +461,10 @@ class Detect:
             return []
         for a in asteroids:
             for s in shots:
-                if Detect.hit(s.x, s.y, a, .75):
+                if Detect.hit(s.x, s.y, a, 0.75):
                     shots.remove(s)
                     a.hit = True
-                    points = int(ASTEROID_RADIUS[1]-a.r) + 1
+                    points = int(ASTEROID_RADIUS[1] - a.r) + 1
                     bonuses.append(Bonus(int(a.x + a.r), int(a.y), points))
 
                     if a.r >= ASTEROID_RADIUS_MEAN:
@@ -467,12 +473,12 @@ class Detect:
                         # split in two
                         a1 = Asteroid(gfx, other=a)
                         a1.a += ASTEROID_SPLIT_A
-                        a1.move(a1.r/2)
+                        a1.move(a1.r / 2)
                         asteroids.append(a1)
 
                         a2 = Asteroid(gfx, other=a)
                         a2.a -= ASTEROID_SPLIT_A
-                        a2.move(a2.r/2)
+                        a2.move(a2.r / 2)
                         asteroids.append(a2)
 
                         if a in asteroids:
@@ -492,10 +498,12 @@ class Detect:
             return
 
         for a in asteroids:
-            if (Detect.hit(ship.x0, ship.y0, a,  .9) or
-                Detect.hit(ship.x1, ship.y1, a,  .9) or
-                Detect.hit(ship.x2, ship.y2, a,  .9) or
-                    Detect.hit(ship.x,  ship.y,  a, 1.1)):
+            if (
+                Detect.hit(ship.x0, ship.y0, a, 0.9)
+                or Detect.hit(ship.x1, ship.y1, a, 0.9)
+                or Detect.hit(ship.x2, ship.y2, a, 0.9)
+                or Detect.hit(ship.x, ship.y, a, 1.1)
+            ):
                 a.hit = True
                 ship.aster_crash = a
         return
@@ -512,16 +520,16 @@ class Detect:
 
     @staticmethod
     def touch(x0: float, y0: float, x1: float, y1: float, r0: float, r1: float) -> bool:
-        dx = (x0 - x1)**2
-        dy = (y0 - y1)**2
-        rr = (dx + dy)
-        return rr < (r0 + r1)**2
+        dx = (x0 - x1) ** 2
+        dy = (y0 - y1) ** 2
+        rr = dx + dy
+        return rr < (r0 + r1) ** 2
 
     @staticmethod
     def hit(x: float, y: float, asteroid: Asteroid, factor: float) -> bool:
         a = asteroid
-        dx = (a.x - x)**2
-        dy = (a.y - y)**2
+        dx = (a.x - x) ** 2
+        dy = (a.y - y) ** 2
         r2 = (dx + dy) * factor
         return r2 < a.r**2
 
@@ -540,8 +548,7 @@ class Autoplay:
         self.start = datetime.datetime.now()
         ap_timeout = config.APP_ASTERIODS_AUTOPLAY_TIMEOUT
         if ap_timeout:
-            self.until = self.start + \
-                datetime.timedelta(seconds=ap_timeout)
+            self.until = self.start + datetime.timedelta(seconds=ap_timeout)
         else:
             self.until = None
         self.game.player.autoplay_enabled = True
@@ -554,8 +561,9 @@ class Asteriods(App):
         self.gfx.set_text_wrap_off()
 
     def __init__(self, board: Board):
-        super().__init__(board, auto_read=False,
-                         extra_configurator=self.extra_configurator)
+        super().__init__(
+            board, auto_read=False, extra_configurator=self.extra_configurator
+        )
         global GAME_OVER_POS
         GAME_OVER_POS = self.get_title_pos(GAME_OVER_TITLE)
 
@@ -671,4 +679,4 @@ class Asteriods(App):
                     self.board.wait_no_button()
 
             if not autoplay.enabled:
-                time.sleep(.05)
+                time.sleep(0.05)

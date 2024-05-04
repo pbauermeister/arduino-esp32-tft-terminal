@@ -8,6 +8,7 @@ from typing import Any, Type
 import config
 from app import App
 from app.asteriods import Asteriods
+
 # from app.bumps import Bumps
 from app.collisions import Collisions
 from app.collisions2 import Collisions2
@@ -54,27 +55,30 @@ def make_all() -> tuple[Channel, Board]:
             print('-- make_all will retry in', config.SERIAL_ERROR_RETRY_DELAY)
             time.sleep(config.SERIAL_ERROR_RETRY_DELAY)
 
+
 ### Here we go ###
 
 
 # Init
-args, only_apps = get_args([
-    MonitorHost,
-    MonitorCpus,
-    MonitorGraph,
-    Asteriods,
-    Cube,
-    # Road,
-    Starfield,
-    Tunnel,
-    Quix,
-    # Bumps,
-    Collisions,
-    Collisions2,
-    Collisions3,
-    Collisions4,
-    Fill,
-])
+args, only_apps = get_args(
+    [
+        MonitorHost,
+        MonitorCpus,
+        MonitorGraph,
+        Asteriods,
+        Cube,
+        # Road,
+        Starfield,
+        Tunnel,
+        Quix,
+        # Bumps,
+        Collisions,
+        Collisions2,
+        Collisions3,
+        Collisions4,
+        Fill,
+    ]
+)
 
 # Channel().monitor()
 chan, board = make_all()
@@ -98,7 +102,10 @@ def start_app_maybe(cls: Type[App]) -> bool:
 
 def suppress_ctrl_c() -> None:
     import signal
-    def handler(signum: int, frame: Any) -> None: pass
+
+    def handler(signum: int, frame: Any) -> None:
+        pass
+
     signal.signal(signal.SIGINT, handler)
 
 

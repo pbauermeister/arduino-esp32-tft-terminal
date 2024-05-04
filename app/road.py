@@ -30,9 +30,9 @@ class Road(App):
             self.draw(i + NB2, 0)
             self.draw(i + NB3, 0)
 
-            self.draw(i+1, 1)
-            self.draw(i+1 + NB2, 1)
-            self.draw(i+1 + NB3, 1)
+            self.draw(i + 1, 1)
+            self.draw(i + 1 + NB2, 1)
+            self.draw(i + 1 + NB3, 1)
 
             self.gfx.display()
             i += 1
@@ -41,12 +41,12 @@ class Road(App):
         i = NB - (i % NB)
         w = config.WIDTH * K**i * 2
         h = config.HEIGHT * K**i * 2
-        x, y = w/2,  h/2
+        x, y = w / 2, h / 2
 
-        x0 = int(config.WIDTH/2 - w/2)
-        x1 = int(config.WIDTH/2 + w/2)
-        y = int(config.HEIGHT/2 - h/2)
+        x0 = int(config.WIDTH / 2 - w / 2)
+        x1 = int(config.WIDTH / 2 + w / 2)
+        y = int(config.HEIGHT / 2 - h / 2)
 
-        hh = int(h+.5)
+        hh = int(h + 0.5)
         self.gfx.draw_fast_vline(x0, y, hh, c)
         self.gfx.draw_fast_vline(x1, y, hh, c)
