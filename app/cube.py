@@ -6,6 +6,7 @@ import config
 from app import App, TimeEscaper
 from lib.board import Board
 
+
 ISOMETRIC = True
 
 
@@ -35,6 +36,12 @@ class Line:
     y1: int
     x2: int
     y2: int
+
+
+@dataclass
+class Edge:
+    a: int
+    b: int
 
 
 class Cube(App):
@@ -103,7 +110,7 @@ class Cube(App):
             rotated_z = z
 
             # False perspective
-            k = 1 if ISOMETRIC else 1.5 ** z * 0.6 + 0.25
+            k = 1 if ISOMETRIC else 1.5**z * 0.6 + 0.25
 
             return Point(rotated_x * k, rotated_y * k, rotated_z)
 
@@ -122,14 +129,16 @@ class Cube(App):
 
             # Find farthest point to omit hidden edges
             min_z: float = 0
-            for from_corner_index, to_corner_index in CUBE_EDGES:
+            for edge in CUBE_EDGES:
+                from_corner_index, to_corner_index = edge.a, edge.b
                 from_point = corners[from_corner_index]
                 to_point = corners[to_corner_index]
                 min_z = min(min_z, from_point.z)
                 min_z = min(min_z, to_point.z)
 
             # Get the points of the cube lines:
-            for from_corner_index, to_corner_index in CUBE_EDGES:
+            for edge in CUBE_EDGES:
+                from_corner_index, to_corner_index = edge.a, edge.b
                 from_point = corners[from_corner_index]
                 to_point = corners[to_corner_index]
                 src = adjust_point(from_point)
@@ -160,20 +169,22 @@ class Cube(App):
             Point(+1, +1, +1),  # Point 7
         ]
 
-        CUBE_EDGES: list[tuple[int, int]] = [
-            (0, 1),  # edge 0
-            (1, 3),  # edge 1
-            (3, 2),  # edge 2
-            (2, 0),  # edge 3
-            (0, 4),  # edge 4
-            (1, 5),  # edge 5
-            (2, 6),  # edge 6
-            (3, 7),  # edge 7
-            (4, 5),  # edge 8
-            (5, 7),  # edge 9
-            (7, 6),  # edge 10
-            (6, 4),  # edge 11
-        ]
+        CUBE_EDGES: tuple[
+            Edge, Edge, Edge, Edge, Edge, Edge, Edge, Edge, Edge, Edge, Edge, Edge
+        ] = (
+            Edge(0, 1),  # edge 0
+            Edge(1, 3),  # edge 1
+            Edge(3, 2),  # edge 2
+            Edge(2, 0),  # edge 3
+            Edge(0, 4),  # edge 4
+            Edge(1, 5),  # edge 5
+            Edge(2, 6),  # edge 6
+            Edge(3, 7),  # edge 7
+            Edge(4, 5),  # edge 8
+            Edge(5, 7),  # edge 9
+            Edge(7, 6),  # edge 10
+            Edge(6, 4),  # edge 11
+        )
 
         # rotatedCorners stores the XYZ coordinates from CUBE_CORNERS after
         # they've been rotated by rx, ry, and rz amounts:
