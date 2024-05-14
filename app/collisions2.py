@@ -8,7 +8,6 @@ from lib.board import Board
 
 
 class Collisions2(Collisions):
-
     def __init__(self, board: Board, **kwargs) -> None:
         super().__init__(board, **kwargs, name="Collisions + gravity")
 

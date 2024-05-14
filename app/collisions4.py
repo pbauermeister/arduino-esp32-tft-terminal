@@ -13,7 +13,6 @@ RADIUS_GROWTH = 0.95
 
 
 class Simulation4(Simulation):
-
     def after_draw(self) -> None:
         """Grow bubbles, recreate the ones that hit something."""
         for i, _ in enumerate(self.particles):

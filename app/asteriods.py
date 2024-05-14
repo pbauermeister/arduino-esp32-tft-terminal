@@ -531,7 +531,7 @@ class Detect:
         dx = (a.x - x) ** 2
         dy = (a.y - y) ** 2
         r2 = (dx + dy) * factor
-        return r2 < a.r**2
+        return r2 < a.r ** 2
 
 
 class Autoplay:
