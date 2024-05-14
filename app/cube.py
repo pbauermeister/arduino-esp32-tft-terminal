@@ -6,6 +6,8 @@ import config
 from app import App, TimeEscaper
 from lib.board import Board
 
+ISOMETRIC = True
+
 
 @dataclass
 class Point:
@@ -33,9 +35,6 @@ class Line:
     y1: int
     x2: int
     y2: int
-
-
-ISOMETRIC = not True
 
 
 class Cube(App):
@@ -149,6 +148,7 @@ class Cube(App):
             |/     |/
             6------7
         """
+
         CUBE_CORNERS: list[Point] = [
             Point(-1, -1, -1),  # Point 0
             Point(+1, -1, -1),  # Point 1
@@ -157,21 +157,22 @@ class Cube(App):
             Point(-1, +1, -1),  # Point 4
             Point(+1, +1, -1),  # Point 5
             Point(-1, +1, +1),  # Point 6
-            Point(+1, +1, +1),
-        ]  # Point 7
+            Point(+1, +1, +1),  # Point 7
+        ]
+
         CUBE_EDGES: list[tuple[int, int]] = [
-            (0, 1),
-            (1, 3),
-            (3, 2),
-            (2, 0),
-            (0, 4),
-            (1, 5),
-            (2, 6),
-            (3, 7),
-            (4, 5),
-            (5, 7),
-            (7, 6),
-            (6, 4),
+            (0, 1),  # edge 0
+            (1, 3),  # edge 1
+            (3, 2),  # edge 2
+            (2, 0),  # edge 3
+            (0, 4),  # edge 4
+            (1, 5),  # edge 5
+            (2, 6),  # edge 6
+            (3, 7),  # edge 7
+            (4, 5),  # edge 8
+            (5, 7),  # edge 9
+            (7, 6),  # edge 10
+            (6, 4),  # edge 11
         ]
 
         # rotatedCorners stores the XYZ coordinates from CUBE_CORNERS after
