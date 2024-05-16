@@ -484,12 +484,24 @@ class Cube(App):
 
         lines: list[Line] = []
         clear = True
+        nb_modes = 5
         while True:  # Main program loop.
             btns = self.board.auto_read_buttons()
             if 'R' in btns:
                 return True
-            if btns:
-                return False
+            if 'A' in btns:
+                return True
+            if 'B' in btns:
+                escaper.retrigger()
+                self.board.wait_button_up(0)
+                continue
+            if 'C' in btns:
+                escaper.retrigger()
+                mode = (mode + 1) % nb_modes
+                clear = True
+                hue = 0
+                self.board.wait_button_up(0)
+
             if escaper.check():
                 return False
 
@@ -507,6 +519,6 @@ class Cube(App):
 
             new_hue = (hue + 5) % 360
             if new_hue < hue:
-                mode = (mode + 1) % 5
+                mode = (mode + 1) % nb_modes
                 clear = True
             hue = new_hue
