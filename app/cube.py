@@ -176,7 +176,7 @@ class Cube(App):
                     title = "Shaded"
                     cube_shaded(corners, False, False)
                 case 3:
-                    title = "Faster"
+                    title = "No flicker"
                     cube_shaded(corners, True, False)
                 case 4:
                     title = "Contour"
