@@ -92,6 +92,7 @@ class Cube(App):
         Z_ROTATE_SPEED = 0.13 * K
 
         LINES_RGB = 96, 255, 96
+        TEXT_RGB = int(96/2), int(255/2), int(96/2)
 
         hue = 0
         mode = 0
@@ -183,7 +184,7 @@ class Cube(App):
                     cube_shaded(corners, True, True)
 
             if clear or mode == 2:
-                self.gfx.set_text_color(128, 128, 128)
+                self.gfx.set_text_color(*TEXT_RGB)
                 self.gfx.home()
                 self.gfx.set_text_size(1, 1.5)
                 self.gfx.print(title)
