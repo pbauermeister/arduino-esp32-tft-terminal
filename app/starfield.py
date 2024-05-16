@@ -20,8 +20,8 @@ class Star:
 
     def compute(self, t: int, check: bool = False) -> tuple[int, int] | None:
         dt = float(t - self.t0)
-        x = int(self.vx * self.k**dt + 0.5 + config.WIDTH / 2)
-        y = int(self.vy * self.k**dt + 0.5 + config.HEIGHT / 2)
+        x = int(self.vx * self.k ** dt + 0.5 + config.WIDTH / 2)
+        y = int(self.vy * self.k ** dt + 0.5 + config.HEIGHT / 2)
         if check:
             if x > config.WIDTH or x < 0 or y > config.HEIGHT or y < 0:
                 return None

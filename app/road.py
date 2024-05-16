@@ -39,8 +39,8 @@ class Road(App):
 
     def draw(self, i: int, c: int) -> None:
         i = NB - (i % NB)
-        w = config.WIDTH * K**i * 2
-        h = config.HEIGHT * K**i * 2
+        w = config.WIDTH * K ** i * 2
+        h = config.HEIGHT * K ** i * 2
         x, y = w / 2, h / 2
 
         x0 = int(config.WIDTH / 2 - w / 2)

@@ -51,8 +51,8 @@ class Tunnel(App):
 
     def make(self, i: int) -> tuple[int, int]:
         i = NB - 1 - (i % NB)
-        w = int(config.WIDTH * K**i * 2)
-        h = int(config.HEIGHT * K**i * 2)
+        w = int(config.WIDTH * K ** i * 2)
+        h = int(config.HEIGHT * K ** i * 2)
         return w, h
 
     def compute(
