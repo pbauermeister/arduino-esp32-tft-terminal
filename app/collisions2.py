@@ -11,9 +11,6 @@ class Collisions2(Collisions):
     def __init__(self, board: Board, **kwargs) -> None:
         super().__init__(board, **kwargs, name="Collisions + gravity")
 
-    def __init__(self, board: Board, **kwargs) -> None:
-        super().__init__(board, **kwargs, name="Collisions + gravity")
-
     def set_collisions_params(self) -> None:
         super().set_collisions_params()
         self.nb = 4

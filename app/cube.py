@@ -423,6 +423,7 @@ class Cube(App):
             |/     |/
             6------7
         """
+
         CUBE_CORNERS: list[Point] = [
             Point(-1, -1, -1),  # Point 0
             Point(+1, -1, -1),  # Point 1
