@@ -62,6 +62,7 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
         metavar="APP",
         help='list of apps to run, among: ' + ' '.join(possible_apps),
         choices=possible_apps,
+        default=[],
     )
 
     args = parser.parse_args()
