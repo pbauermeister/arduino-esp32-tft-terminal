@@ -92,7 +92,7 @@ class Cube(App):
         Z_ROTATE_SPEED = 0.13 * K
 
         LINES_RGB = 96, 255, 96
-        TEXT_RGB = int(96/2), int(255/2), int(96/2)
+        TEXT_RGB = int(96 / 2), int(255 / 2), int(96 / 2)
 
         hue = 0
         mode = 0
@@ -268,7 +268,6 @@ class Cube(App):
             usage_by_edge_index: dict[int, int] = {}
             for i in visible_faces_indices:
                 face = CUBE_FACES[i]
-                point_indices: set[int] = set()
                 for j in face.edges:
                     usage_by_edge_index.setdefault(j, 0)
                     usage_by_edge_index[j] += 1
@@ -331,52 +330,52 @@ class Cube(App):
                     from_point_ix, to_point_ix = edge.a, edge.b
                     from_point = corners[from_point_ix]
                     to_point = corners[to_point_ix]
-                    src = adjust_point(from_point)
-                    dst = adjust_point(to_point)
+                    src2 = adjust_point(from_point)
+                    dst2 = adjust_point(to_point)
 
                     # right
-                    if src.x == x1 and src.y < dst.y:
-                        triangle(src, dst, bot_right, 0)
-                    elif dst.x == x1 and src.y > dst.y:
-                        triangle(src, dst, bot_right, 0)
+                    if src2.x == x1 and src2.y < dst2.y:
+                        triangle(src2, dst2, bot_right, 0)
+                    elif dst2.x == x1 and src2.y > dst2.y:
+                        triangle(src2, dst2, bot_right, 0)
 
-                    elif src.x == x1 and src.y > dst.y:
-                        triangle(src, dst, top_right, 0)
-                    elif dst.x == x1 and src.y < dst.y:
-                        triangle(src, dst, top_right, 0)
+                    elif src2.x == x1 and src2.y > dst2.y:
+                        triangle(src2, dst2, top_right, 0)
+                    elif dst2.x == x1 and src2.y < dst2.y:
+                        triangle(src2, dst2, top_right, 0)
 
                     # left
-                    elif src.x == x0 and src.y < dst.y:
-                        triangle(src, dst, bot_left, 0)
-                    elif dst.x == x0 and src.y > dst.y:
-                        triangle(src, dst, bot_left, 0)
+                    elif src2.x == x0 and src2.y < dst2.y:
+                        triangle(src2, dst2, bot_left, 0)
+                    elif dst2.x == x0 and src2.y > dst2.y:
+                        triangle(src2, dst2, bot_left, 0)
 
-                    elif src.x == x0 and src.y > dst.y:
-                        triangle(src, dst, top_left, 0)
-                    elif dst.x == x0 and src.y < dst.y:
-                        triangle(src, dst, top_left, 0)
+                    elif src2.x == x0 and src2.y > dst2.y:
+                        triangle(src2, dst2, top_left, 0)
+                    elif dst2.x == x0 and src2.y < dst2.y:
+                        triangle(src2, dst2, top_left, 0)
 
                     # top
-                    if src.y == y0 and src.x < dst.x:
-                        triangle(src, dst, top_right, 0)
-                    elif dst.y == y0 and src.x > dst.x:
-                        triangle(src, dst, top_right, 0)
+                    if src2.y == y0 and src2.x < dst2.x:
+                        triangle(src2, dst2, top_right, 0)
+                    elif dst2.y == y0 and src2.x > dst2.x:
+                        triangle(src2, dst2, top_right, 0)
 
-                    if src.y == y0 and src.x > dst.x:
-                        triangle(src, dst, top_left, 0)
-                    elif dst.y == y0 and src.x < dst.x:
-                        triangle(src, dst, top_left, 0)
+                    if src2.y == y0 and src2.x > dst2.x:
+                        triangle(src2, dst2, top_left, 0)
+                    elif dst2.y == y0 and src2.x < dst2.x:
+                        triangle(src2, dst2, top_left, 0)
 
                     # bottom
-                    if src.y == y1 and src.x < dst.x:
-                        triangle(src, dst, bot_right, 0)
-                    elif dst.y == y1 and src.x > dst.x:
-                        triangle(src, dst, bot_right, 0)
+                    if src2.y == y1 and src2.x < dst2.x:
+                        triangle(src2, dst2, bot_right, 0)
+                    elif dst2.y == y1 and src2.x > dst2.x:
+                        triangle(src2, dst2, bot_right, 0)
 
-                    if src.y == y1 and src.x > dst.x:
-                        triangle(src, dst, bot_left, 0)
-                    elif dst.y == y1 and src.x < dst.x:
-                        triangle(src, dst, bot_left, 0)
+                    if src2.y == y1 and src2.x > dst2.x:
+                        triangle(src2, dst2, bot_left, 0)
+                    elif dst2.y == y1 and src2.x < dst2.x:
+                        triangle(src2, dst2, bot_left, 0)
             else:
                 self.gfx.clear()
 
@@ -408,9 +407,9 @@ class Cube(App):
                     from_point_ix, to_point_ix = edge.a, edge.b
                     from_point = corners[from_point_ix]
                     to_point = corners[to_point_ix]
-                    src = adjust_point(from_point)
-                    dst = adjust_point(to_point)
-                    self.gfx.draw_line(src.x, src.y, dst.x, dst.y, 1)
+                    src2 = adjust_point(from_point)
+                    dst2 = adjust_point(to_point)
+                    self.gfx.draw_line(src2.x, src2.y, dst2.x, dst2.y, 1)
 
             # done
             self.gfx.set_fg_color(*LINES_RGB)

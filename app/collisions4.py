@@ -4,6 +4,7 @@ Very crowded, reverse gravity (buoyancy), bubble grow with time and merge on mut
 """
 
 import math
+from typing import Callable
 
 from app.collisions import TIME_SUBQUANTAS, Collisions, Color, Particle, Simulation
 from lib.board import Board
@@ -27,7 +28,13 @@ class Simulation4(Simulation):
                 p2 = self.create_particle(RADIUS_MIN, p.rgb, p.rgb_hit)
                 p.set_from(p2)
 
-    def create_particle(self, rad: float, rgb: Color, rgb_hit: Color) -> Particle:
+    def create_particle(
+        self,
+        rad: float,
+        rgb: Color,
+        rgb_hit: Color,
+        post_create_fn: Callable[[Particle], None] | None = None,
+    ) -> Particle:
         """Create particle at/near bottom, with up and rather vertical speed."""
 
         def post_create(p: Particle) -> None:
@@ -47,8 +54,6 @@ class Simulation4(Simulation):
             p.v[1] = -abs(p.v[1])
 
         p = super().create_particle(rad, rgb, rgb_hit, post_create_fn=post_create)
-        return p
-
         return p
 
     def resolve_collision(self, a: Particle, b: Particle) -> None:

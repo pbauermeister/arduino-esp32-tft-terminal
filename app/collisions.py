@@ -49,7 +49,7 @@ class Particle:
         self.r = np.array((x, y))
         self.v = np.array((vx, vy))
         self.radius = radius
-        self.mass = self.radius ** 2
+        self.mass = self.radius**2
         self.rgb = rgb
         self.rgb_hit = rgb_hit
         self.is_hit_by_wall: bool = False
@@ -324,7 +324,7 @@ class Collisions(App):
         self,
         board: Board,
         simulation_cls: type[Simulation] = Simulation,
-        name="elastic collisions",
+        name: str = "elastic collisions",
     ):
         super().__init__(board, auto_read=True, name=name)
         self.simulation_cls = simulation_cls
