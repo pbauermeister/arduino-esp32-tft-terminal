@@ -2,7 +2,7 @@ import argparse
 from typing import Any, Type
 
 import config
-from app import App, camel_to_snake
+from app import App, camel_to_kebab
 
 
 class Arg:
@@ -50,23 +50,27 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
             )
     existing = [spec.as_flag for spec in specs]
 
-    # make --APP-only flags
+    # make --only arg
+    possible_apps: list[str] = []
     names = sorted([a.__name__ for a in apps])
     for name in names:
-        name = camel_to_snake(name).replace('_', '-')
-        flag = f'--{name}-only'
-        if flag not in existing:
-            parser.add_argument(
-                f'--{name}-only', help='run only this app', action='store_true'
-            )
+        name = camel_to_kebab(name)
+        possible_apps.append(name)
+    parser.add_argument(
+        f'--only',
+        nargs='+',
+        metavar="APP",
+        help='list of apps to run, among: ' + ' '.join(possible_apps),
+        choices=possible_apps,
+    )
 
     args = parser.parse_args()
 
-    # collect apps matching --APP-only
+    # collect apps matching --only APP [APP...]
     only_apps = set()
     for app in apps:
-        k = camel_to_snake(app.__name__) + '_only'
-        if args.__dict__[k]:
+        k = camel_to_kebab(app.__name__)
+        if k in args.only:
             only_apps.add(app)
 
     # handle --once

@@ -152,7 +152,7 @@ class Bouncer:
     def __init__(self, size: int, vx: float, vy: float) -> None:
         self.size = size
         k = 0.5
-        v: float = (4 + 7 ** 1.25 - size ** 1.25) * k
+        v: float = (4 + 7**1.25 - size**1.25) * k
         self.xx: float = size if vx > 0 else config.WIDTH - size
         self.yy: float = size if vy > 0 else config.HEIGHT - size
 
@@ -216,6 +216,14 @@ def camel_to_snake(s: str) -> str:
     def replacer(m: re.Match[str]) -> str:
         s = m[1]
         return f'{s[0]}_{s[1]}'
+
+    return CAMEL_RX.sub(replacer, s).lower()
+
+
+def camel_to_kebab(s: str) -> str:
+    def replacer(m: re.Match[str]) -> str:
+        s = m[1]
+        return f'{s[0]}-{s[1]}'
 
     return CAMEL_RX.sub(replacer, s).lower()
 
