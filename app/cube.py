@@ -8,7 +8,7 @@ from app import App, TimeEscaper
 from lib.board import Board
 
 ISOMETRIC = True
-
+BOUNCE_SIZE = True
 
 @dataclass
 class Point:
@@ -70,13 +70,7 @@ class Cube(App):
 
         # Set up the constants:
         SIZE = min(config.WIDTH, config.HEIGHT)
-        OFFSET_X = (config.WIDTH - SIZE) // 2
-        OFFSET_Y = (config.HEIGHT - SIZE) // 2
-        SCALEX = SCALEY = SIZE // 4
-
-        CENTER_X = int(config.WIDTH / 2)
-        CENTER_Y = int(config.HEIGHT / 2)
-        RADIUS = int(SIZE / 2) - 6
+        SCALE = SIZE // 4
 
         TRANSLATEX = (config.WIDTH - 4) // 2 + int(config.WIDTH / 8)
         TRANSLATEY = (config.HEIGHT - 4) // 2 + 4 + 8
@@ -152,9 +146,12 @@ class Cube(App):
             """Adjusts the 3D XYZ point to a 2D XY point fit for displaying on
             the screen. This resizes this 2D point by a scale of SCALEX and
             SCALEY, then moves the point by TRANSLATEX and TRANSLATEY."""
-            return Point2(
-                int(p.x * SCALEX + TRANSLATEX), int(p.y * SCALEY + TRANSLATEY)
+            scale = (
+                SCALE * (0.8 + math.sin(hue / 360 * math.pi * 2) * 0.2)
+                if BOUNCE_SIZE
+                else SCALE
             )
+            return Point2(int(p.x * scale + TRANSLATEX), int(p.y * scale + TRANSLATEY))
 
         def cube(
             corners: list[Point], rotation: Vector, lines: list[Line], clear: bool
