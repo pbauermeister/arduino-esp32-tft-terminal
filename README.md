@@ -10,6 +10,12 @@ and is extensible.
 
 ![Alt text](media/20240525_133408-thumb.png?raw=true "Title")
 
+(The repo name still contains 'oled' because the first version was
+implemented using an OLED monochrom display. The name also contains
+'server', which is misleading because the project also implements a
+client and a 3D-printed case. So this repo certainly deserves a new
+name.)
+
 ## A. Project motivation
 
 The Adafruit ESP32-S2 Reverse TFT Feather is an awesome little board
