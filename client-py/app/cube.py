@@ -139,7 +139,7 @@ class Cube(App):
             rotated_z = z
 
             # False perspective
-            k = 1 if ISOMETRIC else 1.5**z * 0.6 + 0.25
+            k = 1 if ISOMETRIC else 1.5 ** z * 0.6 + 0.25
 
             return Point(rotated_x * k, rotated_y * k, rotated_z)
 
@@ -233,7 +233,6 @@ class Cube(App):
             smart_erase: bool,
             contour: bool,
         ) -> None:
-
             def extrema(
                 point: Point2,
                 top: Point2,

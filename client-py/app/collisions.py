@@ -49,7 +49,7 @@ class Particle:
         self.r = np.array((x, y))
         self.v = np.array((vx, vy))
         self.radius = radius
-        self.mass = self.radius**2
+        self.mass = self.radius ** 2
         self.rgb = rgb
         self.rgb_hit = rgb_hit
         self.is_hit_by_wall: bool = False
