@@ -319,7 +319,7 @@ class Simulation:
         self.advance_animation(kick, friction)
 
 
-class Collisions(App):
+class CollisionsElastic(App):
     def __init__(
         self,
         board: Board,

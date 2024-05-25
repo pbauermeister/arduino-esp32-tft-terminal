@@ -3,7 +3,13 @@
 Quite crowded, no gravity, bubble grow with time and pop on mutual collision.
 """
 
-from app.collisions import Collisions, Simulation, TIME_SUBQUANTAS, Color, Particle
+from app.collisions import (
+    CollisionsElastic,
+    Simulation,
+    TIME_SUBQUANTAS,
+    Color,
+    Particle,
+)
 from lib.board import Board
 
 RADIUS_MIN = 0.5
@@ -35,7 +41,7 @@ class Simulation3(Simulation):
             p.is_hit_by_other = True
 
 
-class Collisions3(Collisions):
+class BubblesSoap(CollisionsElastic):
     def __init__(self, board: Board):
         super().__init__(board, Simulation3, name="Soap bubbles")
 

@@ -24,12 +24,14 @@ def get_config_args_specs() -> list[Arg]:
     args = [
         a
         for a in args
-        if not a.name.startswith('__') and a.type in (str, bool, int, float)
+        if a.name[0].isupper()
+        and not a.name.startswith('__')
+        and a.type in (str, bool, int, float)
     ]
     return args
 
 
-def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]:
+def get_args(all_apps: list[Type[App]]) -> tuple[argparse.Namespace, list[Type[App]]]:
     specs = get_config_args_specs()
 
     parser = argparse.ArgumentParser(description=__doc__)
@@ -52,7 +54,7 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
 
     # make --only arg
     possible_apps: list[str] = []
-    names = sorted([a.__name__ for a in apps])
+    names = sorted([a.__name__ for a in all_apps])
     for name in names:
         name = camel_to_kebab(name)
         possible_apps.append(name)
@@ -65,20 +67,29 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
         default=[],
     )
 
+    demo_list = (
+        'monitor-graph quix starfield collisions-elastic '
+        + 'collisions-gravity bubbles-soap bubbles-air asteriods cube'
+    )
+    parser.add_argument('--demo', action='store_true', help='play: ' + demo_list)
+
     args = parser.parse_args()
 
+    if args.demo:
+        args.only = demo_list.split()
+
     # collect apps matching --only APP [APP...]
-    only_apps = set()
-    for app in apps:
-        k = camel_to_kebab(app.__name__)
-        if k in args.only:
-            only_apps.add(app)
+    only_apps: list[type[App]] = []
+    for name in args.only:
+        for app in all_apps:
+            if camel_to_kebab(app.__name__) == name:
+                only_apps.append(app)
 
     # handle --once
     if args.once:
         args.apps_timeout = args.apps_once_timeout or config.APPS_ONCE_TIMEOUT
-        args.app_asteriods_autoplay_timeout = args.apps_timeout
         args.app_asteriods_autoplay = True
+        config.once = True
 
     # write back args to config.py
     for spec in specs:
@@ -88,4 +99,4 @@ def get_args(apps: list[Type[App]]) -> tuple[argparse.Namespace, set[Type[App]]]
         else:
             args.__dict__[spec.as_arg] = config.__dict__[spec.name]
 
-    return args, only_apps
+    return args, only_apps or all_apps

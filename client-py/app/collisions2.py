@@ -5,11 +5,11 @@ Sparsely crowded, gravity, elastic bumps.
 
 from typing import Type
 
-from app.collisions import Collisions, Simulation
+from app.collisions import CollisionsElastic, Simulation
 from lib.board import Board
 
 
-class Collisions2(Collisions):
+class CollisionsGravity(CollisionsElastic):
     def __init__(self, board: Board, **kwargs: Type[Simulation]) -> None:
         super().__init__(board, **kwargs, name="Collisions + gravity")
 

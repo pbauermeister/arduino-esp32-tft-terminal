@@ -10,10 +10,10 @@ from app import App
 from app.asteriods import Asteriods
 
 # from app.bumps import Bumps
-from app.collisions import Collisions
-from app.collisions2 import Collisions2
-from app.collisions3 import Collisions3
-from app.collisions4 import Collisions4
+from app.collisions import CollisionsElastic
+from app.collisions2 import CollisionsGravity
+from app.collisions3 import BubblesSoap
+from app.collisions4 import BubblesAir
 from app.cube import Cube
 from app.fill import Fill
 from app.monitor_cpus import MonitorCpus
@@ -58,36 +58,32 @@ def make_all() -> tuple[Channel, Board]:
 
 ### Here we go ###
 
+all_apps = [
+    MonitorHost,
+    MonitorCpus,
+    MonitorGraph,
+    Asteriods,
+    Cube,
+    # Road,
+    Starfield,
+    Tunnel,
+    Quix,
+    # Bumps,
+    CollisionsElastic,
+    CollisionsGravity,
+    BubblesSoap,
+    BubblesAir,
+    Fill,
+]
 
 # Init
-args, only_apps = get_args(
-    [
-        MonitorHost,
-        MonitorCpus,
-        MonitorGraph,
-        Asteriods,
-        Cube,
-        # Road,
-        Starfield,
-        Tunnel,
-        Quix,
-        # Bumps,
-        Collisions,
-        Collisions2,
-        Collisions3,
-        Collisions4,
-        Fill,
-    ]
-)
+args, apps = get_args(all_apps)
 
 # Channel().monitor()
 chan, board = make_all()
 
 
-def start_app_maybe(cls: Type[App]) -> bool:
-    if only_apps and cls not in only_apps:
-        return False
-    only_me = bool(only_apps) and cls in only_apps and len(only_apps) == 1
+def start_app(cls: Type[App], only_me: bool) -> bool:
     instance = cls(board)
     instance.only_me = only_me
 
@@ -113,36 +109,8 @@ def suppress_ctrl_c() -> None:
 while True:
     try:
         while True:
-            if start_app_maybe(MonitorHost):
-                break
-            if start_app_maybe(MonitorCpus):
-                break
-            if start_app_maybe(MonitorGraph):
-                break
-            if start_app_maybe(Asteriods):
-                break
-            if start_app_maybe(Cube):
-                break
-            # if start_app_maybe(Road):
-            #    break
-            if start_app_maybe(Starfield):
-                break
-            if start_app_maybe(Tunnel):
-                break
-            if start_app_maybe(Quix):
-                break
-            # if start_app_maybe(Bumps):
-            #    break
-            if start_app_maybe(Collisions):
-                break
-            if start_app_maybe(Collisions2):
-                break
-            if start_app_maybe(Collisions3):
-                break
-            if start_app_maybe(Collisions4):
-                break
-            if start_app_maybe(Fill):
-                break
+            for app in apps:
+                start_app(app, len(apps) == 1)
 
             if args.once:
                 break

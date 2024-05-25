@@ -10,6 +10,7 @@ from lib.board import Board
 ISOMETRIC = True
 BOUNCE_SIZE = True
 
+
 @dataclass
 class Point:
     x: float
@@ -482,6 +483,8 @@ class Cube(App):
         lines: list[Line] = []
         clear = True
         nb_modes = 5
+        hue_step = 8 if config.once else 5
+
         while True:  # Main program loop.
             btns = self.board.auto_read_buttons()
             if 'R' in btns:
@@ -499,7 +502,7 @@ class Cube(App):
                 hue = 0
                 self.board.wait_button_up(0)
 
-            if escaper.check():
+            if not config.once and escaper.check():
                 return False
 
             # self.gfx.clear()
@@ -514,8 +517,11 @@ class Cube(App):
             self.gfx.display()
             clear = False
 
-            new_hue = (hue + 5) % 360
+            new_hue = (hue + hue_step) % 360
             if new_hue < hue:
                 mode = (mode + 1) % nb_modes
                 clear = True
+                #
+                if mode == 0 and config.once:
+                    return False
             hue = new_hue

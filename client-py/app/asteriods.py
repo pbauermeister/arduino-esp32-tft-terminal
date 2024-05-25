@@ -531,7 +531,7 @@ class Detect:
         dx = (a.x - x) ** 2
         dy = (a.y - y) ** 2
         r2 = (dx + dy) * factor
-        return r2 < a.r ** 2
+        return r2 < a.r**2
 
 
 class Autoplay:
@@ -546,7 +546,7 @@ class Autoplay:
     def enable(self) -> None:
         self.enabled = True
         self.start = datetime.datetime.now()
-        ap_timeout = config.APP_ASTERIODS_AUTOPLAY_TIMEOUT
+        ap_timeout = config.APPS_TIMEOUT  # 0 means until L=0
         if ap_timeout:
             self.until = self.start + datetime.timedelta(seconds=ap_timeout)
         else:

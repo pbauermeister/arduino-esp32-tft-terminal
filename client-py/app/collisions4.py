@@ -6,7 +6,13 @@ Very crowded, reverse gravity (buoyancy), bubble grow with time and merge on mut
 import math
 from typing import Callable
 
-from app.collisions import TIME_SUBQUANTAS, Collisions, Color, Particle, Simulation
+from app.collisions import (
+    TIME_SUBQUANTAS,
+    CollisionsElastic,
+    Color,
+    Particle,
+    Simulation,
+)
 from lib.board import Board
 
 RADIUS_MIN = 1
@@ -88,7 +94,7 @@ class Simulation4(Simulation):
         p.is_hit_by_wall |= hit
 
 
-class Collisions4(Collisions):
+class BubblesAir(CollisionsElastic):
     def __init__(self, board: Board):
         super().__init__(board, Simulation4, name="Air bubbles")
 
