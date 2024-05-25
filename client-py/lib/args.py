@@ -77,6 +77,7 @@ def get_args(all_apps: list[Type[App]]) -> tuple[argparse.Namespace, list[Type[A
 
     if args.demo:
         args.only = demo_list.split()
+        config.APPS_TITLE_DURATION = 1
 
     # collect apps matching --only APP [APP...]
     only_apps: list[type[App]] = []
