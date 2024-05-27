@@ -83,7 +83,8 @@ class, and register your new class in `run.py`.
 ## D. Photos
 |            |             |
 |------------|-------------|
-| ![CPU+net monitor](media/20240525_145648.jpg?raw=true       "CPU+net monitor") | ![CPU+net monitor ](media/20240525_144050.jpg?raw=true       "CPU+net monitor" ) |
-| ![Playing 3D cube](media/20240525_142735-thumb.png?raw=true "Playing 3D cube") | ![Playing Asteriod](media/20240525_132939-thumb.png?raw=true "Playing Asteriod") |
-| ![TFT side       ](media/20240525_144544.jpg?raw=true       "TFT side"       ) | ![ESP32 side      ](media/20240525_144614.jpg?raw=true       "ESP32 side"      ) |
-| ![Case on cap    ](media/20240525_124410.jpg?raw=true       "Case on cap"    ) | ![Case closed     ](media/20240525_124520.jpg?raw=true       "Case closed"     ) |
+| ![CPU+net monitor](media/20240525_145648.jpg?raw=true        "CPU+net monitor") | ![CPU+net monitor ](media/20240525_144050.jpg?raw=true       "CPU+net monitor" ) |
+| ![Playing 3D cube](media/20240525_142735-thumb.png?raw=true  "Playing 3D cube") | ![Playing Asteriod](media/20240525_132939-thumb.png?raw=true "Playing Asteriod") |
+| ![TFT side       ](media/20240525_144544.jpg?raw=true        "TFT side"       ) | ![ESP32 side      ](media/20240525_144614.jpg?raw=true       "ESP32 side"      ) |
+| ![Case on cap    ](media/20240525_124410.jpg?raw=true        "Case on cap"    ) | ![Case closed     ](media/20240525_124520.jpg?raw=true       "Case closed"     ) |
+| ![Case on cap    ](media/esp32s3-rtft-case.scad.png?raw=true "Case on cap"    ) |  |

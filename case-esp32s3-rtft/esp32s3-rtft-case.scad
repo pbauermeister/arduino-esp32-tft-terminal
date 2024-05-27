@@ -1,3 +1,8 @@
+/*
+Enclosure for Adafruit ESP32-S2 Reverse TFT Feather.
+(C) 2023, P. Bauermeister.
+*/
+
 INNER_LENGTH   = 52.0  - .3;
 INNER_WIDTH    = 23.5  - .1;
 INNER_HEIGHT   =  9.0  + .75;
@@ -14,8 +19,6 @@ ATOM           =  0.01;
 
 BORDER_X       = 10.0;
 BORDER_Y       =  2.0;
-
-
 
 PILLAR_SIDE    =  2.0;
 PILLAR_HEIGHT  =  5.5  +.25;
@@ -51,7 +54,6 @@ module chamber() {
 
     // for bottom
     translate([BORDER_X, BORDER_Y + dy - BORDER_Y/2, -ATOM])
-    //cube([INNER_LENGTH - 2*BORDER_X, INNER_WIDTH - 2*BORDER_Y, OUTER_HEIGHT + ATOM*2]);
     cube([INNER_LENGTH - 2*BORDER_X, INNER_WIDTH - 2*BORDER_Y -dy, OUTER_HEIGHT + ATOM*2]);
 
     if(0)
@@ -119,17 +121,6 @@ module case() {
 
 module cap() {
     difference() {
-        /*
-        union() {
-            translate([-THICKNESS*2, -THICKNESS, 0])
-            cube([INNER_LENGTH + THICKNESS*4, INNER_WIDTH + THICKNESS*2, THICKNESS*2]);
-
-            for (x=[-THICKNESS*2, INNER_LENGTH+THICKNESS]) {
-                translate([x, -THICKNESS, 0 + THICKNESS*2])
-                cube([THICKNESS, INNER_WIDTH + THICKNESS*2, THICKNESS*2]);
-            }
-        }
-        */
         translate([-THICKNESS*2, -THICKNESS*2, 0])
         cube([INNER_LENGTH + THICKNESS*4, INNER_WIDTH + THICKNESS*4, THICKNESS*4]);
 
@@ -148,4 +139,4 @@ module cap() {
 
 
 case();
-//cap();
+translate([0, -INNER_WIDTH*1.5, 0]) cap();
