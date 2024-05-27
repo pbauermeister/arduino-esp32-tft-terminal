@@ -20,7 +20,7 @@
 
   - In Arduino: Additional Urls click Add Item and paste
 
-	https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+	  https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 
 ## Select board
 
@@ -37,3 +37,12 @@
     - Button by Michael Adams
     - Adafruit neopixel
     - Adafruit testbed
+
+## Compile / upload
+
+- Visit your *.ino file
+- Click icon "Arduino: Verify" associated with file
+- Click icon "Arduino: Upload" associated with file
+    - The Output console shall indicate "[Starting] Uploading sketch"
+      then "[Done] Uploading sketch"
+- Press the Reset button on the board

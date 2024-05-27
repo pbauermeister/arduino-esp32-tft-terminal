@@ -45,6 +45,9 @@ A 3D-printed case and cap, designed in OpenSCAD.
 An Arduino sketch, implementing a graphical server running on the
 board and providing TFT graphical primitives, and buttons readout.
 
+It has been successfully built and uploaded using VS Code, see
+`README-VSCODE.md`.
+
 ### 3. client-py/
 
 A Python program running on Linux and communicating with the board
