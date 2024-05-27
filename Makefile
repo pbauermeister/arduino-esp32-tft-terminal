@@ -12,7 +12,8 @@ MYPY_OPTS += --warn-redundant-casts
 MYPY_OPTS += --warn-return-any
 MYPY_OPTS += --warn-unreachable
 
-.PHONY: help
+.PHONY: *
+
 help:	## print this help
 	@echo "usage: make COMMAND"
 	@echo
@@ -20,7 +21,11 @@ help:	## print this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' Makefile \
 	| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
 
-.PHONY: lint
-lint: ## lint
+require: ## install dependencies (Python)
+	pip install -r client-py/requirements.txt
+
+lint: ## lint (Python)
 	mypy $(MYPY_OPTS) $$(find -P -name "*.py")
 
+clean: ## remove tmp files
+	rm -rf .mypy_cache
