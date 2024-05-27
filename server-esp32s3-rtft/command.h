@@ -1,3 +1,12 @@
+/*
+Command provides the interpret() function that will:
+1. Parse the input command line:
+   - Read a first keyword,
+   - depending on the first keyword, read the requested parameters,
+   - pack into an Action.
+2. Use Transaction to handle the Action.
+*/
+
 #ifndef COMMAND_H
 #define COMMAND_H
 

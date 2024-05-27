@@ -1,10 +1,22 @@
+/*
+Transaction provides two classes, Action and Transaction.
+Its goal is to minimize flicker, by executing the effective graphics primitive
+all at once, after all actions have been transmitted as commands over USB.
+
+Action is used to store an action with its parameters.
+
+Transaction is used to buffer Actions. Its method commit() will execute all
+actions, calling the associated graphic primitives.
+If transactions is enabled (autoDisplay 1), Actions are buffered.
+If the Action is "display" or transaction is off, commit() is called,
+executing all pending actions and clearing the actions buffer.
+*/
+
 #ifndef TRANSACTION_H
 #define TRANSACTION_H
 
 #include <string.h>
-
 #include <cstdint>
-
 #include "config.h"
 
 typedef intptr_t any;
