@@ -78,10 +78,9 @@ class, and register your new class in `run.py`.
 
 ## C. Videos on Youtube
 
-|            |             |
-|------------|-------------|
-| [![Video on Youtube](https://img.youtube.com/vi/Nq5qLFQl3gA/0.jpg)](https://youtu.be/Nq5qLFQl3gA) | [![Video on Youtube](https://img.youtube.com/vi/HaPi0cx6-W8/0.jpg)](https://youtu.be/HaPi0cx6-W8) |
-| [![Video on Youtube](https://img.youtube.com/vi/vNK-JPLklLs/0.jpg)](https://youtu.be/vNK-JPLklLs) | |
+|            |             |             |
+|------------|-------------|-------------|
+| [![Video on Youtube](media/yt-Nq5qLFQl3gA.jpg)](https://youtu.be/Nq5qLFQl3gA) | [![Video on Youtube](media/yt-HaPi0cx6-W8.jpg)](https://youtu.be/HaPi0cx6-W8) | [![Video on Youtube](media/yt-vNK-JPLklLs.jpg)](https://youtu.be/vNK-JPLklLs) | |
 
 ## D. Photos
 |            |             |
