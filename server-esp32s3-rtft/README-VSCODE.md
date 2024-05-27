@@ -24,14 +24,14 @@
 
 ## Select board
 
-- F1: Arduino: Board Manager
+- *(Press F1)* Arduino: Board Manager
 	- Type: ESP32
 	- Locate esp32 by Espressif Systems, click install
 
-- F1: Arduino: Change board type
+- *(Press F1)* Arduino: Change board type
     - Paste: Adafruit Feather ESP32-S3 Reverse TFT
 
-- F1 Arduino: Library Manager:
+- *(Press F1)* Arduino: Library Manager:
   - Locate and add:
     - Adafruit ST7789
     - Button by Michael Adams
@@ -40,9 +40,9 @@
 
 ## Compile / upload
 
-- Visit your *.ino file
+- Visit your `*.ino` file
 - Click icon "Arduino: Verify" associated with file
 - Click icon "Arduino: Upload" associated with file
-    - The Output console shall indicate "[Starting] Uploading sketch"
-      then "[Done] Uploading sketch"
+    - The Output console shall indicate `[Starting] Uploading sketch`
+      then `[Done] Uploading sketch`
 - Press the Reset button on the board
