@@ -79,6 +79,7 @@ class, and register your new class in `run.py`.
 | [![Video on Youtube](media/yt-Nq5qLFQl3gA.jpg)](https://youtu.be/Nq5qLFQl3gA) | [![Video on Youtube](media/yt-HaPi0cx6-W8.jpg)](https://youtu.be/HaPi0cx6-W8) | [![Video on Youtube](media/yt-vNK-JPLklLs.jpg)](https://youtu.be/vNK-JPLklLs) | |
 
 ## D. Photos
+
 |            |             |
 |------------|-------------|
 | ![CPU+net monitor](media/20240525_145648.jpg?raw=true        "CPU+net monitor") | ![CPU+net monitor ](media/20240525_144050.jpg?raw=true       "CPU+net monitor" ) |
@@ -86,3 +87,8 @@ class, and register your new class in `run.py`.
 | ![TFT side       ](media/20240525_144544.jpg?raw=true        "TFT side"       ) | ![ESP32 side      ](media/20240525_144614.jpg?raw=true       "ESP32 side"      ) |
 | ![Case on cap    ](media/20240525_124410.jpg?raw=true        "Case on cap"    ) | ![Case closed     ](media/20240525_124520.jpg?raw=true       "Case closed"     ) |
 | ![Case on cap    ](media/esp32s3-rtft-case.scad.png?raw=true "Case on cap"    ) |  |
+
+## E. Implementation notes
+
+- [Communication protocol](README-protocol.md) between the computer and the board.
+- [Animations techniques](README-animations.md) to avoid flicker, in the absence of hardware double-buffering.
