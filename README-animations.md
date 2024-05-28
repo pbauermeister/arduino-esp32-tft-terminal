@@ -42,11 +42,11 @@ cd client-py
 ```
 The outer border is not flickering.
 
-### Even more speedup: erase only the remains of the last frame
+## Even more speedup: erase only the remains of the last frame
 
 Instead of erasing the objects of the last frame, only the "remains" of the last frames (i.e. parts of the last frame that are not present in the new frame) are selectively erased (painted in background color). 
 
-### Summary
+## Summary
 
 These different techniques can be seen in the sequences of the Cube app:
 ```
