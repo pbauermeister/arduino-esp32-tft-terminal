@@ -1,6 +1,6 @@
 /*
 Esp32s3-display implements the gfx primitives and buttons readout, for the
-"Adafruit ESP32-S2 Reverse TFT Feather" board.
+"Adafruit ESP32-S3 Reverse TFT Feather" board.
 */
 
 #ifndef ESP32S3_DISPLAY_H

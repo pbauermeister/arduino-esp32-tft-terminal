@@ -22,7 +22,7 @@ To mitigate this, a so-called "transactional mode" can be activated: All pixel c
 So, during the whole computation and transmission time, the previous frame is held visible and unchanged.
 Some display boards provide, by design, transactions. (Like the [FeatherWing 128x64 OLED](https://www.adafruit.com/product/4650) -- no longer supported in this project.)
 
-Unfortunately, the [ESP32-S2 Reverse TFT Feather](https://www.adafruit.com/product/5345) does not provide transactions, so it has been simulated by buffering the commands, eventually yielding the same effect, and allowing easy portability with boards supporting transactions.
+Unfortunately, the [ESP32-S3 Reverse TFT Feather](https://www.adafruit.com/product/5345) does not provide transactions, so it has been simulated by buffering the commands, eventually yielding the same effect, and allowing easy portability with boards supporting transactions.
 
 The transactional mode (real or simulated) can be activated by sending this command to the board (response not shown):
 ```

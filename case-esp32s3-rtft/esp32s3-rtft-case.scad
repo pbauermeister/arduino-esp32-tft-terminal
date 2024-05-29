@@ -1,5 +1,5 @@
 /*
-Enclosure for Adafruit ESP32-S2 Reverse TFT Feather.
+Enclosure for Adafruit ESP32-S3 Reverse TFT Feather.
 (C) 2023, P. Bauermeister.
 */
 

@@ -1,6 +1,6 @@
 # Arduino ESP32 TFT Terminal
 
-(Using Adafruit ESP32-S2 Reverse TFT Feather.)
+(Using Adafruit ESP32-S3 Reverse TFT Feather.)
 
 This repository provides the code needed to implement a gadget
 sporting a small TFT display, enclosed in a 3D-printed case, and
@@ -14,7 +14,7 @@ and is extensible.
 
 ## A. Project motivation
 
-The Adafruit ESP32-S2 Reverse TFT Feather is an awesome little board
+The Adafruit ESP32-S3 Reverse TFT Feather is an awesome little board
 consisting of an ESP32-based Arduino and a 240x135 color TFT display
 on the back side. See https://www.adafruit.com/product/5345.
 
