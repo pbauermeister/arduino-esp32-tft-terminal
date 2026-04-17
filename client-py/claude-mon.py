@@ -100,6 +100,83 @@ def _colorize(text: str, state: ClaudeState, doit: bool = True) -> str:
 # =============================================================================
 # Probing
 # =============================================================================
+#
+# -----------------------------------------------------------------------------
+# STRATEGY — how we find ACTIVE sessions
+# -----------------------------------------------------------------------------
+# Claude Code does not expose a public "list my sessions" API, so we reverse
+# the problem by combining two filesystem sources plus /proc:
+#
+#   1. ~/.claude/sessions/<pid>.json
+#        Each running `claude` process drops a small JSON file here recording
+#        at least { "pid": ..., "cwd": ... }. This is our ENUMERATION source:
+#        it tells us which PIDs *claim* to be Claude Code sessions and the
+#        working directory each was launched from. See `_load_session_probes`.
+#
+#   2. /proc/<pid>  (Linux only)
+#        The sessions file can be stale (process died without cleanup, PID
+#        was recycled, another user's PID collides). So for every candidate
+#        we VERIFY via /proc that:
+#           - the PID still exists,
+#           - its comm is literally "claude",
+#           - it is owned by the current UID.
+#        That is `_is_process_claude`. Only survivors count as "active".
+#
+#   3. ~/.claude/projects/<encoded-cwd>/*.jsonl
+#        Claude Code writes a JSONL transcript per session here, where
+#        <encoded-cwd> is the absolute cwd with "/" replaced by "-". A single
+#        `claude` process can rotate its session id mid-run (e.g. on /clear),
+#        so the id in the sessions/<pid>.json file may go stale. To find the
+#        CURRENT live transcript we pick the most-recently-modified .jsonl in
+#        that project dir. See `_find_active_jsonl`.
+#
+# We also dedupe candidate probes by cwd — if two sessions-files point at the
+# same project we keep the first and skip the rest, since our downstream
+# "which jsonl is live" probe can't tell them apart anyway.
+#
+# -----------------------------------------------------------------------------
+# STRATEGY — how we classify each active session into BUSY / ASKING / IDLE
+# -----------------------------------------------------------------------------
+# We don't have an IPC hook into the running `claude` process, so we infer
+# state from externally-observable signals. The classifier runs in two layers:
+#
+#   Layer A — "is it BUSY right now?"  (see `_is_busy`)
+#     We take two snapshots SAMPLE_SECONDS apart and declare BUSY if ANY of:
+#       (a) The active JSONL's (size, mtime) changed between the two samples
+#           → the process is actively appending turns / tool results.
+#       (b) The JSONL's mtime is within RECENT_WRITE_SECONDS of "now"
+#           → it wrote very recently; our 1.5s window may have caught a lull
+#             between a tool result and the next assistant turn.
+#       (c) The process has at least one live (non-zombie) child in /proc
+#           → a Bash/tool subprocess is currently running on its behalf.
+#       (d) CPU ticks accumulated by the process during the sample window
+#           exceed CPU_TICK_THRESHOLD
+#           → Node.js idle bookkeeping (GC, timers) produces only a handful
+#             of ticks; anything well above that means real work (token
+#             streaming, JSON parsing, tool dispatch, ...).
+#     Any single signal is enough; they are complementary so we can catch
+#     both "writing to disk" work and "waiting on a child tool" work.
+#
+#   Layer B — "if not busy, is it ASKING or IDLE?"  (see `_classify`)
+#     When idle-looking, we tail the active JSONL and inspect the LAST
+#     user/assistant entry:
+#       - No parseable entry yet               → IDLE (fresh/blank session).
+#       - Last entry is `assistant` with a     → ASKING. Claude has emitted
+#         `tool_use` content block               a tool call and is waiting
+#                                                for the user to approve it
+#                                                via the permission menu.
+#       - Last entry is `assistant` without    → IDLE. Assistant finished its
+#         any `tool_use`                         turn; prompt box is waiting.
+#       - Last entry is `user` (prompt or      → ASKING. Claude Code buffers
+#         tool_result) AND not busy              the next assistant tool_use
+#                                                behind a pending permission
+#                                                prompt, so a non-busy process
+#                                                sitting on a user entry means
+#                                                it's blocked on the human.
+#
+# Net effect: BUSY is detected from process/filesystem activity; ASKING vs
+# IDLE is disambiguated from transcript shape once the process is quiet.
+# -----------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -248,12 +325,30 @@ def _get_last_jsonl_entry(path: Path | None) -> _LastJsonlEntry | None:
 
 
 def _is_busy(p: _SessionProbe, now: float) -> bool:
+    # Layer A of the state classifier: answers "is this session working RIGHT
+    # NOW?" from externally observable signals only. Any ONE signal is enough
+    # — they cover different kinds of "busy":
+    #   (a) transcript file mutated during our sample window → writing turns.
+    #   (b) transcript file touched just before our window   → momentary lull.
+    #   (c) has a live child process                         → tool running.
+    #   (d) burned meaningful CPU during the sample window   → doing work.
+    # See the STRATEGY block above for the full rationale and thresholds.
+
+    # (a) The JSONL (size, mtime) tuple changed between the two snapshots we
+    # took SAMPLE_SECONDS apart → Claude is appending new turns/tool results.
     if p.file0 is not None and p.file1 is not None and p.file0 != p.file1:
         return True
+    # (b) Our sample window is short; Claude may have written just before it
+    # and paused to stream the next chunk. Treat very-recent writes as busy.
     if p.file1 is not None and now - p.file1.mtime < RECENT_WRITE_SECONDS:
         return True
+    # (c) A running Bash/tool subprocess is the clearest "doing work" signal
+    # even when neither the transcript nor CPU has moved in our window.
     if _has_process_live_child(p.pid):
         return True
+    # (d) Raw CPU-burn check. Node.js idle background (GC, timers) generates
+    # only 1–3 ticks per ~1.5s; CPU_TICK_THRESHOLD (~13% CPU) clears that
+    # noise floor so we don't false-positive on an idle event loop.
     if (
         p.cpu0 is not None
         and p.cpu1 is not None
@@ -264,22 +359,49 @@ def _is_busy(p: _SessionProbe, now: float) -> bool:
 
 
 def _classify(p: _SessionProbe, now: float) -> ClaudeState:
+    # Two-layer state machine:
+    #   1. If the process looks active by any external signal, it's BUSY.
+    #   2. Otherwise it's quiescent — disambiguate ASKING vs IDLE by looking
+    #      at the tail of the JSONL transcript (the shape of the last entry
+    #      tells us whether Claude is blocked on the human or truly idle).
     if _is_busy(p, now):
         return ClaudeState.BUSY
+
+    # Quiescent: inspect the most recent user/assistant entry in the jsonl.
     entry = _get_last_jsonl_entry(p.jsonl)
     if entry is None:
+        # Fresh session with no turns recorded yet → prompt box is open.
         return ClaudeState.IDLE
+
     if entry.kind == "assistant":
+        # Assistant spoke last. Two sub-cases:
         if entry.has_tool_use:
+            # Assistant emitted a tool_use block and stopped — Claude Code is
+            # showing the permission menu and waiting for the user's answer.
             return ClaudeState.ASKING
+        # Plain assistant reply with no pending tool call → turn is complete
+        # and the prompt box is waiting for the next user message.
         return ClaudeState.IDLE
-    # Last entry is a user message (prompt or tool_result) and the process is
-    # not busy. Claude Code buffers the next assistant tool_use until a pending
-    # permission prompt is resolved, so this state = awaiting answer.
+
+    # Last entry is a user message (a typed prompt or a tool_result) and the
+    # process is not busy. Claude Code buffers the next assistant tool_use
+    # behind a pending permission prompt, so a non-busy process sitting on a
+    # user entry means it's blocked awaiting the user's answer.
     return ClaudeState.ASKING
 
 
 def _load_session_probes() -> list[_SessionProbe]:
+    # Discovery pass for ACTIVE sessions. We walk every candidate file in
+    # ~/.claude/sessions/*.json (each live `claude` process drops one with
+    # at least {pid, cwd}) and keep only the ones that survive validation:
+    #   - JSON parses and has both pid (int) and cwd (str);
+    #   - the cwd hasn't already been claimed by an earlier entry (dedupe
+    #     per-project: two sessions on the same cwd would fight over the
+    #     same jsonl transcript, so we can only monitor one meaningfully);
+    #   - `_is_process_claude(pid)` confirms the PID is still alive, is
+    #     literally a `claude` binary, and is owned by the current user.
+    # Everything that passes becomes a _SessionProbe seed that the caller
+    # will enrich with jsonl path + CPU/file snapshots for classification.
     if not SESSIONS_DIR.is_dir():
         return []
     probes: list[_SessionProbe] = []
