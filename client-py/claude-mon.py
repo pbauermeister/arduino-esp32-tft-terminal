@@ -139,6 +139,159 @@ def _colorize(text: str, state: ClaudeState, doit: bool = True) -> str:
 # We do not sample over time — no CPU ticks, no mtime deltas, no grace
 # windows. Transitions appear with whatever latency the JSONL and /proc
 # themselves exhibit, which is the minimum achievable by a passive monitor.
+#
+# -----------------------------------------------------------------------------
+# ASSUMPTIONS — undocumented Claude Code internals this classifier depends on
+# -----------------------------------------------------------------------------
+# Claude Code does not publish a stable spec for any of the artifacts below.
+# Everything here was reverse-engineered from live installations (v2.1.114 at
+# time of writing — see the `version` field on any jsonl entry). Each item
+# below is an ASSUMPTION with a pointer to the code site that depends on it
+# and a note on how to diagnose and fix breakage if the internal changes.
+#
+# If sessions stop classifying, start by running:
+#     jq -c 'del(.message, .snapshot, .content)' <~/.claude/projects/.../*.jsonl
+# to get a fieldset-only view of the current on-disk schema, and compare
+# against the assumptions below. Most drifts are one renamed field away.
+#
+# Summary:
+#   A. Filesystem layout — sessions/<pid>.json, cwd-to-project-dir encoding,
+#      /clear rotation behavior.
+#   B. JSONL top-level entry types — which type values we act on vs. skip
+#      (enumerated from scanning every project transcript on the system); ISO
+#      8601 timestamp format.
+#   C. message.content shape — the user=string|list, assistant=list-of-blocks
+#      distinction and how breakage would manifest.
+#   D. Slash-command audit records — the four <…> string prefixes we filter;
+#      how to recognize a new one.
+#   E. Turn-end system subtypes — the two that force IDLE (turn_duration,
+#      away_summary) vs. the five observed non-turn-end subtypes that must not be
+#      added (local_command, api_error, compact_boundary, scheduled_task_fire,
+#      informational).
+#   F. Tool execution model — "direct child spawned after tool_use timestamp"
+#      and what breaks if Claude switches to an orchestrator model.
+#   G. Process identity — the 7-byte comm "claude" check.
+#   H. /proc schema — field offsets and the Linux constants we rely on.
+#
+# Details:
+#
+# A. Filesystem layout
+#    A1. Per-pid session file: ~/.claude/sessions/<pid>.json
+#        Used in: _load_session_probes, SESSIONS_DIR.
+#        Verified shape (v2.1.114):
+#            {"pid":int, "sessionId":uuid-str, "cwd":abspath-str,
+#             "startedAt":ms-int, "version":str, "kind":"interactive",
+#             "entrypoint":"cli"}
+#        If the filename pattern or the {pid, cwd, sessionId} triplet moves,
+#        rewrite _load_session_probes. The only hard requirement is some way
+#        to map live pid → current sessionId → transcript path.
+#
+#    A2. Transcript path: ~/.claude/projects/<cwd-with-"/"-as-"-">/<sid>.jsonl
+#        Used in: _find_active_jsonl, PROJECTS_DIR, `encoded = cwd.replace("/", "-")`.
+#        If the encoding changes (e.g. includes a hash, or handles "-" in
+#        paths differently), update the `encoded = ...` line. Symptom: probes
+#        resolve to None for cwds that contain unusual characters.
+#
+#    A3. sessionId rotation behavior: `/clear` allocates a new sessionId and
+#        starts a fresh jsonl, but does NOT rewrite ~/.claude/sessions/<pid>.json.
+#        The hint there therefore goes stale until some unknown next write.
+#        Used in: _find_active_jsonl's solo-branch fallback to newest-jsonl.
+#        If a future version starts rewriting the sessions file atomically
+#        on /clear, the newest-jsonl fallback becomes redundant but harmless.
+#        If it starts writing a per-session tombstone file or similar, we
+#        could drop the solo/multi branching altogether.
+#
+# B. JSONL top-level entry types
+#    B1. Entry types we ACT on: "user", "assistant", "system".
+#        Entry types we IGNORE (skipped by _get_last_entry's outer filter):
+#        "attachment", "permission-mode", "file-history-snapshot",
+#        "last-prompt", "summary".
+#        Used in: _get_last_entry's `if kind not in ("user","assistant"): continue`.
+#        If a new type appears that represents "user is being asked for
+#        something" or "turn ended", add it to the relevant clause.
+#
+#    B2. Every entry carries "timestamp" as ISO 8601 with "Z" suffix,
+#        e.g. "2026-04-19T21:46:27.752Z".
+#        Used in: _parse_timestamp.
+#        Python 3.11+ fromisoformat accepts "+00:00" but not "Z" before 3.11,
+#        so we normalize. If the format changes to epoch-ms or RFC 2822,
+#        update _parse_timestamp.
+#
+# C. JSONL message.content shape
+#    C1. "user".message.content may be:
+#          - a STRING (plain text prompt OR a slash-command audit record),
+#          - a LIST of content blocks (tool_result with {type:"tool_result", ...}).
+#        "assistant".message.content is always a LIST of blocks
+#        with block.type in {"text","tool_use","thinking","redacted_thinking"}.
+#        Used in: _get_last_entry's has_tool_use scan, _is_internal_user_content.
+#        If assistant.content ever becomes a bare string again (Anthropic API
+#        style), the `any(isinstance(c,dict)...)` check silently returns False
+#        and every tool_use becomes invisible → everything classifies as IDLE
+#        or BUSY (never ASKING). Symptom: permission menus never show ASKING.
+#
+# D. Slash-command audit records (internal user entries to skip)
+#    D1. When the user runs a slash command, Claude Code appends user-type
+#        entries whose content is a STRING starting with one of:
+#            <command-name>…            (the command invocation itself)
+#            <local-command-caveat>…    (boilerplate attached to some commands)
+#            <local-command-stdout>…    (stdout of locally-run commands)
+#            <local-command-stderr>…    (stderr of same)
+#        These are NOT user prompts; treating them as one misclassifies a
+#        freshly /clear'd session as BUSY.
+#        Used in: _INTERNAL_USER_PREFIXES, _is_internal_user_content.
+#        If new audit tags appear (likely for new slash-commands), add the
+#        prefix to _INTERNAL_USER_PREFIXES. Symptom: a session sits at BUSY
+#        indefinitely after some specific slash-command usage — dump the
+#        tail and look for a `<something>…</something>` user entry that
+#        we're not skipping.
+#
+# E. Turn-end system subtypes
+#    E1. Claude Code appends one of these system entries when a turn has
+#        definitively wrapped up and the process is awaiting the next prompt:
+#            {type:"system", subtype:"turn_duration", durationMs, messageCount, …}
+#            {type:"system", subtype:"away_summary", content:<summary>, …}
+#        Used in: _TURN_END_SUBTYPES, _LastEntry.turn_ended, _classify.
+#        Without this override, a tool_result user entry appearing as the tail
+#        would keep a completed turn showing as BUSY. Other observed system
+#        subtypes (NOT turn-ending, must not be added): "local_command",
+#        "api_error", "compact_boundary", "scheduled_task_fire",
+#        "informational". If a new turn-end subtype appears, add to the
+#        frozenset. Symptom: idle sessions permanently stuck on BUSY
+#        immediately after a tool call turn.
+#
+# F. Tool execution model
+#    F1. When Claude runs a tool that requires a subprocess (Bash, and
+#        anything delegating to one), it spawns a DIRECT child of the claude
+#        PID, and that child's start time is AFTER the `assistant` entry
+#        containing the tool_use block was written.
+#        Used in: _child_start_times + _classify's refinement loop.
+#        In-process tools (Read, Edit, Grep, Glob, Write, TodoWrite, etc.)
+#        do NOT spawn a child; we can't distinguish "permission pending"
+#        from "in-process tool executing" for those — they briefly show as
+#        ASKING during execution. Accepted limitation.
+#        If Claude Code switches Bash to an in-process library, or starts
+#        using an orchestrator process (so claude's direct child becomes a
+#        persistent helper instead of the tool itself), the refinement
+#        breaks. Symptom: `Bash sleep 30` shows as ASKING throughout, OR
+#        every session pins to BUSY (if the orchestrator is long-lived).
+#        Fix: walk the process tree recursively, or match the new helper
+#        by comm and look one level deeper.
+#
+# G. Process identity
+#    G1. Claude Code's `/proc/<pid>/comm` is literally the 7-byte string
+#        "claude". If the binary is ever renamed (e.g. to "claude-code"),
+#        _is_process_claude returns False for every PID → no sessions
+#        detected. Symptom: empty output. Fix: update the comm check.
+#
+# H. /proc schema (Linux, stable across kernels but noted for completeness)
+#    H1. /proc/<pid>/stat field layout: 3rd field onwards = state, ppid,
+#        pgrp, …, 22nd field = starttime (clock ticks since boot).
+#        After stripping "pid (comm) " the 22nd becomes fields[19].
+#        Used in: _child_start_times, _get_proc_stat_fields.
+#    H2. /proc/stat contains a "btime <epoch>" line giving boot time.
+#        Used in: _boot_time.
+#    H3. SC_CLK_TCK gives ticks-per-second (almost always 100).
+#        Used in: _CLK_TCK module constant.
 # -----------------------------------------------------------------------------
 
 
