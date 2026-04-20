@@ -130,6 +130,12 @@ def _colorize(text: str, state: ClaudeState, doit: bool = True) -> str:
 #     (socat from /sandbox, editors from Ctrl-G) predate the tool_use and
 #     are correctly ignored.
 #
+# Turn-end override: Claude Code appends `system/turn_duration` and
+# `system/away_summary` entries once a turn has completed. If one of
+# these appears in the tail after the last user/assistant entry, the
+# turn has ended regardless of whether that last entry was a `user`
+# tool_result (which would otherwise look mid-turn) → IDLE.
+#
 # We do not sample over time — no CPU ticks, no mtime deltas, no grace
 # windows. Transitions appear with whatever latency the JSONL and /proc
 # themselves exhibit, which is the minimum achievable by a passive monitor.
@@ -141,6 +147,23 @@ class _LastEntry:
     kind: str  # "user" or "assistant"
     has_tool_use: bool
     timestamp: float | None  # epoch seconds, None if missing/unparseable
+    turn_ended: bool  # system/turn_duration or away_summary seen after this entry
+
+
+# System subtypes emitted by Claude Code that mean the turn has wrapped up.
+# Their presence after the last user/assistant entry forces IDLE.
+_TURN_END_SUBTYPES = frozenset({"turn_duration", "away_summary"})
+
+# Slash-command audit markers: Claude Code writes these as type="user"
+# entries, but they are *not* user prompts — they are internal records of
+# commands like /clear, /compact, etc. Including them in the tail scan
+# would misclassify a freshly /clear'd session as BUSY.
+_INTERNAL_USER_PREFIXES = (
+    "<command-name>",
+    "<local-command-caveat>",
+    "<local-command-stdout>",
+    "<local-command-stderr>",
+)
 
 
 @dataclass
@@ -226,7 +249,9 @@ def _newest_jsonl(project_dir: Path) -> Path | None:
     return best
 
 
-def _find_active_jsonl(cwd: str, session_id_hint: str | None, solo: bool) -> Path | None:
+def _find_active_jsonl(
+    cwd: str, session_id_hint: str | None, solo: bool
+) -> Path | None:
     """Resolve a probe's live JSONL transcript.
 
     - solo probe for the cwd → newest jsonl in the project_dir. This is
@@ -260,18 +285,6 @@ def _parse_timestamp(s: str | None) -> float | None:
         return None
 
 
-# Slash-command audit markers: Claude Code writes these as type="user"
-# entries, but they are *not* user prompts — they are internal records of
-# commands like /clear, /compact, etc. Including them in the tail scan
-# would misclassify a freshly /clear'd session as BUSY.
-_INTERNAL_USER_PREFIXES = (
-    "<command-name>",
-    "<local-command-caveat>",
-    "<local-command-stdout>",
-    "<local-command-stderr>",
-)
-
-
 def _is_internal_user_content(content) -> bool:
     if not isinstance(content, str):
         return False
@@ -291,12 +304,16 @@ def _get_last_entry(path: Path | None) -> _LastEntry | None:
             chunk = f.read()
     except OSError:
         return None
+    turn_ended = False
     for raw in reversed([ln for ln in chunk.splitlines() if ln.strip()]):
         try:
             obj = json.loads(raw)
         except json.JSONDecodeError:
             continue
         kind = obj.get("type")
+        if kind == "system" and obj.get("subtype") in _TURN_END_SUBTYPES:
+            turn_ended = True
+            continue
         if kind not in ("user", "assistant"):
             continue
         msg = obj.get("message") or {}
@@ -310,12 +327,15 @@ def _get_last_entry(path: Path | None) -> _LastEntry | None:
             kind=kind,
             has_tool_use=has_tool_use,
             timestamp=_parse_timestamp(obj.get("timestamp")),
+            turn_ended=turn_ended,
         )
     return None
 
 
 def _classify(pid: int, entry: _LastEntry | None) -> ClaudeState:
     if entry is None:
+        return ClaudeState.IDLE
+    if entry.turn_ended:
         return ClaudeState.IDLE
     if entry.kind == "user":
         return ClaudeState.BUSY
@@ -379,11 +399,15 @@ def get_sessions() -> list[ClaudeSession]:
         solo = cwd_counts[p.cwd] == 1
         p.jsonl = _find_active_jsonl(p.cwd, p.session_id_hint, solo)
         entry = _get_last_entry(p.jsonl)
+        if p.jsonl is not None:
+            sid = p.jsonl.stem
+        else:
+            sid = p.session_id_hint or ""
         sessions.append(
             ClaudeSession(
                 path=p.cwd,
                 name=os.path.basename(p.cwd.rstrip("/")),
-                id=p.jsonl.stem if p.jsonl is not None else "",
+                id=sid,
                 state=_classify(p.pid, entry),
             )
         )
@@ -415,8 +439,9 @@ def main() -> int:
     print()
     for s in sessions:
         state_colored = _colorize(f" {s.state:^6} ", s.state)
-        print(f"{s.id[-6:]} {state_colored} {s.name}")
-        # print(f"{s.id} {state_colored} {s.name}")
+        sid = s.id
+        sid = sid.split("-")[-1]
+        print(f"{sid} {state_colored} {s.name}")
     return 0
 
 
