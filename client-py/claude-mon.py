@@ -120,15 +120,29 @@ def _colorize(text: str, state: ClaudeState, doit: bool = True) -> str:
 #   `assistant` without `tool_use`            | IDLE
 #
 #   * Refinement: "ASKING" is ambiguous between (a) permission modal waiting
-#     for the user, and (b) tool was approved and is now executing. We
-#     disambiguate by checking the start time of claude's children:
-#       - any child spawned AFTER the tool_use entry's timestamp
-#         → tool is running → BUSY;
-#       - no such child → ASKING stays.
-#     This uses /proc/<cpid>/stat field 22 (`starttime` in clock ticks
-#     since boot) plus /proc/stat `btime` (boot epoch). Persistent helpers
-#     (socat from /sandbox, editors from Ctrl-G) predate the tool_use and
-#     are correctly ignored.
+#     for the user, and (b) tool was approved and is now executing (or
+#     already executed — in-process tools like Read/Edit/Grep leave no
+#     /proc trace and return almost instantly). We disambiguate in two
+#     steps, in order:
+#
+#       Step 1 (transcript): does the tail already contain a `tool_result`
+#         whose `tool_use_id` matches one of the `tool_use.id`s in the last
+#         assistant entry? If yes, the tool has returned → BUSY. This
+#         catches the in-process-tool case, which has no subprocess to
+#         detect via /proc.
+#
+#       Step 2 (/proc): if no matching tool_result yet, check child
+#         subprocess start times against the turn-boundary timestamp (the
+#         PREVIOUS u/a entry's timestamp, not the current tool_use entry's
+#         — Claude spawns the subprocess ~hundreds of ms BEFORE the tool_use
+#         jsonl write completes, so comparing to the tool_use ts itself
+#         misses the child):
+#           - any child spawned AFTER the previous u/a entry → BUSY;
+#           - no such child → ASKING stays.
+#         This uses /proc/<cpid>/stat field 22 (`starttime` in clock ticks
+#         since boot) plus /proc/stat `btime` (boot epoch). Persistent
+#         helpers (socat from /sandbox, editors from Ctrl-G) predate the
+#         previous turn boundary and are correctly ignored.
 #
 # Turn-end override: Claude Code appends `system/turn_duration` and
 # `system/away_summary` entries once a turn has completed. If one of
@@ -229,6 +243,40 @@ def _colorize(text: str, state: ClaudeState, doit: bool = True) -> str:
 #        and every tool_use becomes invisible → everything classifies as IDLE
 #        or BUSY (never ASKING). Symptom: permission menus never show ASKING.
 #
+#    C2. Tool-use ↔ tool-result correlation:
+#          `assistant` content blocks of type "tool_use" carry {id: str, name, ...}.
+#          `user` content blocks of type "tool_result" carry {tool_use_id: str, ...}
+#          referencing the id of the tool_use they satisfy.
+#        Used in: _collect_tool_use_ids, _has_matching_tool_result, _classify's
+#        Step 1 fast-path for "tool already returned → BUSY".
+#        This is the only way to detect completion of an IN-PROCESS tool
+#        (Read/Edit/Grep/Glob/Write/TodoWrite), which leaves no /proc
+#        signal. If the field names change (e.g. "id"→"uuid" on the tool_use
+#        side, or "tool_use_id"→"tool_call_id" on the tool_result side),
+#        the fast-path silently stops firing and in-process tools revert
+#        to the F1 limitation (brief ASKING during execution, then BUSY
+#        when the next assistant turn lands). Symptom: a session stays on
+#        ASKING indefinitely while Claude is clearly processing a Read/Edit
+#        result. Fix: grep a fresh jsonl for the tool_use/tool_result
+#        blocks and update the field names in the two helpers above.
+#
+#    C3. Non-chronological file order:
+#          Entries are NOT necessarily in timestamp order within the jsonl.
+#          Observed on v2.1.114: a tool_result for tool_use id X can appear
+#          several file-lines EARLIER than the tool_use that produced X.
+#          Claude Code evidently flushes buffered entries in a non-strict
+#          order during a multi-step turn.
+#        Used in: _has_matching_tool_result scans the WHOLE parsed chunk
+#        (not just entries before/after `last_idx`) and matches by
+#        tool_use_id, which is order-independent.
+#        The reverse-walk for `last_idx` also uses file position, not
+#        timestamp — so the "last entry" we classify on is the file-last
+#        one, which is what Claude Code most recently wrote to disk (and
+#        therefore what the live UI is currently displaying as the tail).
+#        If Claude Code switches to strict chronological writes, nothing
+#        breaks; the file-order heuristic just happens to coincide with
+#        timestamp-order.
+#
 # D. Slash-command audit records (internal user entries to skip)
 #    D1. When the user runs a slash command, Claude Code appends user-type
 #        entries whose content is a STRING starting with one of:
@@ -262,13 +310,26 @@ def _colorize(text: str, state: ClaudeState, doit: bool = True) -> str:
 # F. Tool execution model
 #    F1. When Claude runs a tool that requires a subprocess (Bash, and
 #        anything delegating to one), it spawns a DIRECT child of the claude
-#        PID, and that child's start time is AFTER the `assistant` entry
-#        containing the tool_use block was written.
-#        Used in: _child_start_times + _classify's refinement loop.
+#        PID. The child's start time is usually slightly BEFORE the jsonl
+#        write of the corresponding `tool_use` entry completes — observed
+#        ~100–200 ms ahead of the entry.timestamp on v2.1.114. We therefore
+#        do NOT compare child.start to the current tool_use entry's
+#        timestamp (that test rejects the child and stays stuck on ASKING);
+#        instead we compare to the PREVIOUS u/a entry's timestamp, which is
+#        the true turn boundary and is always well before any current-turn
+#        tool spawn.
+#        Used in: _child_start_times + _classify's Step 2 refinement,
+#        _LastEntry.prev_timestamp, _get_last_entry's two-entry walk.
 #        In-process tools (Read, Edit, Grep, Glob, Write, TodoWrite, etc.)
-#        do NOT spawn a child; we can't distinguish "permission pending"
-#        from "in-process tool executing" for those — they briefly show as
-#        ASKING during execution. Accepted limitation.
+#        do NOT spawn a child, so this /proc-based check alone cannot
+#        distinguish "permission pending" from "in-process tool executing".
+#        That gap is now closed by the transcript-based fast path at
+#        Step 1 of _classify (see assumption C2): once a matching
+#        tool_result lands in the jsonl, the classifier reports BUSY
+#        regardless of /proc signals. The /proc check here handles the
+#        pre-tool_result window of subprocess-based tools (Bash et al.)
+#        where the child is already running but no tool_result has been
+#        written yet.
 #        If Claude Code switches Bash to an in-process library, or starts
 #        using an orchestrator process (so claude's direct child becomes a
 #        persistent helper instead of the tool itself), the refinement
@@ -276,6 +337,10 @@ def _colorize(text: str, state: ClaudeState, doit: bool = True) -> str:
 #        every session pins to BUSY (if the orchestrator is long-lived).
 #        Fix: walk the process tree recursively, or match the new helper
 #        by comm and look one level deeper.
+#        If the write-vs-spawn ordering changes so tool children appear
+#        AFTER the previous turn boundary by a large margin (e.g. Claude
+#        batches writes seconds later), consider a grace window on the
+#        threshold or switching back to entry.timestamp - epsilon.
 #
 # G. Process identity
 #    G1. Claude Code's `/proc/<pid>/comm` is literally the 7-byte string
@@ -300,7 +365,9 @@ class _LastEntry:
     kind: str  # "user" or "assistant"
     has_tool_use: bool
     timestamp: float | None  # epoch seconds, None if missing/unparseable
+    prev_timestamp: float | None  # ts of the u/a entry BEFORE this one (turn boundary)
     turn_ended: bool  # system/turn_duration or away_summary seen after this entry
+    tool_resolved: bool  # a matching tool_result exists for this entry's tool_use(s)
 
 
 # System subtypes emitted by Claude Code that mean the turn has wrapped up.
@@ -445,6 +512,51 @@ def _is_internal_user_content(content) -> bool:
     return any(stripped.startswith(p) for p in _INTERNAL_USER_PREFIXES)
 
 
+def _is_qualifying_ua(obj: dict) -> bool:
+    """True if `obj` is a user/assistant entry the classifier should act on."""
+    kind = obj.get("type")
+    if kind not in ("user", "assistant"):
+        return False
+    if kind == "user":
+        msg = obj.get("message") or {}
+        if _is_internal_user_content(msg.get("content") or []):
+            return False
+    return True
+
+
+def _collect_tool_use_ids(content) -> set[str]:
+    if not isinstance(content, list):
+        return set()
+    ids: set[str] = set()
+    for c in content:
+        if isinstance(c, dict) and c.get("type") == "tool_use":
+            tid = c.get("id")
+            if isinstance(tid, str):
+                ids.add(tid)
+    return ids
+
+
+def _has_matching_tool_result(parsed: list[dict], tool_use_ids: set[str]) -> bool:
+    """True if any user entry in `parsed` carries a tool_result for one of `tool_use_ids`."""
+    if not tool_use_ids:
+        return False
+    for obj in parsed:
+        if obj.get("type") != "user":
+            continue
+        msg = obj.get("message") or {}
+        content = msg.get("content")
+        if not isinstance(content, list):
+            continue
+        for c in content:
+            if (
+                isinstance(c, dict)
+                and c.get("type") == "tool_result"
+                and c.get("tool_use_id") in tool_use_ids
+            ):
+                return True
+    return False
+
+
 def _get_last_entry(path: Path | None) -> _LastEntry | None:
     if path is None:
         return None
@@ -457,32 +569,61 @@ def _get_last_entry(path: Path | None) -> _LastEntry | None:
             chunk = f.read()
     except OSError:
         return None
-    turn_ended = False
-    for raw in reversed([ln for ln in chunk.splitlines() if ln.strip()]):
+    parsed: list[dict] = []
+    for raw in chunk.splitlines():
+        if not raw.strip():
+            continue
         try:
-            obj = json.loads(raw)
+            parsed.append(json.loads(raw))
         except json.JSONDecodeError:
             continue
-        kind = obj.get("type")
-        if kind == "system" and obj.get("subtype") in _TURN_END_SUBTYPES:
+    if not parsed:
+        return None
+
+    # Walk backward to find the "last" qualifying u/a entry. Along the way,
+    # flip turn_ended if we see a turn-end system subtype after that entry.
+    turn_ended = False
+    last_idx: int | None = None
+    for i in range(len(parsed) - 1, -1, -1):
+        obj = parsed[i]
+        if last_idx is None and obj.get("type") == "system" and obj.get("subtype") in _TURN_END_SUBTYPES:
             turn_ended = True
             continue
-        if kind not in ("user", "assistant"):
-            continue
-        msg = obj.get("message") or {}
-        content = msg.get("content") or []
-        if kind == "user" and _is_internal_user_content(content):
-            continue
-        has_tool_use = any(
-            isinstance(c, dict) and c.get("type") == "tool_use" for c in content
-        )
-        return _LastEntry(
-            kind=kind,
-            has_tool_use=has_tool_use,
-            timestamp=_parse_timestamp(obj.get("timestamp")),
-            turn_ended=turn_ended,
-        )
-    return None
+        if _is_qualifying_ua(obj):
+            last_idx = i
+            break
+    if last_idx is None:
+        return None
+
+    last_obj = parsed[last_idx]
+    last_content = (last_obj.get("message") or {}).get("content") or []
+    has_tool_use = any(
+        isinstance(c, dict) and c.get("type") == "tool_use" for c in last_content
+    )
+
+    # Previous u/a entry (turn boundary for the child-spawn threshold).
+    prev_timestamp: float | None = None
+    for j in range(last_idx - 1, -1, -1):
+        obj = parsed[j]
+        if _is_qualifying_ua(obj):
+            prev_timestamp = _parse_timestamp(obj.get("timestamp"))
+            break
+
+    # Has any tool_result matching a tool_use in the last entry already been
+    # written? If so, the tool was approved+executed and Claude is processing
+    # — even for in-process tools that never spawn a subprocess.
+    tool_resolved = has_tool_use and _has_matching_tool_result(
+        parsed, _collect_tool_use_ids(last_content)
+    )
+
+    return _LastEntry(
+        kind=last_obj.get("type"),
+        has_tool_use=has_tool_use,
+        timestamp=_parse_timestamp(last_obj.get("timestamp")),
+        prev_timestamp=prev_timestamp,
+        turn_ended=turn_ended,
+        tool_resolved=tool_resolved,
+    )
 
 
 def _classify(pid: int, entry: _LastEntry | None) -> ClaudeState:
@@ -496,9 +637,23 @@ def _classify(pid: int, entry: _LastEntry | None) -> ClaudeState:
     if not entry.has_tool_use:
         return ClaudeState.IDLE
     # tool_use present: disambiguate "permission pending" vs "tool running".
-    if entry.timestamp is not None:
+    # (a) If a tool_result matching this entry's tool_use(s) is already in
+    #     the transcript, the tool was approved + executed (possibly an
+    #     in-process tool like Read/Edit/Grep that leaves no /proc signal),
+    #     and Claude is processing the result → BUSY.
+    if entry.tool_resolved:
+        return ClaudeState.BUSY
+    # (b) Otherwise check /proc for a subprocess spawned for this turn.
+    #     Reference time: the PREVIOUS u/a entry's timestamp, not this one's.
+    #     Empirically Claude spawns the subprocess a few hundred ms BEFORE
+    #     the tool_use entry's jsonl write, so comparing to entry.timestamp
+    #     misses the child. Any child spawned after the previous turn
+    #     boundary is a candidate tool-execution child. Falls back to
+    #     entry.timestamp when there's only one entry in the scanned tail.
+    threshold = entry.prev_timestamp if entry.prev_timestamp is not None else entry.timestamp
+    if threshold is not None:
         for start in _child_start_times(pid):
-            if start > entry.timestamp:
+            if start > threshold:
                 return ClaudeState.BUSY
     return ClaudeState.ASKING
 
