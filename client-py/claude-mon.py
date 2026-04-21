@@ -38,11 +38,35 @@ class ClaudeState(Enum):
 
 
 @dataclass(frozen=True)
+class TokenStats:
+    """Cumulative token usage for a session, plus active compute time."""
+
+    output: int  # sum of assistant.message.usage.output_tokens
+    input_fresh: int  # sum of assistant.message.usage.input_tokens (uncached)
+    input_cache_create: int  # sum of cache_creation_input_tokens
+    input_cache_read: int  # sum of cache_read_input_tokens (cheap, cache hit)
+    active_seconds: float  # sum of system/turn_duration.durationMs / 1000
+
+    @property
+    def input_total(self) -> int:
+        """What the model actually saw (summing the three input categories)."""
+        return self.input_fresh + self.input_cache_create + self.input_cache_read
+
+    @property
+    def throughput_tokens_per_s(self) -> float | None:
+        """Output tokens per second of active (compute) time — model throughput."""
+        if self.active_seconds <= 0:
+            return None
+        return self.output / self.active_seconds
+
+
+@dataclass(frozen=True)
 class ClaudeSession:
     path: str  # absolute project home (cwd of the claude process)
     name: str  # last component of path
     id: str  # session id (stem of the active JSONL file), "" if unknown
     state: ClaudeState
+    stats: TokenStats | None = None  # None if the jsonl is unreadable
 
 
 # =============================================================================
@@ -260,6 +284,26 @@ def _colorize(text: str, state: ClaudeState, doit: bool = True) -> str:
 #        result. Fix: grep a fresh jsonl for the tool_use/tool_result
 #        blocks and update the field names in the two helpers above.
 #
+#    C4. Token accounting — `assistant.message.usage`:
+#          Each assistant entry carries a `usage` object with at least:
+#            input_tokens                    int   — fresh (uncached) input
+#            cache_creation_input_tokens     int   — input written to prompt cache
+#            cache_read_input_tokens         int   — input served from cache
+#            output_tokens                   int   — generated tokens
+#          ("Total input" = sum of the three input categories; summing only
+#           `input_tokens` underreports by ~100× on cached sessions.)
+#          Also present but not currently used:
+#            service_tier / speed            str   — "standard" | "priority"
+#            cache_creation.ephemeral_{5m,1h}_input_tokens  int
+#            server_tool_use.{web_search,web_fetch}_requests int
+#            model                           str   — e.g. "claude-sonnet-4-6"
+#        Used in: TokenStats, _compute_token_stats.
+#        If the usage field is removed or renamed on an assistant entry,
+#        the entry contributes 0 to totals (defensive). Symptom:
+#        TokenStats show 0 output despite visible assistant activity.
+#        Fix: dump `.message.usage` of a recent assistant entry and realign
+#        the four field names in _compute_token_stats.
+#
 #    C3. Non-chronological file order:
 #          Entries are NOT necessarily in timestamp order within the jsonl.
 #          Observed on v2.1.114: a tool_result for tool_use id X can appear
@@ -306,6 +350,17 @@ def _colorize(text: str, state: ClaudeState, doit: bool = True) -> str:
 #        "informational". If a new turn-end subtype appears, add to the
 #        frozenset. Symptom: idle sessions permanently stuck on BUSY
 #        immediately after a tool call turn.
+#
+#    E2. `system/turn_duration.durationMs` is the turn's wall-clock compute
+#        time in MILLISECONDS (not ms, not seconds, not microseconds).
+#        Summed across all turn_duration entries it yields the session's
+#        total "active" / "thinking" time. Used in: TokenStats.active_seconds
+#        (divided by 1000), which in turn drives throughput_tokens_per_s.
+#        If the unit is renamed (e.g. durationSeconds) or the field moves,
+#        active_seconds stays at 0 and throughput reports as None ("—"
+#        in the CLI). Symptom: a session with plenty of output shows no
+#        t/s value. Fix: inspect a fresh turn_duration entry, update the
+#        two references in _compute_token_stats.
 #
 # F. Tool execution model
 #    F1. When Claude runs a tool that requires a subprocess (Bash, and
@@ -626,6 +681,52 @@ def _get_last_entry(path: Path | None) -> _LastEntry | None:
     )
 
 
+def _compute_token_stats(path: Path | None) -> TokenStats | None:
+    """Tally token usage and active compute time from a full jsonl transcript.
+
+    Reads the entire file (not just the tail): token totals are cumulative
+    over the whole session. Works in linear time; a 1 MB transcript is
+    sub-millisecond. See assumptions C4 and E2 for the fields we depend on.
+    """
+    if path is None:
+        return None
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return None
+    output = 0
+    input_fresh = 0
+    input_create = 0
+    input_read = 0
+    active_ms = 0
+    for raw in data.splitlines():
+        if not raw.strip():
+            continue
+        try:
+            obj = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        t = obj.get("type")
+        if t == "assistant":
+            usage = (obj.get("message") or {}).get("usage")
+            if isinstance(usage, dict):
+                output += int(usage.get("output_tokens") or 0)
+                input_fresh += int(usage.get("input_tokens") or 0)
+                input_create += int(usage.get("cache_creation_input_tokens") or 0)
+                input_read += int(usage.get("cache_read_input_tokens") or 0)
+        elif t == "system" and obj.get("subtype") == "turn_duration":
+            d = obj.get("durationMs")
+            if isinstance(d, (int, float)):
+                active_ms += int(d)
+    return TokenStats(
+        output=output,
+        input_fresh=input_fresh,
+        input_cache_create=input_create,
+        input_cache_read=input_read,
+        active_seconds=active_ms / 1000.0,
+    )
+
+
 def _classify(pid: int, entry: _LastEntry | None) -> ClaudeState:
     if entry is None:
         return ClaudeState.IDLE
@@ -717,6 +818,7 @@ def get_sessions() -> list[ClaudeSession]:
                 name=os.path.basename(p.cwd.rstrip("/")),
                 id=sid,
                 state=_classify(p.pid, entry),
+                stats=_compute_token_stats(p.jsonl),
             )
         )
     return sessions
@@ -730,6 +832,17 @@ def get_state_counts(
     for s in sessions or get_sessions():
         counts[s.state] += 1
     return counts
+
+
+def _humanize_count(n: int) -> str:
+    """Short human-readable integer: 12345 → '12.3K', 4_567_890 → '4.6M'."""
+    if n < 1000:
+        return str(n)
+    if n < 1_000_000:
+        return f"{n / 1000:.1f}K"
+    if n < 1_000_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    return f"{n / 1_000_000_000:.1f}G"
 
 
 def main() -> int:
@@ -747,9 +860,16 @@ def main() -> int:
     print()
     for s in sessions:
         state_colored = _colorize(f" {s.state:^6} ", s.state)
-        sid = s.id
-        sid = sid.split("-")[-1]
-        print(f"{sid} {state_colored} {s.name}")
+        sid = s.id.split("-")[-1]
+        if s.stats is not None:
+            out_s = _humanize_count(s.stats.output)
+            in_s = _humanize_count(s.stats.input_total)
+            tput = s.stats.throughput_tokens_per_s
+            tput_s = f"{tput:.0f} t/s" if tput is not None else "—"
+            metrics = f"  out:{out_s:>6}  in:{in_s:>6}  {tput_s:>7}"
+        else:
+            metrics = ""
+        print(f"{sid} {state_colored} {s.name:<28}{metrics}")
     return 0
 
 
