@@ -146,21 +146,29 @@ def _colorize(text: str, state: ClaudeState, doit: bool = True) -> str:
 #   * Refinement: "ASKING" is ambiguous between (a) permission modal waiting
 #     for the user, and (b) tool was approved and is now executing (or
 #     already executed — in-process tools like Read/Edit/Grep leave no
-#     /proc trace and return almost instantly). We disambiguate in two
+#     /proc trace and return almost instantly). We disambiguate in three
 #     steps, in order:
 #
-#       Step 1 (transcript): does the tail already contain a `tool_result`
-#         whose `tool_use_id` matches one of the `tool_use.id`s in the last
-#         assistant entry? If yes, the tool has returned → BUSY. This
-#         catches the in-process-tool case, which has no subprocess to
-#         detect via /proc.
+#       Step 1 (parent transcript): does the tail already contain a
+#         `tool_result` whose `tool_use_id` matches one of the `tool_use.id`s
+#         in the last assistant entry? If yes, the tool has returned → BUSY.
+#         This catches the fast in-process-tool case, which has no
+#         subprocess to detect via /proc.
 #
-#       Step 2 (/proc): if no matching tool_result yet, check child
-#         subprocess start times against the turn-boundary timestamp (the
-#         PREVIOUS u/a entry's timestamp, not the current tool_use entry's
-#         — Claude spawns the subprocess ~hundreds of ms BEFORE the tool_use
-#         jsonl write completes, so comparing to the tool_use ts itself
-#         misses the child):
+#       Step 2 (subagent transcripts): is there a live sidechain jsonl
+#         under <project_dir>/<sid>/subagents/ whose last u/a entry is
+#         non-terminal (subagent still iterating)? If yes → BUSY. This
+#         catches long-running Agent tools whose top-level tool_result
+#         hasn't landed yet. Subagents are in-process like other fast
+#         in-process tools, but runs can take minutes, so Step 1 alone
+#         leaves too large an ASKING window. See assumption I.
+#
+#       Step 3 (/proc): if no matching tool_result and no active subagent,
+#         check child subprocess start times against the turn-boundary
+#         timestamp (the PREVIOUS u/a entry's timestamp, not the current
+#         tool_use entry's — Claude spawns the subprocess ~hundreds of ms
+#         BEFORE the tool_use jsonl write completes, so comparing to the
+#         tool_use ts itself misses the child):
 #           - any child spawned AFTER the previous u/a entry → BUSY;
 #           - no such child → ASKING stays.
 #         This uses /proc/<cpid>/stat field 22 (`starttime` in clock ticks
@@ -210,6 +218,8 @@ def _colorize(text: str, state: ClaudeState, doit: bool = True) -> str:
 #      and what breaks if Claude switches to an orchestrator model.
 #   G. Process identity — the 7-byte comm "claude" check.
 #   H. /proc schema — field offsets and the Linux constants we rely on.
+#   I. Subagent sidechain transcripts — live per-Agent jsonl under
+#      <project_dir>/<sid>/subagents/agent-*.jsonl and the terminal rule.
 #
 # Details:
 #
@@ -412,6 +422,52 @@ def _colorize(text: str, state: ClaudeState, doit: bool = True) -> str:
 #        Used in: _boot_time.
 #    H3. SC_CLK_TCK gives ticks-per-second (almost always 100).
 #        Used in: _CLK_TCK module constant.
+#
+# I. Subagent sidechain transcripts
+#    I1. When Claude runs an Agent tool, it writes a live sidechain
+#        transcript at:
+#            ~/.claude/projects/<encoded-cwd>/<session-id>/subagents/agent-<agentId>.jsonl
+#        Entries carry {isSidechain: true, sessionId: <parent sid>,
+#        agentId: <subagent id>, type/message/timestamp: same shape as
+#        parent entries}. The subagent's first entry is a `user` with the
+#        initial prompt, timestamp within a few ms of the parent's Agent
+#        tool_use entry.
+#        Used in: _has_active_subagent, which globs agent-*.jsonl under
+#        <project_dir>/<sid>/subagents/ and checks each live file's tail.
+#        This is the only intrinsic signal that an in-process Agent is
+#        currently running — the parent transcript merely shows an
+#        unresolved tool_use for minutes. Without this step the classifier
+#        reports ASKING for the whole subagent run (Read/Edit/Grep are
+#        sub-second so the assumption F1 ASKING window is invisible, but
+#        Agent is not).
+#        If Claude Code moves or renames the subagents directory (e.g.
+#        "sidechains/", or flattens files alongside the parent jsonl),
+#        _has_active_subagent silently returns False. Symptom: multi-minute
+#        Agent runs flip to ASKING until every sibling tool_result lands.
+#        Fix: update the sub_dir path in _has_active_subagent.
+#
+#    I2. Subagent transcripts contain NO `system/turn_duration` or
+#        `away_summary` entries (unlike parent transcripts). Subagent
+#        terminal state therefore cannot use the turn_ended flag. Instead:
+#        the subagent is considered done iff its last qualifying u/a entry
+#        is an `assistant` message with NO tool_use content blocks — this
+#        is the final text answer the subagent returns to the parent.
+#        Anything else (user tool_result, or assistant with tool_use) means
+#        the subagent is mid-iteration. Symmetric with the top-level
+#        assistant-without-tool_use → IDLE rule.
+#        If a future version starts emitting a turn-end system marker in
+#        subagent jsonls, we can tighten this to also consume that marker,
+#        but the current rule is still correct.
+#
+#    I3. Scoping by mtime: _has_active_subagent compares each file's mtime
+#        against the parent's `prev_timestamp` (the current turn boundary)
+#        and skips subagents from earlier turns. Every such subagent has
+#        long since finished writing, so its mtime is strictly less than
+#        any post-turn-boundary write. This is a pure performance filter;
+#        the classification signal remains the content of the tail.
+#        If Claude Code ever touches old subagent jsonls (e.g. for log
+#        rotation or batched flushes), the filter could admit stale files,
+#        which is harmless — the terminal-rule content check still decides.
 # -----------------------------------------------------------------------------
 
 
@@ -727,7 +783,42 @@ def _compute_token_stats(path: Path | None) -> TokenStats | None:
     )
 
 
-def _classify(pid: int, entry: _LastEntry | None) -> ClaudeState:
+def _has_active_subagent(jsonl: Path, threshold: float | None) -> bool:
+    """True if any subagent transcript for this session is mid-iteration.
+
+    Terminal rule (per assumption I2): last qualifying u/a entry is
+    `assistant` with no tool_use → subagent returned. Anything else (user
+    tool_result, or assistant with tool_use) = still iterating → BUSY.
+
+    Scoped by file mtime vs `threshold` (parent's prev turn boundary) to
+    skip subagents from earlier turns, which are all terminal by now.
+    """
+    sub_dir = jsonl.parent / jsonl.stem / "subagents"
+    if not sub_dir.is_dir():
+        return False
+    try:
+        candidates = list(sub_dir.glob("agent-*.jsonl"))
+    except OSError:
+        return False
+    for f in candidates:
+        try:
+            mtime = f.stat().st_mtime
+        except OSError:
+            continue
+        if threshold is not None and mtime < threshold:
+            continue
+        last = _get_last_entry(f)
+        if last is None:
+            continue
+        if last.kind == "assistant" and not last.has_tool_use:
+            continue  # subagent returned its final answer
+        return True
+    return False
+
+
+def _classify(
+    pid: int, entry: _LastEntry | None, jsonl: Path | None = None
+) -> ClaudeState:
     if entry is None:
         return ClaudeState.IDLE
     if entry.turn_ended:
@@ -744,7 +835,13 @@ def _classify(pid: int, entry: _LastEntry | None) -> ClaudeState:
     #     and Claude is processing the result → BUSY.
     if entry.tool_resolved:
         return ClaudeState.BUSY
-    # (b) Otherwise check /proc for a subprocess spawned for this turn.
+    # (b) A long-running Agent runs in-process so has no /proc child, and
+    #     its parent tool_result may not land for minutes (parallel-tool
+    #     batches are gated on the slowest sibling). Check sidechain
+    #     transcripts for live subagent activity.
+    if jsonl is not None and _has_active_subagent(jsonl, entry.prev_timestamp):
+        return ClaudeState.BUSY
+    # (c) Otherwise check /proc for a subprocess spawned for this turn.
     #     Reference time: the PREVIOUS u/a entry's timestamp, not this one's.
     #     Empirically Claude spawns the subprocess a few hundred ms BEFORE
     #     the tool_use entry's jsonl write, so comparing to entry.timestamp
@@ -817,7 +914,7 @@ def get_sessions() -> list[ClaudeSession]:
                 path=p.cwd,
                 name=os.path.basename(p.cwd.rstrip("/")),
                 id=sid,
-                state=_classify(p.pid, entry),
+                state=_classify(p.pid, entry, p.jsonl),
                 stats=_compute_token_stats(p.jsonl),
             )
         )
