@@ -510,6 +510,12 @@ const char *interpret(char *input, const Config &config) {
         case hash("setFont"): {  //
       */
 
+    case hash("hardcopy"): {  // hardcopy
+      transaction.commit();
+      tft.begin();
+      return null;
+    }
+
     default:
       break;
   }
