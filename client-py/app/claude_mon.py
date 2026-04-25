@@ -6,6 +6,7 @@ from enum import Enum
 
 from app import App, TimeEscaper
 from claude_busy_monitor import (
+    ClaudeSession,
     ClaudeState,
     get_sessions,
     get_state_counts,
@@ -19,6 +20,9 @@ STATUS_TEXT_MARGIN = 2
 
 LIST_TEXT_SIZE_X = 1
 LIST_TEXT_SIZE_Y = 1
+LIST_TEXT_MARGIN = 2
+LIST_Y_OFFSET = (16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2) * 4
+
 
 RgbColor = tuple[int, int, int]
 
@@ -47,11 +51,11 @@ IDLE_COLOR = TextBgColor(NamedColor.BLACK, NamedColor.GREEN)
 INACTIVE_COLOR = TextBgColor(NamedColor.GRAY, NamedColor.DARK)
 BLINKED_COLOR = TextBgColor(NamedColor.WHITE, NamedColor.DARK)
 
-LIST_COLOR = NamedColor.LIGHTGRAY
+LIST_COLOR = TextBgColor(NamedColor.LIGHTGRAY, NamedColor.BLACK)
 
 
 @dataclass
-class Status:
+class StateCountStatus:
     name: str
     row: int
     width: int
@@ -59,6 +63,7 @@ class Status:
     blink_color: TextBgColor | None = None
     blinks: bool = False
     value: int = 0
+    last_value: tuple[bool, int] | None = None  # to avoid flickering when unchanged
 
     def print(self, gfx: Gfx) -> None:
         color = self.color
@@ -70,16 +75,51 @@ class Status:
             if self.blinks:
                 color = self.blink_color
 
-        y = (16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2) * self.row
-        gfx.set_bg_color(*color.bg.value)
-        gfx.fill_rect(
-            0, y, self.width, 16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2, 0
-        )
+        # No change, skip to reduce flickering
+        if self.last_value == (value := (self.blinks, self.value)):
+            return
+        self.last_value = value
 
-        s = f" {self.value:4} {self.name}"
+        # Render
+        y = (16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2) * self.row
+        h = 16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2
+        s = f" {self.value:3} {self.name}"
+
+        gfx.set_bg_color(*color.bg.value)
+        gfx.fill_rect(0, y, self.width, h, 0)
         gfx.set_text_color(*color.fg.value)
         gfx.set_cursor(0, y + STATUS_TEXT_MARGIN * 2)
         gfx.print(s)
+
+
+@dataclass
+class SessionLine:
+    idx: int
+    width: int
+    last_value: tuple[ClaudeState, str] | None = (
+        None  # to avoid flickering when unchanged
+    )
+
+    def print(self, gfx: Gfx, session: ClaudeSession) -> int:
+        y = LIST_Y_OFFSET + (16 * LIST_TEXT_SIZE_Y + LIST_TEXT_MARGIN) * self.idx
+
+        # No change, skip to reduce flickering
+        if self.last_value == (session.state, session.name):
+            return y
+        self.last_value = (session.state, session.name)
+
+        # Erase line
+        h = 16 * LIST_TEXT_SIZE_Y
+        gfx.set_bg_color(*LIST_COLOR.bg.value)
+        gfx.fill_rect(0, y, self.width, h, 0)
+
+        # Print new text
+        s = f"{session.state.value.upper():6} {session.name}"
+        gfx.set_cursor(0, y)
+        gfx.set_text_color(*LIST_COLOR.fg.value)
+        gfx.print(s)
+
+        return y
 
 
 class ClaudeMonitor(App):
@@ -93,9 +133,10 @@ class ClaudeMonitor(App):
         self.gfx.set_auto_display_off()
         self.gfx.set_text_wrap_off()
 
-        asking = Status("ASKING", 0, self.w, ASKING_COLOR, BLINKED_COLOR)
-        busy = Status("BUSY", 1, self.w, BUSY_COLOR)
-        idle = Status("IDLE", 2, self.w, IDLE_COLOR)
+        asking = StateCountStatus("ASKING", 0, self.w, ASKING_COLOR, BLINKED_COLOR)
+        busy = StateCountStatus("BUSY", 1, self.w, BUSY_COLOR)
+        idle = StateCountStatus("IDLE", 2, self.w, IDLE_COLOR)
+        session_by_idx: dict[int, SessionLine] = {}
 
         while True:
             btns = self.board.auto_read_buttons()
@@ -123,21 +164,13 @@ class ClaudeMonitor(App):
                 + [s for s in sessions if s.state == ClaudeState.BUSY]
             )
 
-            row = 3
-            y = (
-                16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2
-            ) * row + STATUS_TEXT_MARGIN * 2
-            self.gfx.set_cursor(0, y + STATUS_TEXT_MARGIN * 2)
             self.gfx.set_text_size(LIST_TEXT_SIZE_X, LIST_TEXT_SIZE_Y)
-            for session in sorted_sessions:
-                y += 16 * LIST_TEXT_SIZE_Y + STATUS_TEXT_MARGIN
-                if y > self.h:
+
+            for idx, session in enumerate(sorted_sessions):
+                session_line = session_by_idx.setdefault(idx, SessionLine(idx, self.w))
+                y = session_line.print(self.gfx, session)
+                if y + 16 * LIST_TEXT_SIZE_Y + LIST_TEXT_MARGIN * 2 > self.h:
                     break
-                s = session.state.value.upper()
-                text = f"{s:6} {session.name}"
-                self.gfx.set_cursor(0, y)
-                self.gfx.set_text_color(*LIST_COLOR.value)
-                self.gfx.print(text)
 
             self.gfx.display()
             time.sleep(0.5)
