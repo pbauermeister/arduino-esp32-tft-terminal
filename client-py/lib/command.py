@@ -1,13 +1,10 @@
 import time
-from abc import abstractmethod
 from typing import Callable
 
 import config
-from lib import *
+from lib import NONE, ERROR, UNKNOWN, ArduinoCommExceptions
 
 from .channel import Channel
-
-import sys
 
 
 class Command:

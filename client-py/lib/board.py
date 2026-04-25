@@ -4,7 +4,7 @@ import time
 from typing import Any, Callable
 
 import config
-from lib import *
+from lib import NONE, READY, until, chunkize
 from lib.gfx import Gfx
 
 from .channel import Channel
@@ -126,7 +126,9 @@ class Board:
 
     def wait_no_button(self, timeout: int | None = None) -> bool:
         self.chan.flush_in()
-        if timeout is None:
+        if timeout == 0:
+            return False
+        elif timeout is None:
             while self.gfx.read_buttons() != NONE:
                 pass
         else:
