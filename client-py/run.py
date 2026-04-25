@@ -22,6 +22,7 @@ from app.monitor_host import MonitorHost
 from app.quix import Quix
 from app.road import Road
 from app.starfield import Starfield
+from app.claude_mon import ClaudeMonitor
 from app.thats_all import ThatsAll
 from app.tunnel import Tunnel
 from lib import ArduinoCommExceptions, RebootedException
@@ -59,6 +60,7 @@ def make_all() -> tuple[Channel, Board]:
 ### Here we go ###
 
 all_apps = [
+    ClaudeMonitor,
     MonitorHost,
     MonitorCpus,
     MonitorGraph,
