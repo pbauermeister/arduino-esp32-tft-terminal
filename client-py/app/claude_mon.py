@@ -29,13 +29,14 @@ RgbColor = tuple[int, int, int]
 
 class NamedColor(Enum):
     WHITE = RgbColor((255, 255, 255))
+    LIGHTGRAY = RgbColor((164, 164, 164))
+    GRAY = RgbColor((128, 128, 128))
+    DARK = RgbColor((32, 32, 32))
     BLACK = RgbColor((0, 0, 0))
+
     RED = RgbColor((255, 0, 0))
     YELLOW = RgbColor((255, 255, 0))
     GREEN = RgbColor((0, 255, 0))
-    GRAY = RgbColor((64, 64, 64))
-    DARK = RgbColor((12, 12, 12))
-    LIGHTGRAY = RgbColor((164, 164, 164))
 
 
 @dataclass
