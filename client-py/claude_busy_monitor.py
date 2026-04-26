@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """List active Claude sessions for the current user with their state.
 
+Strategy, schema assumptions, diagnostic recipes, and repair playbook
+live in README-STATE-DETECTION.md (next to this file). **Read that
+first** before changing the classifier or reacting to a misclassification
+report — the assumptions there are reverse-engineered from undocumented
+Claude Code internals and the README is the only place they're written
+down. Inline references below are tagged `(see README §A1)` etc.
+
 As a CLI, prints one line per session with state and token totals.
 
 As a module, provides:
@@ -87,85 +94,12 @@ def _colorize(text: str, state: ClaudeState, doit: bool = True) -> str:
 
 
 # =============================================================================
-# Probing
+# Probing — see README-STATE-DETECTION.md for the full design and assumptions
 # =============================================================================
-#
-# -----------------------------------------------------------------------------
-# STRATEGY
-# -----------------------------------------------------------------------------
-# Two on-disk sources, both written by Claude Code itself:
-#
-#   1. ~/.claude/sessions/<pid>.json
-#        {pid, cwd, sessionId, status, waitingFor, ...}
-#        Enumeration source AND authoritative state. See A1, A4.
-#
-#   2. ~/.claude/projects/<encoded-cwd>/<sid>.jsonl
-#        Per-session transcript. Used only to total token usage. See A2, B.
-#
-# State classification (one table, no inference):
-#   probe.status   | state
-#   ---------------|---------
-#   "busy"         | BUSY
-#   "idle"         | IDLE
-#   "waiting"      | ASKING   (any waitingFor reason)
-#   missing/other  | session dropped
-#
-# -----------------------------------------------------------------------------
-# ASSUMPTIONS — undocumented Claude Code internals this depends on
-# -----------------------------------------------------------------------------
-# Reverse-engineered from a live install. Diagnostic when something drifts:
-#     jq . ~/.claude/sessions/*.json
-#     jq -c 'del(.message,.snapshot,.content)' ~/.claude/projects/.../*.jsonl
-#     strings $(which claude) | grep -E 'vM1=|gS\$\(.*status'
-#
-# A1. Per-pid session file: ~/.claude/sessions/<pid>.json
-#     Required fields: {pid:int, cwd:str, sessionId:str, status:str, ...}.
-#     Used in: _load_session_probes.
-#     If filename or {pid,cwd,sessionId,status} layout moves, rewrite the
-#     loader. The hard requirement is mapping live pid → cwd → sessionId →
-#     status.
-#
-# A2. Transcript path: ~/.claude/projects/<cwd-with-"/"-as-"-">/<sid>.jsonl
-#     Used in: _find_active_jsonl, `encoded = cwd.replace("/", "-")`.
-#     If the encoding changes (hash, escape rules), update that line.
-#     Symptom: token stats report None for cwds with unusual characters.
-#
-# A3. /clear sessionId rotation: the probe's sessionId field can lag behind
-#     the post-/clear id. Solo-cwd probes therefore fall back to the newest
-#     jsonl in the project dir; multi-probe-per-cwd cases use the hint and
-#     accept that token stats may attribute to the wrong file after a /clear.
-#     Used in: _find_active_jsonl.
-#
-# A4. Live status (Claude Code v2.1.119+):
-#     `status` ∈ {"busy","idle","waiting"}; `waitingFor` carries the
-#     waiting reason ("approve <Tool>", "worker request", "sandbox
-#     request", "dialog open", "input needed"). Written by Claude Code via
-#     gS$({status, waitingFor}) on every UI state transition (see vM1
-#     enum + the status expression in `strings $(which claude)`).
-#     Used in: _PROBE_STATUS_MAP, _load_session_probes.
-#     If renamed or removed, every session falls out of the listing.
-#     Fix: re-grep the binary for `vM1=` and the gS$ call site, then
-#     update _PROBE_STATUS_MAP and the field name in _load_session_probes.
-#
-# B. Token usage — `assistant.message.usage`:
-#       input_tokens                 int — fresh (uncached) input
-#       cache_creation_input_tokens  int — input written to prompt cache
-#       cache_read_input_tokens      int — input served from cache
-#       output_tokens                int — generated tokens
-#     "Total input" sums all three; using only input_tokens underreports
-#     by ~100× on cached sessions.
-#     Used in: _compute_token_stats.
-#     If usage is renamed/removed, totals come back as 0. Fix: dump
-#     `.message.usage` of a recent assistant entry and realign field names.
-#
-# C. Process identity: /proc/<pid>/comm == "claude" (7 bytes).
-#     Used in: _is_process_claude.
-#     If the binary is renamed (e.g. "claude-code"), every session is
-#     filtered out. Symptom: empty output. Fix: update the comm check.
-# -----------------------------------------------------------------------------
 
 
-# Authoritative state mapping for the probe `status` field (A4).
+# Authoritative state mapping for the probe `status` field.
+# Schema, repair playbook, and binary-side source of truth: README §A4.
 _PROBE_STATUS_MAP: dict[str, ClaudeState] = {
     "busy": ClaudeState.BUSY,
     "idle": ClaudeState.IDLE,
@@ -183,6 +117,8 @@ class _SessionProbe:
 
 
 def _is_process_claude(pid: int) -> bool:
+    # comm literal "claude" is the binary name. README §C if Claude Code
+    # is ever renamed (every session would silently disappear from the listing).
     try:
         comm = Path(f"/proc/{pid}/comm").read_text().strip()
         if comm != "claude":
@@ -211,14 +147,9 @@ def _find_active_jsonl(
 ) -> Path | None:
     """Resolve a probe's live JSONL transcript (used for token stats only).
 
-    - solo probe for the cwd → newest jsonl in the project_dir. Robust to
-      /clear-driven sessionId rotation where sessions/<pid>.json may not
-      reflect the new id.
-    - multiple probes share the cwd → each probe's sessionId hint is the
-      only way to distinguish them; do NOT fall back to newest, which
-      would cause same-cwd probes to collide on the same file.
+    Path encoding and the solo-vs-multi disambiguation: README §A2, §A3.
     """
-    encoded = cwd.replace("/", "-")
+    encoded = cwd.replace("/", "-")  # README §A2 if encoding ever changes
     project_dir = PROJECTS_DIR / encoded
     if not project_dir.is_dir():
         return None
@@ -235,7 +166,7 @@ def _compute_token_stats(path: Path | None) -> TokenStats | None:
     """Tally cumulative token usage from a full jsonl transcript.
 
     Linear in file size; a 1 MB transcript is sub-millisecond.
-    See assumption B for the fields used.
+    Field names and the cache-vs-fresh accounting: README §B.
     """
     if path is None:
         return None
@@ -269,8 +200,9 @@ def _compute_token_stats(path: Path | None) -> TokenStats | None:
 def _load_session_probes() -> list[_SessionProbe]:
     """Enumerate live claude sessions with state from their probe files.
 
+    Probe file shape: README §A1. Status field semantics: README §A4.
     Probes without a recognized `status` field (older Claude Code) are
-    dropped. Migrate them by exiting and `claude --resume <sessionId>`.
+    dropped — migrate them by exiting and `claude --resume <sessionId>`.
     """
     if not SESSIONS_DIR.is_dir():
         return []
