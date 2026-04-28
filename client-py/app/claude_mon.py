@@ -15,6 +15,9 @@ from claude_busy_monitor import (
 from lib.board import Board
 from lib.gfx import Gfx
 
+TITLE = "Claude Code Monitor"
+TITLE_AREA_H = 12
+
 STATUS_TEXT_SIZE_X = 1.5
 STATUS_TEXT_SIZE_Y = 1
 STATUS_TEXT_MARGIN = 2
@@ -86,7 +89,7 @@ class StateCountStatus:
         self.last_value = value
 
         # Render
-        y = (16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2) * self.row
+        y = TITLE_AREA_H + (16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2) * self.row
         h = 16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2
         s = f" {self.value:3} {self.name}"
 
@@ -225,10 +228,10 @@ class Clauding:
         h = lh * 3
 
         # display busy counter on background
-        gfx.fill_rect(0, 0, self.width, h, 0)
+        gfx.fill_rect(0, TITLE_AREA_H, self.width, h, 0)
         gfx.set_text_size(STATUS_TEXT_SIZE_X, STATUS_TEXT_SIZE_Y)
         gfx.set_text_color(*CLAUDING_COLOR.fg.value)
-        gfx.set_cursor(60, lh + STATUS_TEXT_MARGIN * 2)
+        gfx.set_cursor(60, TITLE_AREA_H + lh + STATUS_TEXT_MARGIN * 2)
         s = f"{n} BUSY"
         gfx.print(s)
 
@@ -236,7 +239,7 @@ class Clauding:
         for c in self.claude_chars.ALL_CHARS:
             gfx.set_text_color(*CLAUDING_COLOR.fg.value)
             x = 24 + random.randint(0, 6)
-            y = lh - 10 * 0 + random.randint(0, 6)
+            y = TITLE_AREA_H + lh - 10 * 0 + random.randint(0, 6)
             self.claude_chars.draw(gfx, c, x, y)
             gfx.display()
             time.sleep(0.1)
@@ -262,6 +265,12 @@ class ClaudeMonitor(App):
         busy = StateCountStatus("BUSY", 1, self.w, BUSY_COLOR)
         idle = StateCountStatus("IDLE", 2, self.w, IDLE_COLOR)
         session_by_idx: dict[int, SessionLine] = {}
+
+        self.gfx.set_text_size(0.5, 0.5)
+        self.gfx.set_text_color(*NamedColor.ORANGE.value)
+        w, h = self.gfx.get_text_bounds(0, 0, TITLE)
+        self.gfx.set_cursor((self.w - w) // 2, 0)
+        self.gfx.print(TITLE)
 
         last_max = -1
 
