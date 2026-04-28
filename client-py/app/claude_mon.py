@@ -1,3 +1,20 @@
+"""Claude Monitor App
+
+This ESP32 TFT terminal app monitors the status of Claude code sessions by
+periodically fetching session data and displaying it on the screen. It shows
+counts of sessions in different states (ASKING, BUSY, IDLE) and lists individual
+sessions with their names and states.
+
+When there are busy sessions but no asking or idle sessions, it displays an
+animated "clauding" logo.
+
+The app also handles button inputs to exit or refresh the display.
+
+It relies on the `claude_busy_monitor` PyPI library to fetch Claude Code session
+data on the computer for the current user. It sends display command to the TFT
+board using the `lib.gfx` local library for rendering text and graphics.
+"""
+
 from __future__ import annotations
 
 import random
@@ -27,6 +44,9 @@ LIST_TEXT_SIZE_Y = 1
 LIST_TEXT_MARGIN = 2
 LIST_OFFSET_Y = (16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2) * 4
 
+################################################################################
+# Colors
+################################################################################
 
 RgbColor = tuple[int, int, int]
 
@@ -62,6 +82,9 @@ LIST_COLOR = TextBgColor(NamedColor.LIGHTGRAY, NamedColor.BLACK)
 CLAUDING_COLOR = TextBgColor(NamedColor.WHITE, NamedColor.ORANGE)
 
 
+################################################################################
+# State display
+################################################################################
 @dataclass
 class StateCountStatus:
     name: str
@@ -98,6 +121,11 @@ class StateCountStatus:
         gfx.set_text_color(*color.fg.value)
         gfx.set_cursor(0, y + STATUS_TEXT_MARGIN * 2)
         gfx.print(s)
+
+
+################################################################################
+# Session display
+################################################################################
 
 
 @dataclass
@@ -137,6 +165,9 @@ class SessionLine:
         gfx.fill_rect(0, y, width, h, 0)
 
 
+################################################################################
+# Claude animated logo display
+################################################################################
 class ClaudeChar:
     @dataclass(frozen=True)
     class SubChar:
@@ -247,6 +278,11 @@ class Clauding:
             gfx.set_text_color(*CLAUDING_COLOR.bg.value)
             self.claude_chars.draw(gfx, c, x, y)
             gfx.display()
+
+
+################################################################################
+# The Claude Code Monitor App
+################################################################################
 
 
 class ClaudeMonitor(App):
