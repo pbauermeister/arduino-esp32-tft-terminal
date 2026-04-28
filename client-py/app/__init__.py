@@ -33,7 +33,8 @@ class App:
         self.board.command.had_recoveries()
         self.only_me = False
         self.init()
-        self.show_main_title()
+        if config.APPS_TITLE_DURATION:
+            self.show_main_title()
 
     @abstractmethod
     def _run(self) -> bool:
