@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 import time
 from dataclasses import dataclass
 from enum import Enum
@@ -21,7 +22,7 @@ STATUS_TEXT_MARGIN = 2
 LIST_TEXT_SIZE_X = 1
 LIST_TEXT_SIZE_Y = 1
 LIST_TEXT_MARGIN = 2
-LIST_Y_OFFSET = (16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2) * 4
+LIST_OFFSET_Y = (16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2) * 4
 
 
 RgbColor = tuple[int, int, int]
@@ -37,6 +38,7 @@ class NamedColor(Enum):
     RED = RgbColor((255, 0, 0))
     YELLOW = RgbColor((255, 255, 0))
     GREEN = RgbColor((0, 255, 0))
+    ORANGE = RgbColor((255, 165, 0))
 
 
 @dataclass
@@ -45,7 +47,7 @@ class TextBgColor:
     bg: NamedColor
 
 
-BUSY_COLOR = TextBgColor(NamedColor.WHITE, NamedColor.RED)
+BUSY_COLOR = TextBgColor(NamedColor.BLACK, NamedColor.ORANGE)
 ASKING_COLOR = TextBgColor(NamedColor.BLACK, NamedColor.YELLOW)
 IDLE_COLOR = TextBgColor(NamedColor.BLACK, NamedColor.GREEN)
 
@@ -53,6 +55,8 @@ INACTIVE_COLOR = TextBgColor(NamedColor.GRAY, NamedColor.DARK)
 BLINKED_COLOR = TextBgColor(NamedColor.WHITE, NamedColor.DARK)
 
 LIST_COLOR = TextBgColor(NamedColor.LIGHTGRAY, NamedColor.BLACK)
+
+CLAUDING_COLOR = TextBgColor(NamedColor.WHITE, NamedColor.ORANGE)
 
 
 @dataclass
@@ -102,7 +106,7 @@ class SessionLine:
     )
 
     def print(self, gfx: Gfx, session: ClaudeSession) -> int:
-        y = LIST_Y_OFFSET + (16 * LIST_TEXT_SIZE_Y + LIST_TEXT_MARGIN) * self.idx
+        y = LIST_OFFSET_Y + (16 * LIST_TEXT_SIZE_Y + LIST_TEXT_MARGIN) * self.idx
 
         # No change, skip to reduce flickering
         if self.last_value == (session.state, session.name):
@@ -122,6 +126,125 @@ class SessionLine:
 
         return y
 
+    @staticmethod
+    def clear(gfx: Gfx, idx: int, width: int) -> None:
+        y = LIST_OFFSET_Y + (16 * LIST_TEXT_SIZE_Y + LIST_TEXT_MARGIN) * idx
+        h = 16 * LIST_TEXT_SIZE_Y
+        gfx.set_bg_color(*LIST_COLOR.bg.value)
+        gfx.fill_rect(0, y, width, h, 0)
+
+
+class ClaudeChar:
+    @dataclass(frozen=True)
+    class SubChar:
+        char: str
+        x_offset: int
+        y_offset: int
+        sx: int = 2
+        sy: int = 2
+
+    CompositeChar = list[SubChar]
+
+    DIM: CompositeChar = [
+        SubChar('+', 0, 0),
+    ]
+
+    FLORAL_STAR: CompositeChar = [
+        SubChar('+', 0, 0),
+        SubChar('.', -2, -22),
+        SubChar('.', -2, 2),
+        SubChar('.', -12, -3),
+        SubChar('.', 8, -3),
+        SubChar('.', -12, -18),
+        SubChar('.', 8, -18),
+    ]
+
+    FLORAL_STAR2: CompositeChar = [
+        SubChar('+', 0, 0),
+        SubChar('.', -2, -24),
+        SubChar('.', -2, 4),
+        SubChar('.', -16, -3),
+        SubChar('.', 12, -3),
+        SubChar('.', -16, -18),
+        SubChar('.', 12, -18),
+    ]
+
+    EIGHT_STAR: CompositeChar = [
+        SubChar('+', 0, 0),
+        SubChar('-', -9, 0),
+        SubChar('-', 11, 0),
+        SubChar('/', -6, 6),
+        SubChar('/', 6, -6),
+        SubChar('\\\\', -6, -6),
+        SubChar('\\\\', 6, 6),
+        SubChar('|', 0, 6),
+        SubChar('|', 0, -6),
+    ]
+
+    SIX_POINTED_STAR: CompositeChar = [
+        SubChar('/', -6, 11, sx=2, sy=1),
+        SubChar('/', 6, 3, sx=2, sy=1),
+        SubChar('\\\\', -6, 3, sx=2, sy=1),
+        SubChar('\\\\', 6, 11, sx=2, sy=1),
+        SubChar('|', 0, 2),
+        SubChar('|', 0, -2),
+    ]
+
+    FOUR_POINTED_STAR: CompositeChar = [
+        SubChar('+', 0, 0),
+        SubChar('.', -2, -24),
+        SubChar('.', -2, 4),
+        SubChar('.', -16, -10),
+        SubChar('.', 12, -10),
+    ]
+
+    ALL_CHARS: list[CompositeChar] = [
+        DIM,
+        FLORAL_STAR,
+        FLORAL_STAR2,
+        SIX_POINTED_STAR,
+        EIGHT_STAR,
+        FOUR_POINTED_STAR,
+    ]
+
+    def draw(self, gfx: Gfx, char: CompositeChar, x: int, y: int) -> None:
+        for sc in char:
+            gfx.set_text_size(sc.sx // 2, sc.sy // 2)
+            gfx.set_cursor(x + sc.x_offset // 2, y + sc.y_offset // 2)
+            gfx.print(sc.char)
+
+
+class Clauding:
+    def __init__(self, width):
+        self.width = width
+        self.claude_chars = ClaudeChar()
+
+    def draw(self, gfx: Gfx, n: int) -> None:
+        gfx.set_bg_color(*CLAUDING_COLOR.bg.value)
+        lh = 16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2
+        h = lh * 3
+
+        # display busy counter on background
+        gfx.fill_rect(0, 0, self.width, h, 0)
+        gfx.set_text_size(STATUS_TEXT_SIZE_X, STATUS_TEXT_SIZE_Y)
+        gfx.set_text_color(*CLAUDING_COLOR.fg.value)
+        gfx.set_cursor(60, lh + STATUS_TEXT_MARGIN * 2)
+        s = f"{n} BUSY"
+        gfx.print(s)
+
+        # animate claude logo
+        for c in self.claude_chars.ALL_CHARS:
+            gfx.set_text_color(*CLAUDING_COLOR.fg.value)
+            x = 24 + random.randint(0, 6)
+            y = lh - 10 * 0 + random.randint(0, 6)
+            self.claude_chars.draw(gfx, c, x, y)
+            gfx.display()
+            time.sleep(0.1)
+
+            gfx.set_text_color(*CLAUDING_COLOR.bg.value)
+            self.claude_chars.draw(gfx, c, x, y)
+            gfx.display()
+
 
 class ClaudeMonitor(App):
     def __init__(self, board: Board):
@@ -133,11 +256,14 @@ class ClaudeMonitor(App):
         escaper = TimeEscaper(self)
         self.gfx.set_auto_display_off()
         self.gfx.set_text_wrap_off()
+        clauding = Clauding(self.w)
 
         asking = StateCountStatus("ASKING", 0, self.w, ASKING_COLOR, BLINKED_COLOR)
         busy = StateCountStatus("BUSY", 1, self.w, BUSY_COLOR)
         idle = StateCountStatus("IDLE", 2, self.w, IDLE_COLOR)
         session_by_idx: dict[int, SessionLine] = {}
+
+        last_max = -1
 
         while True:
             btns = self.board.auto_read_buttons()
@@ -151,14 +277,22 @@ class ClaudeMonitor(App):
             sessions = get_sessions()
             counts = get_state_counts(sessions)
 
+            # Counts
             asking.value = counts.get(ClaudeState.ASKING, 0)
             busy.value = counts.get(ClaudeState.BUSY, 0)
             idle.value = counts.get(ClaudeState.IDLE, 0)
-            self.gfx.set_text_size(STATUS_TEXT_SIZE_X, STATUS_TEXT_SIZE_Y)
-            asking.print(self.gfx)
-            busy.print(self.gfx)
-            idle.print(self.gfx)
 
+            is_clauding = asking.value == 0 and idle.value == 0 and busy.value > 0
+            if is_clauding:
+                clauding.draw(self.gfx, busy.value)
+                asking.last_value = idle.last_value = busy.last_value = None
+            else:
+                self.gfx.set_text_size(STATUS_TEXT_SIZE_X, STATUS_TEXT_SIZE_Y)
+                asking.print(self.gfx)
+                busy.print(self.gfx)
+                idle.print(self.gfx)
+
+            # Sessions
             sorted_sessions = (
                 [s for s in sessions if s.state == ClaudeState.ASKING]
                 + [s for s in sessions if s.state == ClaudeState.IDLE]
@@ -167,11 +301,22 @@ class ClaudeMonitor(App):
 
             self.gfx.set_text_size(LIST_TEXT_SIZE_X, LIST_TEXT_SIZE_Y)
 
+            idx = -1
             for idx, session in enumerate(sorted_sessions):
                 session_line = session_by_idx.setdefault(idx, SessionLine(idx, self.w))
                 y = session_line.print(self.gfx, session)
                 if y + 16 * LIST_TEXT_SIZE_Y + LIST_TEXT_MARGIN * 2 > self.h:
                     break
+            if not sorted_sessions:
+                session_by_idx.clear()
+
+            # clear remaining lines if sessions have decreased
+            if idx < last_max:
+                for i in range(idx + 1, last_max + 1):
+                    SessionLine.clear(self.gfx, i, self.w)
+
+            last_max = idx
 
             self.gfx.display()
-            time.sleep(0.5)
+            if not is_clauding:
+                time.sleep(0.5)
