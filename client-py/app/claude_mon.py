@@ -17,6 +17,7 @@ board using the `lib.gfx` local library for rendering text and graphics.
 
 from __future__ import annotations
 
+from math import cos, sin
 import random
 import time
 from dataclasses import dataclass
@@ -44,6 +45,9 @@ LIST_TEXT_SIZE_Y = 1
 LIST_TEXT_MARGIN = 2
 LIST_OFFSET_Y = (16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2) * 4
 
+CLAUDING_AMPL = 4
+CLAUDING_SPEED = 0.35
+
 ################################################################################
 # Colors
 ################################################################################
@@ -54,13 +58,15 @@ RgbColor = tuple[int, int, int]
 class NamedColor(Enum):
     WHITE = RgbColor((255, 255, 255))
     LIGHTGRAY = RgbColor((164, 164, 164))
-    GRAY = RgbColor((72, 72, 72))
-    DARK = RgbColor((32, 32, 32))
+    GRAY = RgbColor((48, 48, 48))
+    DARKGRAY = RgbColor((8, 8, 8))
     BLACK = RgbColor((0, 0, 0))
 
     RED = RgbColor((255, 0, 0))
     YELLOW = RgbColor((255, 255, 0))
+    DARKYELLOW = RgbColor((220, 195, 0))
     GREEN = RgbColor((0, 255, 0))
+    DARKGREEN = RgbColor((0, 128, 0))
     ORANGE = RgbColor((255, 165, 0))
 
 
@@ -74,8 +80,8 @@ BUSY_COLOR = TextBgColor(NamedColor.BLACK, NamedColor.ORANGE)
 ASKING_COLOR = TextBgColor(NamedColor.BLACK, NamedColor.YELLOW)
 IDLE_COLOR = TextBgColor(NamedColor.BLACK, NamedColor.GREEN)
 
-INACTIVE_COLOR = TextBgColor(NamedColor.GRAY, NamedColor.DARK)
-BLINKED_COLOR = TextBgColor(NamedColor.WHITE, NamedColor.DARK)
+INACTIVE_COLOR = TextBgColor(NamedColor.GRAY, NamedColor.DARKGRAY)
+BLINKED_COLOR = TextBgColor(NamedColor.WHITE, NamedColor.DARKGRAY)
 
 LIST_COLOR = TextBgColor(NamedColor.LIGHTGRAY, NamedColor.BLACK)
 
@@ -249,9 +255,16 @@ class ClaudeChar:
 
 
 class Clauding:
+
     def __init__(self, width):
         self.width = width
         self.claude_chars = ClaudeChar()
+        self.phase = 0
+        self.last_n = -1
+
+    def reset(self):
+        self.phase = 0
+        self.last_n = -1
 
     def draw(self, gfx: Gfx, n: int) -> None:
         gfx.set_bg_color(*CLAUDING_COLOR.bg.value)
@@ -259,21 +272,27 @@ class Clauding:
         h = lh * 3
 
         # display busy counter on background
-        gfx.fill_rect(0, TITLE_AREA_H, self.width, h, 0)
-        gfx.set_text_size(STATUS_TEXT_SIZE_X, STATUS_TEXT_SIZE_Y)
-        gfx.set_text_color(*CLAUDING_COLOR.fg.value)
-        gfx.set_cursor(60, TITLE_AREA_H + lh + STATUS_TEXT_MARGIN * 2)
-        s = f"{n} BUSY"
-        gfx.print(s)
+        if self.last_n != n:
+            gfx.fill_rect(0, TITLE_AREA_H, self.width, h, 0)
+            gfx.set_text_size(STATUS_TEXT_SIZE_X, STATUS_TEXT_SIZE_Y)
+            gfx.set_text_color(*CLAUDING_COLOR.fg.value)
+            gfx.set_cursor(60, TITLE_AREA_H + lh + STATUS_TEXT_MARGIN * 2)
+            s = f"{n} BUSY"
+            gfx.print(s)
+            self.last_n = n
 
         # animate claude logo
-        for c in self.claude_chars.ALL_CHARS:
+        for c in self.claude_chars.ALL_CHARS * 2:
             gfx.set_text_color(*CLAUDING_COLOR.fg.value)
-            x = 24 + random.randint(0, 6)
-            y = TITLE_AREA_H + lh - 10 * 0 + random.randint(0, 6)
+            x = 24 + random.randint(0, 4)
+            dy = (
+                int(CLAUDING_AMPL * 2 * (1 - pow(cos(cos(self.phase)), 20)))
+                - CLAUDING_AMPL
+            )
+            self.phase += CLAUDING_SPEED
+            y = TITLE_AREA_H + lh + dy  # - 10 * 0 + random.randint(0, 6)
             self.claude_chars.draw(gfx, c, x, y)
             gfx.display()
-            time.sleep(0.1)
 
             gfx.set_text_color(*CLAUDING_COLOR.bg.value)
             self.claude_chars.draw(gfx, c, x, y)
@@ -322,22 +341,7 @@ class ClaudeMonitor(App):
             sessions = get_sessions()
             counts = get_state_counts(sessions)
 
-            # Counts
-            asking.value = counts.get(ClaudeState.ASKING, 0)
-            busy.value = counts.get(ClaudeState.BUSY, 0)
-            idle.value = counts.get(ClaudeState.IDLE, 0)
-
-            is_clauding = asking.value == 0 and idle.value == 0 and busy.value > 0
-            if is_clauding:
-                clauding.draw(self.gfx, busy.value)
-                asking.last_value = idle.last_value = busy.last_value = None
-            else:
-                self.gfx.set_text_size(STATUS_TEXT_SIZE_X, STATUS_TEXT_SIZE_Y)
-                asking.print(self.gfx)
-                busy.print(self.gfx)
-                idle.print(self.gfx)
-
-            # Sessions
+            # sessions
             sorted_sessions = (
                 [s for s in sessions if s.state == ClaudeState.ASKING]
                 + [s for s in sessions if s.state == ClaudeState.IDLE]
@@ -359,9 +363,25 @@ class ClaudeMonitor(App):
             if idx < last_max:
                 for i in range(idx + 1, last_max + 1):
                     SessionLine.clear(self.gfx, i, self.w)
-
             last_max = idx
 
+            # counts
+            asking.value = counts.get(ClaudeState.ASKING, 0)
+            busy.value = counts.get(ClaudeState.BUSY, 0)
+            idle.value = counts.get(ClaudeState.IDLE, 0)
+
+            is_clauding = asking.value == 0 and idle.value == 0 and busy.value > 0
+            if is_clauding:
+                clauding.draw(self.gfx, busy.value)
+                asking.last_value = idle.last_value = busy.last_value = None
+            else:
+                clauding.reset()
+                self.gfx.set_text_size(STATUS_TEXT_SIZE_X, STATUS_TEXT_SIZE_Y)
+                asking.print(self.gfx)
+                busy.print(self.gfx)
+                idle.print(self.gfx)
+
+            # display
             self.gfx.display()
             if not is_clauding:
                 time.sleep(0.5)
