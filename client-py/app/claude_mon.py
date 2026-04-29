@@ -45,9 +45,6 @@ LIST_TEXT_SIZE_Y = 1
 LIST_TEXT_MARGIN = 2
 LIST_OFFSET_Y = (16 * STATUS_TEXT_SIZE_Y + STATUS_TEXT_MARGIN * 2) * 4
 
-CLAUDING_AMPL = 4
-CLAUDING_SPEED = 0.35
-
 ################################################################################
 # Colors
 ################################################################################
@@ -85,6 +82,9 @@ BLINKED_COLOR = TextBgColor(NamedColor.WHITE, NamedColor.DARKGRAY)
 
 LIST_COLOR = TextBgColor(NamedColor.LIGHTGRAY, NamedColor.BLACK)
 
+CLAUDING_AMPL = 4
+CLAUDING_SPEED = 0.25
+CLAUDING_DELAY = 0.05
 CLAUDING_COLOR = TextBgColor(NamedColor.WHITE, NamedColor.ORANGE)
 
 
@@ -175,6 +175,12 @@ class SessionLine:
 # Claude animated logo display
 ################################################################################
 class ClaudeChar:
+    """Defines composite characters for the animated Claude logo.
+
+    They consist of multiple sub-characters with specific offsets and sizes to
+    create unicode flowers and stars. Because I was too lazy^H^H^H^Hbusy to
+    to create fonts in the Arduino firmware."""
+
     @dataclass(frozen=True)
     class SubChar:
         char: str
@@ -294,6 +300,10 @@ class Clauding:
             self.claude_chars.draw(gfx, c, x, y)
             gfx.display()
 
+            if CLAUDING_DELAY:
+                time.sleep(CLAUDING_DELAY)
+
+            # erase
             gfx.set_text_color(*CLAUDING_COLOR.bg.value)
             self.claude_chars.draw(gfx, c, x, y)
             gfx.display()
@@ -310,6 +320,14 @@ class ClaudeMonitor(App):
         self.w = self.gfx.get_width()
         self.h = self.gfx.get_height()
 
+    def print_nb_sessions(self, n: int, color: NamedColor) -> None:
+        text = f"{n} session{'s' if n != 1 else ''}"
+        self.gfx.set_text_size(0.5, 0.5)
+        w, h = self.gfx.get_text_bounds(0, 0, text)
+        self.gfx.set_text_color(*color.value)
+        self.gfx.set_cursor(self.w - w, 0)
+        self.gfx.print(text)
+
     def _run(self) -> bool:
         escaper = TimeEscaper(self)
         self.gfx.set_auto_display_off()
@@ -324,10 +342,11 @@ class ClaudeMonitor(App):
         self.gfx.set_text_size(0.5, 0.5)
         self.gfx.set_text_color(*NamedColor.ORANGE.value)
         w, h = self.gfx.get_text_bounds(0, 0, TITLE)
-        self.gfx.set_cursor((self.w - w) // 2, 0)
+        self.gfx.set_cursor(0, 0)  # (self.w - w) // 2, 0)
         self.gfx.print(TITLE)
 
         last_max = -1
+        last_n_sessions = -1
 
         while True:
             btns = self.board.auto_read_buttons()
@@ -340,6 +359,14 @@ class ClaudeMonitor(App):
 
             sessions = get_sessions()
             counts = get_state_counts(sessions)
+
+            # nb of sessions
+            n_sessions = len(sessions)
+            if n_sessions != last_n_sessions:
+                if last_n_sessions > -1:
+                    self.print_nb_sessions(last_n_sessions, NamedColor.BLACK)
+                self.print_nb_sessions(n_sessions, NamedColor.WHITE)
+                last_n_sessions = n_sessions
 
             # sessions
             sorted_sessions = (
