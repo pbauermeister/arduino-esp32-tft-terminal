@@ -17,7 +17,7 @@ ROWS: int = 0
 SERIAL_PORT_BASE = "/dev/ttyACM"  # adapt dep on your OS
 SERIAL_BAUDRATE = 115200  # default baudrate of oled-server.ino
 SERIAL_ERROR_RETRY_DELAY = 0.2
-SERIAL_ERROR_RETRY_DELAY_2 = 1
+SERIAL_ERROR_RETRY_MAX_BACKOFF = 30
 SERIAL_TIMEOUT = 5.0
 # Misc
 DEBUG = False

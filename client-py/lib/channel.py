@@ -23,6 +23,7 @@ class Channel:
 
     def open(self) -> None:
         port_nr = 0
+        backoff = 1
         while True:
             try:
                 port = f'{self.port_base}{port_nr}'
@@ -32,11 +33,9 @@ class Channel:
             except ArduinoCommExceptions as e:
                 print('>open>error:', e)
                 port_nr = (port_nr + 1) % 25
-                time.sleep(
-                    config.SERIAL_ERROR_RETRY_DELAY
-                    if port_nr
-                    else config.SERIAL_ERROR_RETRY_DELAY_2
-                )
+                time.sleep(config.SERIAL_ERROR_RETRY_DELAY if port_nr else backoff)
+                if not port_nr:
+                    backoff = min(backoff * 2, config.SERIAL_ERROR_RETRY_MAX_BACKOFF)
                 continue
 
             self.ser.timeout = config.SERIAL_TIMEOUT
