@@ -10,7 +10,7 @@ Design task. Deliverable is this devlog (the strategy); no tests implemented her
 
 - Author: agent
 - Model: Claude Opus 4.8
-- Review: pending
+- Review: user
 
 Design a minimal, proportionate automated-test strategy for the Python client.
 Hard constraint: everything ultimately talks to a hardware board over USB. The brief (from the assessment) is **one seam, don't over-mock** — fake only the serial boundary, run everything above it as real code.
@@ -26,7 +26,7 @@ Hard constraint: everything ultimately talks to a hardware board over USB. The b
 
 - Author: agent
 - Model: Claude Opus 4.8
-- Review: pending
+- Review: user
 
 This is the design. On approval, task E implements Tier 1 + Tier 2 (and wires the Makefile/CI); Tier 3 is a manual checklist.
 
@@ -34,7 +34,7 @@ This is the design. On approval, task E implements Tier 1 + Tier 2 (and wires th
 
 - Author: agent
 - Model: Claude Opus 4.8
-- Review: pending
+- Review: user
 
 ### 3.1 Principle — one seam
 
@@ -75,7 +75,7 @@ Mechanism:
 
 In scope (deterministic): **`cube`, `fill`, `tunnel`** (no RNG); **`starfield`, `quix`, `collisions*`** (seeded RNG).
 
-Out of scope for this tier: **monitor apps** — their command stream depends on live CPU/mem/net/date, so snapshots aren't stable. Their *logic* is covered by the Tier-1 parser tests instead.
+Out of scope for this tier: **monitor apps** — their command stream depends on live CPU/mem/net/date, so snapshots aren't stable. Their _logic_ is covered by the Tier-1 parser tests instead.
 
 This catches rendering-logic regressions (a maths bug in the cube projection, a changed draw order) with zero hardware.
 
@@ -119,20 +119,20 @@ client-py/
 
 ## Governance trace
 
-| Source                          | Clause                      | Action  | Note                                              |
-| ------------------------------- | --------------------------- | ------- | ------------------------------------------------- |
-| CLAUDE.md (Task nature)         | exploratory vs execution    | applied | flagged design task; deliverable is the strategy  |
-| CLAUDE.md (Proportionality)     | proportionality             | applied | one seam; monitor snapshots + coverage gate deferred |
-| CLAUDE.md (Preferences)         | research established methods | applied | reuse dfd non-regression pattern (golden files)   |
-| CLAUDE.md (Framing)             | desired-outcome framing     | applied | "exercise the stack via one seam", not per-part mocks |
+| Source                      | Clause                       | Action  | Note                                                  |
+| --------------------------- | ---------------------------- | ------- | ----------------------------------------------------- |
+| CLAUDE.md (Task nature)     | exploratory vs execution     | applied | flagged design task; deliverable is the strategy      |
+| CLAUDE.md (Proportionality) | proportionality              | applied | one seam; monitor snapshots + coverage gate deferred  |
+| CLAUDE.md (Preferences)     | research established methods | applied | reuse dfd non-regression pattern (golden files)       |
+| CLAUDE.md (Framing)         | desired-outcome framing      | applied | "exercise the stack via one seam", not per-part mocks |
 
 ## Resource consumption
 
-| Phase  | Tokens (approx) | Wall time |
-| ------ | --------------- | --------- |
-| Design | ~45k (incl. subagent) | ~30 min |
+| Phase  | Tokens (approx)       | Wall time |
+| ------ | --------------------- | --------- |
+| Design | ~45k (incl. subagent) | ~30 min   |
 
-| Counter              | Value |
-| -------------------- | ----- |
-| Subagent invocations | 1     |
+| Counter              | Value           |
+| -------------------- | --------------- |
+| Subagent invocations | 1               |
 | Files changed        | 1 (this devlog) |
