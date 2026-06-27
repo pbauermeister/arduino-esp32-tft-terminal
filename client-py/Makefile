@@ -162,8 +162,10 @@ publish-quality: ## pre-publish gate: ci-green lint test reinstall build (1)
 	$(MAKE) build
 	@echo "publish-quality: all gates green; dist/ ready. Run 'make publish' to upload."
 
+# `publish` is intentionally ungated: `publish-quality` (which runs ci-green) is
+# the gate. Keeping `publish` raw preserves an emergency short-circuit.
 .PHONY: publish
-publish: ## upload to PyPI (raw; use publish-quality first) (2)
+publish: ## upload to PyPI (raw, ungated; use publish-quality) (2)
 	export UV_KEYRING_PROVIDER=subprocess; \
 	export UV_PUBLISH_USERNAME=__token__; \
 	uv publish
