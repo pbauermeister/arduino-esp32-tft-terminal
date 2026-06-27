@@ -56,8 +56,13 @@ Or run it without installing: `uvx arduino-esp32-tft-terminal --demo`.
 
 ### Firmware (board)
 
-- Build and flash `server-esp32s3-rtft/` onto the board.
-- It has been built and uploaded with VS Code — see [`server-esp32s3-rtft/README-VSCODE.md`](server-esp32s3-rtft/README-VSCODE.md).
+Build and flash `server-esp32s3-rtft/` onto the board with `make` (`arduino-cli`):
+
+```bash
+cd server-esp32s3-rtft
+make require          # one-time: arduino-cli + esp32 core + libraries
+make firmware-upload  # build, flash, verify
+```
 
 ### Client (computer)
 
@@ -98,7 +103,7 @@ make install   # = uv tool install . ; run `make help` for all targets
 
 - [Communication protocol](README-protocol.md) — the USB command/answer protocol between computer and board.
 - [Animation techniques](README-animations.md) — flicker avoidance, in the absence of hardware double-buffering.
-- [Building the firmware](server-esp32s3-rtft/README-VSCODE.md) — VS Code build and upload.
+- [Board firmware](server-esp32s3-rtft/README.md) — build and flash with `make` (`arduino-cli`).
 - [Claude session-state detection](https://github.com/pbauermeister/claude-busy-monitor/blob/main/README-STATE-DETECTION.md) — design notes for the `claude-monitor` app (in the `claude-busy-monitor` project).
 
 ## Videos
