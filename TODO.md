@@ -44,10 +44,33 @@ CHANGES.md, doc layer, test tiers).
 
 ## TODO Items
 
-1. **Firmware Makefile targets** — split out of G: a committed
-   `.clang-format` for `server-esp32s3-rtft/`, plus `arduino-cli`
-   firmware-build / firmware-upload targets.
+1. **Firmware Makefile targets** — committed `.clang-format` + `arduino-cli`
+   build/upload targets for `server-esp32s3-rtft/`. _In PR #33 (require
+   bootstraps `arduino-cli`; `firmware-upload` hardware-tested)._
 
-2. **Protocol single-source** (J) — deferred. Codegen a command spec
+2. **Firmware version command** — add a board command (`version`) returning the
+   firmware version. Maintain the version in a firmware `CHANGES.md` (same
+   `## Version X.Y.Z:` format as `client-py/`), injected into the build
+   (`CHANGES.md` → generated header) so the running firmware reports it.
+   Optionally surface it via the client.
+
+3. **Retire VS Code build docs** — remove `server-esp32s3-rtft/README-VSCODE.md`
+   and its references; the Arduino VS Code plugin is unmaintained. From now on
+   the build/flash is shell + Makefile + `arduino-cli`, entirely and only
+   (`make require` / `firmware-build` / `firmware-upload`). Repoint the server
+   and top-level READMEs.
+
+4. **Top-level signpost Makefile** — a repo-root `Makefile` that builds nothing;
+   its default/help target points to the sub-makefiles: `client-py/` (client +
+   the test suites — tests live there because a running app drives the board)
+   and `server-esp32s3-rtft/` (firmware build/flash).
+
+5. **Firmware clang-format backlog** — run `make format` over the firmware
+   (`*.ino` / `*.cpp` / `*.h`); ~2730-line pure-formatting diff. Apply as a
+   single reviewed commit, then re-verify on the board (`make firmware-build`
+   + a hardware smoke). Deferred from #33 — no automated behaviour check for
+   firmware, so the reformat is isolated from logic changes.
+
+6. **Protocol single-source** (J) — deferred. Codegen a command spec
    into both `client-py` (gfx strings) and firmware (`command.cpp`
    hash-switch). Parked until the duplication actually bites.
