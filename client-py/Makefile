@@ -64,14 +64,9 @@ format: ## ruff format + lint autofix (modifies code)
 	uv run ruff check --fix src tests
 
 .PHONY: test
-test: ## run unit + snapshot tests
+test: ## run unit tests
 	uv sync --extra dev
 	uv run pytest tests
-
-.PHONY: snapshot-regenerate
-snapshot-regenerate: ## rewrite snapshot goldens from current output
-	uv sync --extra dev
-	SNAPSHOT_UPDATE=1 uv run pytest tests/snapshot
 
 .PHONY: check
 check: lint test ## CI/pre-PR gate: lint test
