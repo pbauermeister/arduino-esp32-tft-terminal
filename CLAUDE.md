@@ -21,7 +21,7 @@ The protocol is specified in `README-protocol.md`; flicker-avoidance techniques 
 ## Project structure
 
 - `client-py/` — installable Python package (`src/arduino_esp32_tft_terminal/`) running on the computer; communicates with the board over USB and implements the apps (`app/`, one module + class per app; registered in `cli.py`)
-- `server-esp32s3-rtft/` — Arduino sketch: the on-board graphical server (TFT primitives, button readout). Built/uploaded via VS Code (`README-VSCODE.md`)
+- `server-esp32s3-rtft/` — Arduino sketch: the on-board graphical server (TFT primitives, button readout). Built/uploaded via `make` + `arduino-cli` (`server-esp32s3-rtft/Makefile`)
 - `case-esp32s3-rtft/` — 3D-printed case and cap, designed in OpenSCAD (`.scad` sources, `.stl` outputs)
 - `media/` — photos, thumbnails, YouTube stills used by the READMEs
 - `server-featherwing--obsolete/` — superseded FeatherWing OLED server; kept for reference only
@@ -31,7 +31,7 @@ The protocol is specified in `README-protocol.md`; flicker-avoidance techniques 
 - `README.md` — project overview, motivation, parts, build/run entry points
 - `README-protocol.md` — USB command/answer protocol between computer and board
 - `README-animations.md` — flicker-avoidance techniques (no hardware double-buffering)
-- `server-esp32s3-rtft/README-VSCODE.md` — building and uploading the board sketch
+- `server-esp32s3-rtft/Makefile` — building/flashing the board sketch (`make help`)
 
 ## Document toolchain
 
