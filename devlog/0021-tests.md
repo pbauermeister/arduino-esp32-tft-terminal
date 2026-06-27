@@ -1,11 +1,11 @@
-# 0021 — Implement tests (Tier 1 units + Tier 2 snapshots)
+# 0021 — Implement tests (protocol/button contract + pure-logic units)
 
 - GH issue: #21
 - Branch: impl/0021-tests
 - Opened: 2026-06-27
 - Closed: 2026-06-27
 
-Implements the strategy approved in devlog 0019 (task D). Scope from `TODO.md` item E.
+Implements the testing strategy (devlog 0019, task D), **revised mid-task by user review**: the app command-stream snapshots were dropped as low-value; the focus moved to the protocol/button contract.
 
 ## 1. Mandate
 
@@ -13,14 +13,19 @@ Implements the strategy approved in devlog 0019 (task D). Scope from `TODO.md` i
 - Model: Claude Opus 4.8
 - Review: pending
 
-Implement Tier 1 (pure-logic units) and Tier 2 (command-stream snapshots) per devlog 0019, with the user-approved decisions: full-stream snapshots, N=8 frames, fake board 240×135, first apps `cube`/`fill`/`tunnel`/`starfield`, committed parser fixtures.
+Test the client where the bug surface is — the USB **protocol contract** (command formatting, response parsing, button decoding) — plus the genuinely pure logic. Fake only the serial boundary.
+
+### Review pivot (supersedes part of 0019)
+
+User review of the first cut: app command-stream **golden snapshots are superfluous** — the apps are straightforward and/or RNG-driven, so a pinned stream is change-detection, not testing. Dropped. The real value is the gadget + USB comms; the visual cumulative effect isn't automatable (no framebuffer readback), but the protocol and button layers are. Firmware-side host tests are split into a separate study (task: firmware host tests).
 
 ### Acceptance criteria
 
-1. `FakeChannel` single seam + pytest fixtures.
-2. Tier 1 unit tests (helpers, colour, physics, args/config, monitor parser).
-3. Tier 2 snapshot tests for the 4 apps, golden-file based, deterministic.
-4. `pyproject` pytest config + Makefile `test` / `snapshot-regenerate` wiring; `make check` green.
+1. `FakeChannel` single seam (records writes, scripts answers) + fixtures.
+2. Protocol tests: command formatting, query/response parsing, error rejection.
+3. Button tests: state decoding (`readButtons`), event accumulation (auto-read `OK <codes>`).
+4. Pure-logic unit tests (helpers, colour, physics, args/config, mpstat parser).
+5. `pyproject` pytest config + Makefile `test` wiring; `make check` green.
 
 ## 2. Execution plan
 
@@ -28,10 +33,7 @@ Implement Tier 1 (pure-logic units) and Tier 2 (command-stream snapshots) per de
 - Model: Claude Opus 4.8
 - Review: pending
 
-1. `FakeChannel` (records writes, answers the synchronous protocol) + `fake_board` / `capture_stream` fixtures in `tests/conftest.py`.
-2. Snapshot harness: seed RNG, patch `TimeEscaper.check` to end after N frames, run `app._run()`, capture the command stream.
-3. Tier 1 unit tests.
-4. Wire `pyproject` (`[tool.pytest.ini_options]`) + Makefile.
+`FakeChannel` with a `responses` override (to script button reads / errors) + `fake_board` / `make_board` fixtures; protocol + button + unit tests; Makefile/pyproject wiring.
 
 ## 3. Closure
 
@@ -41,56 +43,55 @@ Implement Tier 1 (pure-logic units) and Tier 2 (command-stream snapshots) per de
 
 ### 3.1 What was built
 
-- `tests/conftest.py` — `FakeChannel` + `fake_board` + `capture_stream`.
-- `tests/snapshot/test_apps.py` + `golden/{cube,fill,starfield,tunnel}.txt` — Tier 2.
-- `tests/unit/` — `test_helpers`, `test_gfx_color`, `test_physics`, `test_args`, `test_monitor_parse` (Tier 1).
-- `pyproject.toml` `[tool.pytest.ini_options]`; Makefile `test` + `snapshot-regenerate`; `lint`/`format` extended to `src tests`.
+- `tests/conftest.py` — `FakeChannel` (records writes; `responses` override) + `fake_board` / `make_board` fixtures.
+- `tests/unit/test_protocol.py` — draw-command formatting, `width`/`height`/`getTextBounds` parsing, `ERROR` rejection.
+- `tests/unit/test_buttons.py` — `readButtons` state decoding (none / multiple / invalid-ignored), auto-read event accumulation.
+- `tests/unit/test_{helpers,gfx_color,physics,args,monitor_parse}.py` — pure logic.
+- `pyproject.toml` `[tool.pytest.ini_options]`; Makefile `test`; `lint`/`format` over `src tests`.
 
 ### 3.2 Deviations / notes
 
-- **Loop exit via `TimeEscaper.check` patch**, not scripted buttons: all 4 apps are `auto_read=True` and share the `auto_read_buttons()` + `escaper.check()` shape, so patching `check` to fire after N frames is uniform and app-agnostic.
-- **`cube`'s geometry (`rotate_point`/`adjust_point`) is nested inside `_run()`** — not directly unit-testable. It is exercised by the `cube` snapshot instead. Pure units chosen are the genuinely module/class-level ones.
-- **`config` is process-global and runtime-patched**: fixtures reset `WIDTH`/`HEIGHT`/`once`/`APPS_INTERFRAME_DELAY_MS`/`APPS_TITLE_DURATION` per test for isolation; per-frame sleep set to 0.
-- **Monitor snapshot deferred** (subprocess/system state); its parser is unit-tested with a fixture + monkeypatched `shell_command` instead.
+- **App golden snapshots removed** (the harness + `golden/*.txt`) per review. The `FakeChannel` seam is kept, repurposed to script protocol/button answers rather than capture rendering streams.
+- **`config` is process-global**: fixtures reset it per test; per-frame sleep set to 0.
 
 ### 3.3 Verification
 
-- `make check` → ruff clean (src + tests) + **20 passed** (4 snapshot + 16 unit).
-- Snapshots are deterministic: regenerate (`SNAPSHOT_UPDATE=1`) then re-run → pass unchanged. Goldens are readable command streams (e.g. `fill` prints the glyph table, `tunnel` draws line pairs).
+- `make check` → ruff clean (src + tests) + **24 passed** in ~0.3 s (no app loops; pure protocol/logic).
 
-### 3.4 Test coverage review (§ 3.5 per CEREMONIES)
+### 3.4 Test coverage review (per CEREMONIES § 3.5)
 
-- Q's `except:`→`except Exception:` behaviour change: not directly asserted (needs the board/Ctrl-C path = Tier 3 manual). Noted as a manual-smoke item.
-- The `--version` flag (#18): covered by `test_args::test_version_exits_zero`.
-- The import-namespace refactor (#18): implicitly covered — every test imports the package, and the snapshot harness exercises the whole stack.
+- Q's `except:`→`except Exception:` (Ctrl-C) behaviour: needs the board/Ctrl-C path → Tier 3 manual smoke (unchanged).
+- `--version` (#18): covered (`test_args`).
+- Protocol/button decoding: now directly covered (`test_protocol`, `test_buttons`).
+- Firmware command interpretation (the gadget's real logic): not covered here → the firmware host-test study.
 
 ### 3.5 Retrospective
 
-| #   | Point                                                                | Agent | User |
-| --- | -------------------------------------------------------------------- | ----- | ---- |
-| 1   | One seam (`FakeChannel`) exercised the whole stack as designed       | well  |      |
-| 2   | `TimeEscaper.check` patch gave uniform, app-agnostic N-frame exit    | well  |      |
-| 3   | Some advertised pure units were nested (cube) — snapshot covers them | surprise |   |
+| #   | Point                                                            | Agent | User     |
+| --- | ---------------------------------------------------------------- | ----- | -------- |
+| 1   | First cut over-indexed on app snapshots; review corrected course | not well | surprise |
+| 2   | `FakeChannel` seam still right — repurposed to protocol/buttons  | well  |          |
+| 3   | Suite now fast + meaningful (protocol contract, not pinned bytes)| well  |          |
 
 ### 3.6 Verdict
 
-Accept with review: deterministic and green, but the goldens are agent-generated — a glance at one (e.g. `fill.txt`) confirms they're sensible command streams, not noise.
+Accept: green, fast, targets the real bug surface. The deeper gadget verification moves to the firmware host-test study.
 
 ## Governance trace
 
-| Source                       | Clause                | Action  | Note                                            |
-| ---------------------------- | --------------------- | ------- | ----------------------------------------------- |
-| devlog 0019                  | approved strategy     | applied | one seam + 3 tiers, 5 decisions as approved     |
-| CLAUDE.md (Preferences)      | established methods    | applied | golden-file non-regression (dfd pattern)        |
-| CLAUDE.md (Proportionality)  | proportionality       | applied | monitor snapshot + broad coverage deferred      |
+| Source                       | Clause                   | Action  | Note                                        |
+| ---------------------------- | ------------------------ | ------- | ------------------------------------------- |
+| devlog 0019                  | approved strategy        | tension | Tier 2 (app snapshots) dropped on review    |
+| CLAUDE.md (Proportionality)  | proportionality          | applied | dropped low-value goldens; protocol focus   |
+| CLAUDE.md (Iterative review) | human review corrects    | applied | review pivot mid-task                       |
 
 ## Resource consumption
 
 | Phase     | Tokens (approx) | Wall time |
 | --------- | --------------- | --------- |
-| Execution | ~80k (incl. subagent) | ~1 h |
+| Execution | ~95k (incl. subagent + revision) | ~1.5 h |
 
 | Counter              | Value |
 | -------------------- | ----- |
-| Subagent invocations | 1 (in D)|
-| Files changed        | ~12 (tests, goldens, pyproject, Makefile) |
+| Subagent invocations | 1 (in D) |
+| Files changed        | ~10 (tests, pyproject, Makefile) |
