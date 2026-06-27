@@ -9,12 +9,10 @@ Quite crowded, no gravity, elastic bumps.
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass
 from itertools import combinations
-from typing import Any, Callable
+from typing import Callable
 
 import numpy as np
-from numpy.typing import NDArray
 
 import config
 from app import App, TimeEscaper
@@ -49,7 +47,7 @@ class Particle:
         self.r = np.array((x, y))
         self.v = np.array((vx, vy))
         self.radius = radius
-        self.mass = self.radius ** 2
+        self.mass = self.radius**2
         self.rgb = rgb
         self.rgb_hit = rgb_hit
         self.is_hit_by_wall: bool = False

@@ -1,16 +1,7 @@
+SHELL := /bin/bash
 
-MYPY_OPTS :=
-MYPY_OPTS += --explicit-package-bases
-MYPY_OPTS += --follow-imports=silent
-MYPY_OPTS += --ignore-missing-imports
-MYPY_OPTS += --namespace-packages
-MYPY_OPTS += --no-strict-optional
-MYPY_OPTS += --pretty
-MYPY_OPTS += --strict
-MYPY_OPTS += --strict-equality
-MYPY_OPTS += --warn-redundant-casts
-MYPY_OPTS += --warn-return-any
-MYPY_OPTS += --warn-unreachable
+# Interim ruff-based quality targets (mypy dropped, #9).
+# The full uv-based two-level Makefile lands with task G (#TODO item 5).
 
 .PHONY: *
 
@@ -24,8 +15,12 @@ help:	## print this help
 require: ## install dependencies (Python)
 	pip install -r client-py/requirements.txt
 
-lint: ## lint (Python)
-	mypy $(MYPY_OPTS) $$(find -P -name "*.py")
+lint: ## lint + format-check (ruff, read-only)
+	cd client-py && uv tool run ruff check . && uv tool run ruff format --check .
 
-clean: ## remove tmp files
-	rm -rf .mypy_cache
+format: ## format + lint autofix (ruff, modifies code)
+	cd client-py && uv tool run ruff format . && uv tool run ruff check --fix .
+
+clean: ## remove caches
+	rm -rf .ruff_cache .pytest_cache .mypy_cache
+	find . -type d -name __pycache__ -prune -exec rm -rf {} +

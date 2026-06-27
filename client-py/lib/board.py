@@ -4,7 +4,7 @@ import time
 from typing import Any, Callable
 
 import config
-from lib import NONE, READY, until, chunkize
+from lib import NONE, READY, chunkize, until
 from lib.gfx import Gfx
 
 from .channel import Channel
@@ -64,7 +64,7 @@ class Board:
         # normally called by callback
         try:
             self._configure()
-        except:
+        except Exception:
             self.reboot()
             self._configure()
 
@@ -82,7 +82,7 @@ class Board:
             config.HEIGHT = h
             config.COLUMNS = int(w / 6.4)
             config.ROWS = int(h / 8)
-            print(f'OLED resolution:')
+            print('OLED resolution:')
             print(f'  pixels: {w} x {h}')
             print(f'  chars:  {config.COLUMNS} x {config.ROWS}')
 
@@ -214,7 +214,6 @@ class Board:
         print(msg)
         self.gfx.reset()
         self.gfx.set_auto_display_on()
-        w, h = 1, config.TEXT_SCALING
         self.gfx.set_text_size(0.5, 1)
         self.gfx.set_text_wrap_on()
 

@@ -1,6 +1,4 @@
-import datetime
 import math
-import time
 from dataclasses import dataclass
 
 import config
@@ -76,9 +74,6 @@ class Cube(App):
         TRANSLATEX = (config.WIDTH - 4) // 2 + int(config.WIDTH / 8)
         TRANSLATEY = (config.HEIGHT - 4) // 2 + 4 + 8
 
-        # (!) Try changing this to '#' or '*' or some other character:
-        LINE_CHAR = chr(9608)  # Character 9608 is a solid block.
-
         # (!) Try setting two of these values to zero to rotate the cube only
         # along a single axis:
         K = 0.7
@@ -139,7 +134,7 @@ class Cube(App):
             rotated_z = z
 
             # False perspective
-            k = 1 if ISOMETRIC else 1.5 ** z * 0.6 + 0.25
+            k = 1 if ISOMETRIC else 1.5**z * 0.6 + 0.25
 
             return Point(rotated_x * k, rotated_y * k, rotated_z)
 
@@ -194,8 +189,8 @@ class Cube(App):
         ) -> None:
 
             # Erase old
-            for l in lines:
-                line(l.x1, l.y1, l.x2, l.y2, 0)
+            for ln in lines:
+                line(ln.x1, ln.y1, ln.x2, ln.y2, 0)
             lines.clear()
 
             # Find farthest point to omit hidden edges
@@ -222,8 +217,8 @@ class Cube(App):
 
             # Draw
             self.gfx.set_fg_color(*LINES_RGB)
-            for l in lines:
-                line(l.x1, l.y1, l.x2, l.y2, 1)
+            for ln in lines:
+                line(ln.x1, ln.y1, ln.x2, ln.y2, 1)
 
         self.last_x0 = self.last_x1 = self.last_y0 = self.last_y1 = 0
         self.has_last = False
@@ -256,7 +251,7 @@ class Cube(App):
             for i, face in enumerate(CUBE_FACES):
                 src = corners[face.normal.a]
                 dst = corners[face.normal.b]
-                dx, dy, dz = dst.x - src.x, dst.y - src.y, dst.z - src.z
+                dx, _, dz = dst.x - src.x, dst.y - src.y, dst.z - src.z
                 if dz > 0:
                     visible_faces_indices.add(i)
                     value_by_face_index[i] = (dz + dx) / 3
@@ -288,7 +283,6 @@ class Cube(App):
             top_right = Point2(x1, y0)
             bot_left = Point2(x0, y1)
             bot_right = Point2(x1, y1)
-            center = Point2(TRANSLATEX, TRANSLATEY)
 
             if smart_erase:
                 # erase frame (between enclosing rectangle and last enclosing rectangle)
@@ -474,9 +468,7 @@ class Cube(App):
         # Rotation amounts for each axis:
         rotation = Vector(0, 0, 0)
 
-        previous: Vector | None = None
         escaper = TimeEscaper(self)
-        start = datetime.datetime.now()
         # self.gfx.reset()
 
         lines: list[Line] = []

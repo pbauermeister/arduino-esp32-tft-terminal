@@ -1,4 +1,3 @@
-import config
 from app import App, Sprite, TimeEscaper
 from lib.board import Board
 

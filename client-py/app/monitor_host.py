@@ -32,7 +32,7 @@ class MonitorBase(App):
             head = '  ' + ''.join([f'{s:3}' for s in cols])
             vals = '   ' + ' '.join([f'{int(v):2}' for v in stats])
             return [head, vals]
-        except:
+        except Exception:
             return ['mem unavailable']
 
     def shell_command(
@@ -44,7 +44,7 @@ class MonitorBase(App):
             return subprocess.run(
                 cmd, encoding='utf-8', check=check, stdout=subprocess.PIPE
             ).stdout
-        except Exception as e:
+        except Exception:
             print(f'Error >>> {cmd}')
             raise
 
@@ -75,9 +75,9 @@ class MonitorHost(MonitorBase):
                 self.get_uptime(),
             ] + self.get_mem()
 
-            for l in lines:
-                l = self.shorten(l)
-                self.gfx.print(f'{l}\\n')
+            for ln in lines:
+                ln = self.shorten(ln)
+                self.gfx.print(f'{ln}\\n')
             self.gfx.display()
 
             btns = self.board.wait_button(2)
@@ -91,7 +91,7 @@ class MonitorHost(MonitorBase):
     def get_hostname(self) -> str:
         try:
             return self.shell_command(['hostname'])
-        except:
+        except Exception:
             return '<hostname unavail>'
 
     def get_ip(self) -> str:
@@ -105,7 +105,7 @@ class MonitorHost(MonitorBase):
             host = config.MONITOR_SSH_AUTHORITY.split('@')[-1]
             out = self.shell_command(['host', host], force_local=True, check=False)
             return out.splitlines()[0].split(' ')[-1]
-        except:
+        except Exception:
             return '<rmt ip addr unavail>'
 
     def get_local_ip(self) -> str:
@@ -113,27 +113,27 @@ class MonitorHost(MonitorBase):
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
             return str(s.getsockname()[0])
-        except:
+        except Exception:
             return '<ip addr unavail>'
 
     def get_nb_users(self) -> int | None:
         try:
             out = self.shell_command(['who'])
             return len(out.splitlines())
-        except:
+        except Exception:
             return None
 
     def get_date(self) -> str:
         try:
             out = self.shell_command(['date', '--rfc-3339=seconds'])
             return out.split('+')[0]
-        except:
+        except Exception:
             return '<date unavail>'
 
     def get_uptime(self) -> str:
         try:
             uptime = self.shell_command(['uptime', '-p'])
-        except:
+        except Exception:
             return '<uptime unavail>'
         for unit in 'hour', 'minute', 'day', 'week', 'month', 'year':
             initial = unit[0]
@@ -150,5 +150,5 @@ class MonitorHost(MonitorBase):
             head = '  ' + ''.join([f'{s:3}' for s in cols])
             vals = '   ' + ' '.join([f'{int(v):2}' for v in stats])
             return [head, vals]
-        except:
+        except Exception:
             return ['mem unavailable']

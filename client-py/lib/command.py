@@ -2,7 +2,7 @@ import time
 from typing import Callable
 
 import config
-from lib import NONE, ERROR, UNKNOWN, ArduinoCommExceptions
+from lib import ERROR, NONE, UNKNOWN, ArduinoCommExceptions
 
 from .channel import Channel
 
@@ -32,7 +32,7 @@ class Command:
         # it is okay to retry once
         try:
             return self._send_command(cmd, ignore_error, ignore_response)
-        except:
+        except Exception:
             self.chan.clear()
             return self._send_command(cmd, ignore_error, ignore_response)
 
@@ -57,7 +57,7 @@ class Command:
         time.sleep(delay)
         try:
             self.chan.close()
-        except:
+        except Exception:
             pass
 
         self.chan.open()

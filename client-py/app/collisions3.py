@@ -4,11 +4,10 @@ Quite crowded, no gravity, bubble grow with time and pop on mutual collision.
 """
 
 from app.collisions import (
-    CollisionsElastic,
-    Simulation,
     TIME_SUBQUANTAS,
-    Color,
+    CollisionsElastic,
     Particle,
+    Simulation,
 )
 from lib.board import Board
 

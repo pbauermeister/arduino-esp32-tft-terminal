@@ -286,7 +286,6 @@ class MonitorGraph(MonitorBase):
         self.gfx.print(cpus_label)
 
         if state.last_cpus_ttl is not None:
-            xy = self.gfx
             self.gfx.set_text_color(0, 0, 0)
             self.gfx.print(f'{state.last_cpus_ttl}%')
             self.gfx.set_text_color(*COLOR_LABELS)
@@ -294,7 +293,6 @@ class MonitorGraph(MonitorBase):
         self.gfx.set_cursor(0, y + dy)
         self.gfx.print(cpus_label)
         self.gfx.print(f'{state.cpus_ttl}%')
-        last_cpus_ttl = state.cpus_ttl
 
         # Net
         y = self.make_net_y(0)
@@ -325,15 +323,13 @@ class MonitorGraph(MonitorBase):
         try:
             # interval = config.MONITOR_CPU_INTERVAL
             interval = 1
-            out = self.shell_command(
-                (f'mpstat -P ALL {interval} 1 ' f'-o JSON').split()
-            )
+            out = self.shell_command((f'mpstat -P ALL {interval} 1 -o JSON').split())
             data = json.loads(out)
             loads = data['sysstat']['hosts'][0]['statistics'][0]['cpu-load']
-            cpus = [l for l in loads if l['cpu'] not in ('all', '-1')]
+            cpus = [entry for entry in loads if entry['cpu'] not in ('all', '-1')]
             pcents = [int(c['usr'] + 0.5) for c in cpus]
             pcents = sorted(pcents)
-        except:
+        except Exception:
             return [], '<mpstat error>'
         return pcents, ''
 
@@ -343,5 +339,5 @@ class MonitorGraph(MonitorBase):
             rx = sum([int(m) for m in RX_REGEX.findall(out)])
             tx = sum([int(m) for m in TX_REGEX.findall(out)])
             return rx, tx, ''
-        except:
+        except Exception:
             return 0, 0, '<netstat error>'
