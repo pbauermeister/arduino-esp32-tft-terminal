@@ -129,11 +129,29 @@ cycle: ## from scratch: uninstall clean lint test install verify (1)
 ################################################################################
 ## Publish to PyPI:: ##
 
+.PHONY: ci-green
+ci-green: ## assert GitHub CI for HEAD has finished and passed (gh) (3)
+	@SHA=$$(git rev-parse HEAD); \
+	echo "ci-green: GitHub CI for HEAD $$SHA"; \
+	RUNS=$$(gh run list --limit 40 --json databaseId,headSha \
+		--jq "[.[] | select(.headSha==\"$$SHA\")] | .[].databaseId"); \
+	if [ -z "$$RUNS" ]; then \
+		echo "ci-green: no CI run for HEAD — push the commit and let CI start" >&2; \
+		exit 1; \
+	fi; \
+	for r in $$RUNS; do \
+		echo "ci-green: watching run $$r..."; \
+		gh run watch "$$r" --exit-status \
+			|| { echo "ci-green: CI run $$r did not pass" >&2; exit 1; }; \
+	done; \
+	echo "ci-green: all CI runs for HEAD passed."
+
 .PHONY: publish-quality
-publish-quality: ## pre-publish gate: lint test reinstall build (1)
-	@echo "About to run lint + tests + uninstall/install cycle + build. Does NOT upload."
+publish-quality: ## pre-publish gate: ci-green lint test reinstall build (1)
+	@echo "About to verify CI + run lint/tests/install-cycle/build. Does NOT upload."
 	@echo "Ctrl-C within 2 seconds to abort."
 	@sleep 2
+	$(MAKE) ci-green
 	$(MAKE) lint
 	$(MAKE) test
 	-$(MAKE) uninstall
@@ -174,3 +192,4 @@ clean: ## remove venv, build artefacts, caches
 ## - (1) modifies the user account (~/.local/bin, uv tools).
 ## - (2) prerequisite — store the PyPI token in keyring once:
 ##       keyring set https://upload.pypi.org/legacy/ __token__
+## - (3) needs the `gh` CLI authenticated; HEAD must be pushed so CI has run.
