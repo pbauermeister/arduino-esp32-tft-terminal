@@ -60,7 +60,10 @@ CHANGES.md, doc layer, test tiers).
    Refactor the `config.py` runtime-patched global. Declare
    `[project].dependencies`: `numpy`, `pyserial`, and
    `claude-busy-monitor` (already imported by `app/claude_mon.py`,
-   but currently absent from `requirements.txt`). [cbm]
+   but currently absent from `requirements.txt`). On publish, adapt the
+   README Quick start: install via `pipx`/`uv tool`, plus a
+   run-without-installing option (e.g. `uvx`), as in the
+   `claude-busy-monitor` README. [cbm]
 
 7. **Test strategy** (D) — design devlog: one `RecordingChannel` seam
    (the only fake) + three tiers — pure-logic units, command-stream
