@@ -42,18 +42,26 @@ help: ## print this help
 ## Setup:: ##
 
 .PHONY: require
-require: ## install the toolchain (arduino-cli + esp32 core)
-	@command -v arduino-cli >/dev/null || { \
+require: ## install the toolchain (arduino-cli + core + libs)
+	@set -e; \
+	if ! command -v arduino-cli >/dev/null; then \
 		echo "installing arduino-cli into $(ARDUINO_CLI_BINDIR) ..."; \
 		mkdir -p "$(ARDUINO_CLI_BINDIR)"; \
 		curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh \
 			| BINDIR="$(ARDUINO_CLI_BINDIR)" sh; \
 		echo "note: ensure $(ARDUINO_CLI_BINDIR) is on your PATH"; \
-	}
+	fi; \
+	export PATH="$(ARDUINO_CLI_BINDIR):$$PATH"; \
 	arduino-cli config add board_manager.additional_urls \
-		https://espressif.github.io/arduino-esp32/package_esp32_index.json || true
-	arduino-cli core update-index
-	arduino-cli core install esp32:esp32
+		https://espressif.github.io/arduino-esp32/package_esp32_index.json || true; \
+	arduino-cli core update-index; \
+	arduino-cli core install esp32:esp32; \
+	arduino-cli lib install \
+		"Adafruit GFX Library" \
+		"Adafruit ST7735 and ST7789 Library" \
+		"Adafruit NeoPixel" \
+		"Adafruit TestBed" \
+		"Button"
 
 ################################################################################
 ## Quality:: ##

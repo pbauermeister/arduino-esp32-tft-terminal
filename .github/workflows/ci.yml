@@ -22,3 +22,21 @@ jobs:
       - name: make check (ruff lint + pytest)
         working-directory: client-py
         run: make check
+
+  firmware-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache arduino-cli core + libraries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.arduino15
+            ~/Arduino
+          key: arduino-${{ runner.os }}-esp32
+      - name: Install toolchain + compile firmware
+        working-directory: server-esp32s3-rtft
+        run: |
+          make require
+          export PATH="$HOME/.local/bin:$PATH"
+          make firmware-build
