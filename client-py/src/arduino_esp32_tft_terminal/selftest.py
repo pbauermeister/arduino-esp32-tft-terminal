@@ -159,34 +159,48 @@ def phase1_gallery(board: Board, results: Results) -> None:
         results.check(f'gallery:{name}', _ask(question))
 
 
-def _poll_for_button(board: Board, code: str, timeout: int = 15) -> set[str]:
-    """Poll `readButtons` until `code` is pressed (or timeout). Returns all
-    codes seen (for diagnostics when nothing matches)."""
+def _await_auto_button(board: Board, code: str, timeout: int = 15) -> set[str]:
+    """In auto-report mode the board appends button codes to every OK response.
+    Elicit responses (a cheap `display`) and accumulate codes until `code` is
+    seen (or timeout). Returns all codes seen (for diagnostics)."""
     seen: set[str] = set()
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
-            b = board.read_buttons()
+            board.gfx.display()  # its OK response carries the current buttons
+            seen |= board.auto_read_buttons()
         except Exception:
-            b = set()
-        seen |= b
-        if code in b:
+            pass
+        if code in seen:
             break
         time.sleep(0.05)
     return seen
 
 
 def phase1_buttons(board: Board, results: Results) -> None:
-    # Read the gadget's buttons by polling — no terminal input here.
+    # Buttons via auto-report mode (the path the apps use): once enabled, the
+    # board appends button codes to every OK response.
     print('\n== Phase 1b: buttons — press the button ON THE GADGET ==')
+    gfx = board.gfx
     board.clear_buttons()  # reset reboot counter so `R` isn't reported spuriously
-    for code, label in [('A', 'A (D0)'), ('B', 'B (D1)'), ('C', 'C (D2)')]:
-        print(f'  >>> press and hold button {label} for ~1s (up to 15s)...')
-        seen = _poll_for_button(board, code)
-        results.check(
-            f'button:{code}', code in seen, f'saw {sorted(seen) or "nothing"}'
-        )
-        time.sleep(1)  # give the user time to release before the next prompt
+    board.begin_auto_read_buttons()
+    try:
+        for code, label in [('A', 'A (D0)'), ('B', 'B (D1)'), ('C', 'C (D2)')]:
+            gfx.reset()
+            gfx.fill_screen(0)
+            gfx.set_text_color(255, 255, 255)
+            gfx.set_text_size(2, 2)
+            gfx.set_cursor(0, config.HEIGHT // 3)
+            gfx.print(f'PRESS {code}')
+            gfx.display()
+            print(f'  >>> press button {label} (up to 15s)...')
+            seen = _await_auto_button(board, code)
+            results.check(
+                f'button:{code}', code in seen, f'saw {sorted(seen) or "nothing"}'
+            )
+            time.sleep(0.5)  # let the user release before the next prompt
+    finally:
+        board.end_auto_read_buttons()
 
     print('  >>> now press the RESET button (the board reboots)...')
     board.clear_buttons()
