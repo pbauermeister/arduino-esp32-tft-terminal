@@ -64,9 +64,14 @@ format: ## ruff format + lint autofix (modifies code)
 	uv run ruff check --fix src tests
 
 .PHONY: test
-test: ## run unit tests
+test: ## run host unit tests (no board)
 	uv sync --extra dev
 	uv run pytest tests
+
+.PHONY: test-board
+test-board: ## on-board acceptance suite (needs gadget on USB; not CI)
+	uv sync --extra dev
+	uv run python -m arduino_esp32_tft_terminal.selftest
 
 .PHONY: check
 check: lint test ## CI/pre-PR gate: lint test
