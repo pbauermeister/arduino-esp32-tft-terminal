@@ -4,13 +4,13 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Board: ESP32-S3 Reverse TFT](https://img.shields.io/badge/board-ESP32--S3%20Reverse%20TFT-blue.svg)](https://www.adafruit.com/product/5345)
 
-A pocket gadget with a small colour TFT display, enclosed in a 3D-printed
+A small gadget with a colour TFT display, enclosed in a 3D-printed
 case and driven from your computer over USB. It runs performance monitors,
 games, and graphical demos — and is easy to extend.
 
 The display is the [Adafruit ESP32-S3 Reverse TFT Feather](https://www.adafruit.com/product/5345):
 an ESP32-S3 board with a 240×135 colour TFT on its back. The board runs a
-small graphical server; all application logic lives on the computer (Python,
+small graphical server (written in C++); all application logic lives on the computer (Python,
 developed and tested on Linux) and drives the board over a simple USB text
 protocol.
 
