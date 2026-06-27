@@ -54,18 +54,24 @@ venv-activate: ## start an interactive shell in updated .venv
 .PHONY: lint
 lint: ## ruff check + format-check (read-only)
 	uv sync --extra dev
-	uv run ruff check src
-	uv run ruff format --check src
+	uv run ruff check src tests
+	uv run ruff format --check src tests
 
 .PHONY: format
 format: ## ruff format + lint autofix (modifies code)
 	uv sync --extra dev
-	uv run ruff format src
-	uv run ruff check --fix src
+	uv run ruff format src tests
+	uv run ruff check --fix src tests
 
 .PHONY: test
-test: ## run tests (none yet — added in task D/E)
-	@echo "No tests yet — added in task D/E."
+test: ## run unit + snapshot tests
+	uv sync --extra dev
+	uv run pytest tests
+
+.PHONY: snapshot-regenerate
+snapshot-regenerate: ## rewrite snapshot goldens from current output
+	uv sync --extra dev
+	SNAPSHOT_UPDATE=1 uv run pytest tests/snapshot
 
 .PHONY: check
 check: lint test ## CI/pre-PR gate: lint test

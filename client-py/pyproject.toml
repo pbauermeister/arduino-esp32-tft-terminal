@@ -42,6 +42,10 @@ pattern = '^## Version (?P<version>\d+\.\d+\.\d+(?:\.post\d+)?):'
 [tool.hatch.build.targets.wheel]
 packages = ["src/arduino_esp32_tft_terminal"]
 
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
 [tool.ruff]
 target-version = "py311"
 
