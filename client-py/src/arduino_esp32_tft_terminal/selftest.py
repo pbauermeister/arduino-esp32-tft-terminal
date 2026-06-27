@@ -201,6 +201,32 @@ def phase1_gallery(board: Board, results: Results) -> None:
         results.check(f"gallery:{name}", _ask(question))
 
 
+_LOGO_REF = """\
+  ┌─────────────────────┐
+  │ WEYLAND-YUTANI CORP │
+  │                     │
+  │         LOGO        │
+  │                     │
+  └─────────────────────┘
+"""
+
+
+def phase0_boot(board: Board, results: Results) -> None:
+    # Reboot the board and check its power-on behaviour (logo + NeoPixel).
+    _title("boot:logo")
+    print("  rebooting the board...")
+    board.reboot()
+    print("  expected boot screen:")
+    print(_LOGO_REF)
+    results.check("boot:logo", _ask("does the board show that boot/logo screen?"))
+    _title("boot:neopixel")
+    results.check(
+        "boot:neopixel",
+        _ask("is the RGB (NeoPixel) LED pulsing and slowly cycling colour?"),
+    )
+    board.configure()  # re-establish the configured state after the reboot
+
+
 # Seconds to wait for each interactive button press (None = wait forever).
 BUTTON_TIMEOUT: float | None = 60
 
@@ -373,6 +399,7 @@ def main() -> None:
     board = connect()
     results = Results()
     if not unattended_only:
+        phase0_boot(board, results)
         phase1_gallery(board, results)
         phase1_buttons(board, results)
     phase2_unattended(board, results)
