@@ -33,7 +33,7 @@ jobs:
           path: |
             ~/.arduino15
             ~/Arduino
-          key: arduino-${{ runner.os }}-esp32
+          key: arduino-${{ runner.os }}-esp32-3.3.0
       - name: Install toolchain + compile firmware
         working-directory: server-esp32s3-rtft
         run: |

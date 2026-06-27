@@ -22,6 +22,8 @@ OPTS := USBMode=default,CDCOnBoot=cdc,PSRAM=enabled,PartitionScheme=tinyuf2,Flas
 PORT ?= /dev/ttyACM0
 SRC  := $(wildcard *.ino *.cpp *.h)
 ARDUINO_CLI_BINDIR ?= $(HOME)/.local/bin
+# Pinned: the firmware is near the DRAM limit; 3.3.10 overflows it by ~4 KB.
+ESP32_CORE := esp32:esp32@3.3.0
 
 ################################################################################
 ## General:: ##
@@ -55,7 +57,7 @@ require: ## install the toolchain (arduino-cli + core + libs)
 	arduino-cli config add board_manager.additional_urls \
 		https://espressif.github.io/arduino-esp32/package_esp32_index.json || true; \
 	arduino-cli core update-index; \
-	arduino-cli core install esp32:esp32; \
+	arduino-cli core install $(ESP32_CORE); \
 	arduino-cli lib install \
 		"Adafruit GFX Library" \
 		"Adafruit ST7735 and ST7789 Library" \

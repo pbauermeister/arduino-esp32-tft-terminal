@@ -40,7 +40,7 @@ A CI job must verify the firmware compiles (would have caught the esp32-core nar
 ### 3.2 Notes
 
 - `require` is one shell block so the `PATH` export reaches the `arduino-cli` calls whether it was just installed or pre-existing.
-- The core install pins to whatever `esp32:esp32` is current; if a future core breaks the build, this job is exactly what flags it.
+- **DRAM finding (CI surfaced it immediately):** the first CI run pulled core `3.3.10` (latest 3.3.x) and the link **failed** — `dram0_0_seg overflowed by 4224 bytes`. The firmware is near the static-RAM ceiling (84 % on 3.3.0), and 3.3.10 tips it over. Fix: **pin `esp32:esp32@3.3.0`** (the core the board is validated on) in `require` + the cache key, so dev/CI/board build the same. Reducing the firmware's DRAM headroom is a separate concern, parked.
 
 ### 3.3 Verdict
 
