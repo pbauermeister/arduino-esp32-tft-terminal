@@ -103,18 +103,23 @@ def _gallery_text(gfx: Gfx) -> None:
     w, h = config.WIDTH, config.HEIGHT
     gfx.reset()
     gfx.fill_screen(0)
+    # top-left, base size
     gfx.set_text_color(255, 255, 255)
     gfx.set_text_size(1, 1)
     gfx.set_cursor(0, 0)
-    gfx.print('size 1x1 top-left')
+    gfx.print('top-left')
+    # middle, double size
     gfx.set_text_size(2, 2)
     gfx.set_text_color(255, 255, 0)
     gfx.set_cursor(0, h // 3)
     gfx.print('SIZE 2')
+    # bottom-right, measured with getTextBounds and right/bottom-aligned
     gfx.set_text_size(1, 1)
     gfx.set_text_color(0, 255, 255)
-    gfx.set_cursor(w // 2, h - 10)
-    gfx.print('bottom-right')
+    label = 'bottom-right'
+    tw, th = gfx.get_text_bounds(0, 0, label)
+    gfx.set_cursor(max(0, w - tw), max(0, h - th))
+    gfx.print(label)
     gfx.display()
 
 
