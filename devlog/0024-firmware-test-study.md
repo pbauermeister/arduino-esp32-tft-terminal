@@ -10,6 +10,8 @@
 
 Research only (no implementation). Answers three questions about testing the gadget's firmware / USB protocol off-board.
 
+**Outcome (after discussion):** the **interactive on-board self-test** (devlog 0026, `make test-board`) was adopted instead of host C++ tests. It verifies the protocol both ways with no firmware change and minimal human time (visual primitive gallery, guided button/reset, then an unattended command-conformance + soak pass). The firmware C++ host harness and the shadow-canvas readback were considered and **parked** — disproportionate to the value. Pixel readback confirmed unavailable (kept as trusted SOUP).
+
 ## Mandate
 
 1. How much can be tested **without** firmware (FW) changes?
