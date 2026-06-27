@@ -159,22 +159,42 @@ def phase1_gallery(board: Board, results: Results) -> None:
         results.check(f'gallery:{name}', _ask(question))
 
 
-def phase1_buttons(board: Board, results: Results) -> None:
-    print('\n== Phase 1b: buttons (follow the prompts) ==')
-    for code, label in [('A', 'A (D0)'), ('B', 'B (D1)'), ('C', 'C (D2)')]:
-        input(f'Press and release button {label}, then Enter is not needed... ')
-        btns = board.wait_button(timeout=15)
-        results.check(
-            f'button:{code}', code in btns, f'got {sorted(btns) or "nothing"}'
-        )
+def _poll_for_button(board: Board, code: str, timeout: int = 15) -> set[str]:
+    """Poll `readButtons` until `code` is pressed (or timeout). Returns all
+    codes seen (for diagnostics when nothing matches)."""
+    seen: set[str] = set()
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            b = board.read_buttons()
+        except Exception:
+            b = set()
+        seen |= b
+        if code in b:
+            break
+        time.sleep(0.05)
+    return seen
 
-    print('Now press the RESET button (the board will reboot)...')
+
+def phase1_buttons(board: Board, results: Results) -> None:
+    # Read the gadget's buttons by polling — no terminal input here.
+    print('\n== Phase 1b: buttons — press the button ON THE GADGET ==')
+    board.clear_buttons()  # reset reboot counter so `R` isn't reported spuriously
+    for code, label in [('A', 'A (D0)'), ('B', 'B (D1)'), ('C', 'C (D2)')]:
+        print(f'  >>> press and hold button {label} for ~1s (up to 15s)...')
+        seen = _poll_for_button(board, code)
+        results.check(
+            f'button:{code}', code in seen, f'saw {sorted(seen) or "nothing"}'
+        )
+        time.sleep(1)  # give the user time to release before the next prompt
+
+    print('  >>> now press the RESET button (the board reboots)...')
     board.clear_buttons()
     deadline = time.time() + 20
     detected = False
     while time.time() < deadline:
         try:
-            if 'R' in board.read_buttons(flush=True):
+            if 'R' in board.read_buttons():
                 detected = True
                 break
         except Exception:
