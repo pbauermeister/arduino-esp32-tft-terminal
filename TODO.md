@@ -25,60 +25,37 @@ CHANGES.md, doc layer, test tiers).
 5. Rename `Asteriods` → `Asteroids` — the spelling is intentional.
 6. Single-source protocol (codegen for client + firmware) — real fix
    for the double-definition, but needs codegen on both sides;
-   parked (see item 11 below).
+   parked (see the **Protocol single-source** TODO item below).
+
+## Done
+
+- **A · Hygiene** — #8.
+- **Q · Quality tooling** (ruff format + lint, mypy dropped) — #10.
+- **H1 · Top-level README** (dfd finish) — #12.
+- **H2 · Doc layer** — `CHANGES.md` (#14), per-subproject READMEs + index (#16), install-methods refresh (#18). The `README-STATE-DETECTION` family member moved upstream to `claude-busy-monitor`.
+- **G · Makefile** (uv + ruff, two-level; build/install/publish groups) — #18 (folded with P). _Firmware targets split out — see below._
+- **P · Packaging** — src-layout, console script, version from `CHANGES.md`, deps incl. `claude-busy-monitor` — #18. **Published 0.1.0 to PyPI.**
 
 ## TODO Items
 
-1. **Hygiene** (A) — `.gitignore` (caches, `dist/`, `.venv/`); remove
-   `.mypy_cache/`; relocate `client-py/load.sh` → `scripts/`; add
-   `server-featherwing--obsolete/DEPRECATED.md`. Dead apps
-   (`bumps.py`, `road.py`) stay inactive/unlinked.
-
-2. **Quality tooling** (Q) — adopt ruff (format + lint), drop mypy,
-   reach green. Remove mypy config from the top-level Makefile. [cbm]
-
-3. **Top-level README** (H1) — bring to dfd finish: badges, pitch,
-   features, quick-start, per-OS install, links. Static. [dfd]
-
-4. **Doc layer** (H2) — `CHANGES.md` (`## Version X` format, version
-   source for packaging); per-subproject READMEs; consolidate the
-   `README-protocol/animations/VSCODE/STATE-DETECTION` family under an
-   index. [dfd]
-
-5. **Makefile** (G) — uv + ruff, two-level targets (low does one
-   thing; high composes, marked by a colon in its `##` doc). Targets:
-   help, require (uv), venv-activate, format, lint, test, run, build,
-   install, clean, publish. Plus `arduino-cli` firmware-build /
-   firmware-upload, and a committed `.clang-format` for the firmware.
-   [cbm]
-
-6. **Packaging** (P) — make `client-py` installable and
-   PyPI-publishable: src-layout
-   `client-py/src/arduino_esp32_tft_terminal/`, `[project]` metadata,
-   console script `arduino-esp32-tft-terminal`, `uv tool install` /
-   `uv build` / `uv publish`, version extracted from `CHANGES.md`.
-   Refactor the `config.py` runtime-patched global. Declare
-   `[project].dependencies`: `numpy`, `pyserial`, and
-   `claude-busy-monitor` (already imported by `app/claude_mon.py`,
-   but currently absent from `requirements.txt`). On publish, adapt the
-   README Quick start: install via `pipx`/`uv tool`, plus a
-   run-without-installing option (e.g. `uvx`), as in the
-   `claude-busy-monitor` README. [cbm]
-
-7. **Test strategy** (D) — design devlog: one `RecordingChannel` seam
+1. **Test strategy** (D) — design devlog: one `RecordingChannel` seam
    (the only fake) + three tiers — pure-logic units, command-stream
    snapshot (golden) tests, manual hardware smoke. [dfd]
 
-8. **Tests** (E) — implement the unit + snapshot tiers per the
+2. **Tests** (E) — implement the unit + snapshot tiers per the
    strategy. [dfd]
 
-9. **CI** (F) — GitHub Actions: install uv, `make check` (lint +
+3. **CI** (F) — GitHub Actions: install uv, `make check` (lint +
    tests); light Python matrix. [cbm]
 
-10. **De-duplicate physics** (I) — extract a shared
-    `Particle`/`Simulation` base from
-    `collisions{,2,3,4}.py` (rule-of-three met). No behaviour change.
+4. **De-duplicate physics** (I) — extract a shared
+   `Particle`/`Simulation` base from
+   `collisions{,2,3,4}.py` (rule-of-three met). No behaviour change.
 
-11. **Protocol single-source** (J) — deferred. Codegen a command spec
-    into both `client-py` (gfx strings) and firmware (`command.cpp`
-    hash-switch). Parked until the duplication actually bites.
+5. **Firmware Makefile targets** — split out of G: a committed
+   `.clang-format` for `server-esp32s3-rtft/`, plus `arduino-cli`
+   firmware-build / firmware-upload targets.
+
+6. **Protocol single-source** (J) — deferred. Codegen a command spec
+   into both `client-py` (gfx strings) and firmware (`command.cpp`
+   hash-switch). Parked until the duplication actually bites.
