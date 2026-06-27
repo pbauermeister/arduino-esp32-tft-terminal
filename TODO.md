@@ -45,6 +45,8 @@ CHANGES.md, doc layer, test tiers).
 - **Firmware clang-format backlog applied** — `make format` over all sources; binary-identical (498103 bytes), `format-check` clean — #39.
 - **Firmware VS Code format-on-save** — `.vscode/settings.json` clang-formats `.cpp`/`.h`/`.ino` on save with the same binary + `.clang-format` as `make format` (zero diff) — #41.
 - **Firmware CI compile gate** — `firmware-build` job (cache + `make require` + `make firmware-build`); `require` installs the libs; core pinned `3.3.0` — #43.
+- **Retire VS Code build docs** — removed `README-VSCODE.md`; server/top READMEs + CLAUDE.md repointed to the `make` build — #45.
+- **Top-level signpost Makefile** — root `make` points to the sub-makefiles (tests live in client-py) — #47.
 
 ## TODO Items
 
@@ -54,23 +56,12 @@ CHANGES.md, doc layer, test tiers).
    (`CHANGES.md` → generated header) so the running firmware reports it.
    Optionally surface it via the client.
 
-2. **Retire VS Code build docs** — remove `server-esp32s3-rtft/README-VSCODE.md`
-   and its references; the Arduino VS Code plugin is unmaintained. From now on
-   the build/flash is shell + Makefile + `arduino-cli`, entirely and only
-   (`make require` / `firmware-build` / `firmware-upload`). Repoint the server
-   and top-level READMEs.
-
-3. **Top-level signpost Makefile** — a repo-root `Makefile` that builds nothing;
-   its default/help target points to the sub-makefiles: `client-py/` (client +
-   the test suites — tests live there because a running app drives the board)
-   and `server-esp32s3-rtft/` (firmware build/flash).
-
-4. **Firmware DRAM headroom / core pin** — the firmware sits at ~84% of static
+2. **Firmware DRAM headroom / core pin** — the firmware sits at ~84% of static
    RAM on esp32 core `3.3.0`; `3.3.10` overflows `dram0_0_seg` by ~4 KB, so the
    core is pinned to `3.3.0` (`require` + CI cache key). To track newer cores,
    trim static DRAM usage (buffers) and lift the pin. Until then, the pin keeps
    dev/CI/board reproducible.
 
-5. **Protocol single-source** (J) — deferred. Codegen a command spec
+3. **Protocol single-source** (J) — deferred. Codegen a command spec
    into both `client-py` (gfx strings) and firmware (`command.cpp`
    hash-switch). Parked until the duplication actually bites.
