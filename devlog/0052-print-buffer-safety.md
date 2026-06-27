@@ -104,7 +104,22 @@ On connect (in `board._configure`, beside the resolution/version query): query `
 - Model: Claude Opus 4.8
 - Review: pending
 
-(Pending implementation.)
+### 3.1 Implementation
+
+Implemented per the user's explicit verbal "go, implement" — the in-file review gate was waived by the user for this task; no attestation is fabricated (this section stays `Review: pending`).
+
+- **FW:** `getPrintMaxLength` (= `PRINT_LENGTH - 1`); `action()` flush-when-full + `add()` simplified — fixes #50's drop; `do_action` no-op; `CHANGES.md` → **0.2.0**. Compiles on 3.3.10 (67% DRAM), format clean.
+- **Client:** `config.DEFAULT_PRINT_MAX=127` + `PRINT_WIRE_MAX=190`; `Gfx.print_max` default + `get_print_max_length()`; `Gfx.print()` slices via `_slice_print` (escape-safe; `str` **and** wire limits); `board._configure` negotiates it and banners it.
+- **Host tests:** `test_print_slicing.py` — 9 tests (slicing, escape boundaries, wire cap, default, negotiation + fallback). ruff clean, **33 tests pass**.
+- **On-board demo:** `make test-board-buffer` (`buffer_safety.py`) — gigantic sliced print + a 1500-draw flow-control latency demo.
+
+### 3.2 Pending (hardware — gadget disconnected; to do together)
+
+- Flash 0.2.0 (ROM download mode), then `make test-board-buffer`: confirm the long print renders **in full** and the flow-control **latency spikes** appear near multiples of 1000 with **all** shapes drawn (none dropped).
+
+### 3.3 Verdict
+
+Accept once the hardware demo passes.
 
 ## Governance trace
 

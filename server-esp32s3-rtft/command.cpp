@@ -456,6 +456,11 @@ const char *interpret(char *input, const Config &config) {
             return make_resp_buffer(&rest, config.display_height);
         }
 
+        case hash("getPrintMaxLength"): {  // getPrintMaxLength
+            // usable print text per buffered action (\0 reserved)
+            return make_resp_buffer(&rest, PRINT_LENGTH - 1);
+        }
+
         case hash("getRotation"): {  // getRotation
             transaction.commit();
             return make_resp_buffer(&rest, get_rotation());

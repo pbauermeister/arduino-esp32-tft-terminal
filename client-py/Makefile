@@ -73,6 +73,11 @@ test-board: ## on-board acceptance suite (needs gadget on USB; not CI)
 	uv sync --extra dev
 	uv run python -m arduino_esp32_tft_terminal.selftest
 
+.PHONY: test-board-buffer
+test-board-buffer: ## on-board print/buffer-safety demo (needs gadget; not CI)
+	uv sync --extra dev
+	uv run python -m arduino_esp32_tft_terminal.buffer_safety
+
 .PHONY: check
 check: lint test ## CI/pre-PR gate: lint test
 

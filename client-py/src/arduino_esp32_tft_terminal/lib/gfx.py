@@ -5,10 +5,33 @@ from arduino_esp32_tft_terminal import config
 from .command import Command
 
 
+def _slice_print(s: str, max_text: int, max_wire: int) -> list[str]:
+    """Split a print payload into chunks, each holding at most `max_text`
+    unescaped characters and `max_wire` wire characters, never splitting a
+    backslash escape (`\\n`, `\\t`, `\\\\`)."""
+    chunks: list[str] = []
+    i, n = 0, len(s)
+    while i < n:
+        start = i
+        text = 0
+        while i < n and text < max_text:
+            tok = 2 if (s[i] == '\\' and i + 1 < n) else 1
+            if i - start + tok > max_wire:
+                break
+            i += tok
+            text += 1
+        if i == start:  # never stall
+            i = min(start + 2, n)
+        chunks.append(s[start:i])
+    return chunks
+
+
 class Gfx:
     def __init__(self, command: Command):
         self.command = command
         self.APPS_INTERFRAME_DELAY = config.APPS_INTERFRAME_DELAY_MS / 1000.0
+        # Usable print-text length; refined from the board on connect (else default).
+        self.print_max = config.DEFAULT_PRINT_MAX
 
     def _command(
         self, cmd: str, ignore_error: bool = False, ignore_response: bool = False
@@ -32,8 +55,16 @@ class Gfx:
     def set_cursor(self, x: int, y: int) -> None:
         self._command(f'setCursor {x} {y}')
 
+    def get_print_max_length(self) -> int:
+        return int(self._command('getPrintMaxLength'))
+
     def print(self, s: str) -> None:
-        self._command(f'print {s}')
+        # Fast path: wire length <= print_max <= every limit -> one command.
+        if len(s) <= self.print_max:
+            self._command(f'print {s}')
+            return
+        for chunk in _slice_print(s, self.print_max, config.PRINT_WIRE_MAX):
+            self._command(f'print {chunk}')
 
     def display(self) -> None:
         self._command('display')

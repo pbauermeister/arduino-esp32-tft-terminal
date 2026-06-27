@@ -86,10 +86,15 @@ class Board:
                 version = self.gfx._command('version')
             except Exception:
                 version = 'unknown'  # older firmware without the command
+            try:
+                self.gfx.print_max = self.gfx.get_print_max_length()
+            except Exception:
+                pass  # older firmware: keep the safe default (config.DEFAULT_PRINT_MAX)
             print('OLED resolution:')
             print(f'  pixels: {w} x {h}')
             print(f'  chars:  {config.COLUMNS} x {config.ROWS}')
             print(f'firmware version: {version}')
+            print(f'print max length: {self.gfx.print_max}')
 
         if self.configure_callback:
             self.configure_callback()
