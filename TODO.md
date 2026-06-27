@@ -35,27 +35,24 @@ CHANGES.md, doc layer, test tiers).
 - **H2 · Doc layer** — `CHANGES.md` (#14), per-subproject READMEs + index (#16), install-methods refresh (#18). The `README-STATE-DETECTION` family member moved upstream to `claude-busy-monitor`.
 - **G · Makefile** (uv + ruff, two-level; build/install/publish groups) — #18 (folded with P). _Firmware targets split out — see below._
 - **P · Packaging** — src-layout, console script, version from `CHANGES.md`, deps incl. `claude-busy-monitor` — #18. **Published 0.1.0 to PyPI.**
+- **D · Test strategy** — design devlog; pivoted on review from app snapshots to the protocol/button contract — #20.
+- **E · Tests** — host unit tests: protocol formatting/parsing, button decoding, pure-logic units (24 tests) — #22/#23.
+- **Self-test** — interactive on-board acceptance suite (`make test-board`): boot (logo + NeoPixel), primitive gallery, buttons/reset, unattended command-conformance + soak — #27.
+- **Firmware host-test study** — researched; interactive self-test adopted, FW host-tests + shadow-canvas parked; pixel readback confirmed unavailable — #25.
 
 ## TODO Items
 
-1. **Test strategy** (D) — design devlog: one `RecordingChannel` seam
-   (the only fake) + three tiers — pure-logic units, command-stream
-   snapshot (golden) tests, manual hardware smoke. [dfd]
-
-2. **Tests** (E) — implement the unit + snapshot tiers per the
-   strategy. [dfd]
-
-3. **CI** (F) — GitHub Actions: install uv, `make check` (lint +
+1. **CI** (F) — GitHub Actions: install uv, `make check` (lint +
    tests); light Python matrix. [cbm]
 
-4. **De-duplicate physics** (I) — extract a shared
+2. **De-duplicate physics** (I) — extract a shared
    `Particle`/`Simulation` base from
    `collisions{,2,3,4}.py` (rule-of-three met). No behaviour change.
 
-5. **Firmware Makefile targets** — split out of G: a committed
+3. **Firmware Makefile targets** — split out of G: a committed
    `.clang-format` for `server-esp32s3-rtft/`, plus `arduino-cli`
    firmware-build / firmware-upload targets.
 
-6. **Protocol single-source** (J) — deferred. Codegen a command spec
+4. **Protocol single-source** (J) — deferred. Codegen a command spec
    into both `client-py` (gfx strings) and firmware (`command.cpp`
    hash-switch). Parked until the duplication actually bites.
