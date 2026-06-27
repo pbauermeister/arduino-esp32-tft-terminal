@@ -23,8 +23,9 @@ PORT ?= /dev/ttyACM0
 # version.h is generated from CHANGES.md (see below) — excluded from formatting.
 SRC  := $(filter-out version.h,$(wildcard *.ino *.cpp *.h))
 ARDUINO_CLI_BINDIR ?= $(HOME)/.local/bin
-# Pinned: the firmware is near the DRAM limit; 3.3.10 overflows it by ~4 KB.
-ESP32_CORE := esp32:esp32@3.3.0
+# Pinned for reproducibility. After the transaction DRAM trim the firmware uses
+# ~62% of static RAM (was 84%), so 3.3.10 now fits with ~121 KB to spare.
+ESP32_CORE := esp32:esp32@3.3.10
 
 ################################################################################
 ## General:: ##
