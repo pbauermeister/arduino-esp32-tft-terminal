@@ -57,7 +57,10 @@ CHANGES.md, doc layer, test tiers).
    `client-py/src/arduino_esp32_tft_terminal/`, `[project]` metadata,
    console script `arduino-esp32-tft-terminal`, `uv tool install` /
    `uv build` / `uv publish`, version extracted from `CHANGES.md`.
-   Refactor the `config.py` runtime-patched global. [cbm]
+   Refactor the `config.py` runtime-patched global. Declare
+   `[project].dependencies`: `numpy`, `pyserial`, and
+   `claude-busy-monitor` (already imported by `app/claude_mon.py`,
+   but currently absent from `requirements.txt`). [cbm]
 
 7. **Test strategy** (D) — design devlog: one `RecordingChannel` seam
    (the only fake) + three tiers — pure-logic units, command-stream
