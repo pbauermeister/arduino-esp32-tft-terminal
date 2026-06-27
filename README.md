@@ -1,94 +1,108 @@
 # Arduino ESP32 TFT Terminal
 
-(Using Adafruit ESP32-S3 Reverse TFT Feather.)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Board: ESP32-S3 Reverse TFT](https://img.shields.io/badge/board-ESP32--S3%20Reverse%20TFT-blue.svg)](https://www.adafruit.com/product/5345)
 
-This repository provides the code needed to implement a gadget
-sporting a small TFT display, enclosed in a 3D-printed case, and
-driven by a program running on your computer (in Python, developed and
-tested on Linux).
+A pocket gadget with a small colour TFT display, enclosed in a 3D-printed
+case and driven from your computer over USB. It runs performance monitors,
+games, and graphical demos — and is easy to extend.
 
-It provides apps like performance monitors, games and various demos,
-and is extensible.
+The display is the [Adafruit ESP32-S3 Reverse TFT Feather](https://www.adafruit.com/product/5345):
+an ESP32-S3 board with a 240×135 colour TFT on its back. The board runs a
+small graphical server; all application logic lives on the computer (Python,
+developed and tested on Linux) and drives the board over a simple USB text
+protocol.
 
-![Alt text](media/20240525_133408-thumb.png?raw=true "Title")
+![Asteriods on the TFT](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_133408-thumb.png "Asteriods running on the gadget")
 
-## A. Project motivation
+## Apps
 
-The Adafruit ESP32-S3 Reverse TFT Feather is an awesome little board
-consisting of an ESP32-based Arduino and a 240x135 color TFT display
-on the back side. See https://www.adafruit.com/product/5345.
+Run any of the bundled apps, or write your own.
 
-Wanting first to get one, then to do something with it, I first
-implemented an external CPU and network monitor gadget for my
-computer. Quickly impressed by the TFT quality, I ended up
-implementing various neat apps:
+| Category     | Apps                                                                          |
+| ------------ | ----------------------------------------------------------------------------- |
+| **Monitors** | `claude-monitor`, `monitor-host`, `monitor-cpus`, `monitor-graph` (local or remote computer) |
+| **Games**    | `asteriods`                                                                    |
+| **Physics**  | `collisions-elastic`, `collisions-gravity`, `bubbles-soap`, `bubbles-air`     |
+| **Graphics** | `cube` (3D), `starfield`, `tunnel`, `quix`, `fill`                             |
 
-- Performance monitors for local or remote computers
-- Asteriod game
-- Particles physics simulation
-- 3D cube
+## How it works
 
-and others.
+Three parts, with a clean split of concerns:
 
-## B. Project parts
+| Part                   | Role                                                                                   |
+| ---------------------- | -------------------------------------------------------------------------------------- |
+| `case-esp32s3-rtft/`   | 3D-printed case and cap, designed in OpenSCAD.                                          |
+| `server-esp32s3-rtft/` | Arduino firmware: a graphical server exposing TFT drawing primitives and button readout over USB. Holds no app logic. |
+| `client-py/`           | Python program on the computer: owns all app logic, drives the board by sending command lines and reading answers. |
 
-### 1. case-esp32s3-rtft/
+The board maps most commands directly to TFT library calls; the contract
+between the two sides is the [USB protocol](README-protocol.md).
 
-A 3D-printed case and cap, designed in OpenSCAD.
+## Quick start
 
-### 2. server-esp32s3-rtft/
+The client currently runs from source (a pip-installable package is on the
+way — see [`TODO.md`](TODO.md)). You need a flashed board connected over USB
+(see [Installing](#installing)).
 
-An Arduino sketch, implementing a graphical server running on the
-board and providing TFT graphical primitives, and buttons readout.
-
-It has been successfully built and uploaded using VS Code, see
-`README-VSCODE.md`.
-
-### 3. client-py/
-
-A Python program running on Linux and communicating with the board
-over USB, implementing various apps:
-
-  - asteriods
-  - bubbles-air
-  - bubbles-soap
-  - collisions-elastic
-  - collisions-gravity
-  - cube
-  - fill
-  - monitor-cpus
-  - monitor-graph
-  - monitor-host
-  - quix
-  - starfield
-  - tunnel
-
-To run it, do:
-```
-cd client-py
-./run.py -h
+```bash
+git clone https://github.com/pbauermeister/arduino-esp32-tft-terminal.git
+cd arduino-esp32-tft-terminal/client-py
+pip install -r requirements.txt
+./run.py -h           # list options and apps
+./run.py --demo       # cycle through all apps
+./run.py --only cube  # run a single app
 ```
 
-To create a new app, study `app/quix.py`, create a new module and
-class, and register your new class in `run.py`.
+## Installing
 
-## C. Videos on Youtube
+### Hardware
 
-|            |             |             |
-|------------|-------------|-------------|
-| [![Video on Youtube](media/yt-Nq5qLFQl3gA.jpg)](https://youtu.be/Nq5qLFQl3gA) | [![Video on Youtube](media/yt-HaPi0cx6-W8.jpg)](https://youtu.be/HaPi0cx6-W8) | [![Video on Youtube](media/yt-vNK-JPLklLs.jpg)](https://youtu.be/vNK-JPLklLs) | |
+- An [Adafruit ESP32-S3 Reverse TFT Feather](https://www.adafruit.com/product/5345).
+- Optionally, the 3D-printed case from `case-esp32s3-rtft/` (`.stl` files ready to print; `.scad` sources to customise).
 
-## D. Photos
+### Firmware (board)
 
-|            |             |
-|------------|-------------|
-| ![CPU+net monitor](media/20240525_145648.jpg?raw=true        "CPU+net monitor") | ![CPU+net monitor ](media/20240525_144050.jpg?raw=true       "CPU+net monitor" ) |
-| ![Playing 3D cube](media/20240525_142735-thumb.png?raw=true  "Playing 3D cube") | ![Playing Asteriod](media/20240525_132939-thumb.png?raw=true "Playing Asteriod") |
-| ![TFT side       ](media/20240525_144544.jpg?raw=true        "TFT side"       ) | ![ESP32 side      ](media/20240525_144614.jpg?raw=true       "ESP32 side"      ) |
-| ![Case on cap    ](media/20240525_124410.jpg?raw=true        "Case on cap"    ) | ![Case closed     ](media/20240525_124520.jpg?raw=true       "Case closed"     ) |
-| ![Case on cap    ](media/esp32s3-rtft-case.scad.png?raw=true "Case on cap"    ) |  |
+Build and flash `server-esp32s3-rtft/` onto the board. It has been built and
+uploaded with VS Code — see [`server-esp32s3-rtft/README-VSCODE.md`](server-esp32s3-rtft/README-VSCODE.md).
 
-## E. Implementation notes
+### Client (computer)
 
-- [Communication protocol](README-protocol.md) between the computer and the board.
-- [Animations techniques](README-animations.md) to avoid flicker, in the absence of hardware double-buffering.
+Requires Python 3.10+ on Linux. Install the dependencies and run as shown in
+[Quick start](#quick-start). The client talks to the board over its USB
+serial port.
+
+## Writing a new app
+
+Study [`client-py/app/quix.py`](client-py/app/quix.py) as a template, create a
+new module and class, and register the class in
+[`client-py/run.py`](client-py/run.py).
+
+## Documentation
+
+- [Communication protocol](README-protocol.md) — the USB command/answer protocol between computer and board.
+- [Animation techniques](README-animations.md) — flicker avoidance, in the absence of hardware double-buffering.
+- [Building the firmware](server-esp32s3-rtft/README-VSCODE.md) — VS Code build and upload.
+- [Claude session-state detection](client-py/README-STATE-DETECTION.md) — design notes for the `claude-monitor` app.
+
+## Videos
+
+|                                                                                                                                              |                                                                                                                                              |                                                                                                                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| [![Video on YouTube](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/yt-Nq5qLFQl3gA.jpg)](https://youtu.be/Nq5qLFQl3gA) | [![Video on YouTube](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/yt-HaPi0cx6-W8.jpg)](https://youtu.be/HaPi0cx6-W8) | [![Video on YouTube](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/yt-vNK-JPLklLs.jpg)](https://youtu.be/vNK-JPLklLs) |
+
+## Photos
+
+|                                                                                                                                          |                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| ![CPU + net monitor](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_145648.jpg "CPU + net monitor") | ![CPU + net monitor](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_144050.jpg "CPU + net monitor") |
+| ![Playing 3D cube](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_142735-thumb.png "Playing 3D cube") | ![Playing Asteriods](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_132939-thumb.png "Playing Asteriods") |
+| ![TFT side](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_144544.jpg "TFT side")       | ![ESP32 side](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_144614.jpg "ESP32 side")   |
+| ![Case on cap](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_124410.jpg "Case on cap") | ![Case closed](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_124520.jpg "Case closed") |
+| ![Case render](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/esp32s3-rtft-case.scad.png "Case render") |                                                                                                                                         |
+
+## Links
+
+- **Source code:** [github.com/pbauermeister/arduino-esp32-tft-terminal](https://github.com/pbauermeister/arduino-esp32-tft-terminal)
+- **License:** [GPLv3](LICENSE)
