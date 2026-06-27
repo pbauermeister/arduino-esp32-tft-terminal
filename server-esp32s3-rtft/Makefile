@@ -1,6 +1,18 @@
-# Firmware build / format helpers for the ESP32-S3 board.
-# Run from this directory. Needs `arduino-cli` (+ the esp32 core) and
-# `clang-format`. Board settings mirror .vscode/arduino.json.
+# Just type 'make' to get help.
+# First run on a fresh box: 'make require', then 'make help'.
+#
+# ============================================================================
+# CONVENTIONS WHEN EDITING THIS FILE — read before adding/changing targets.
+# ============================================================================
+#
+# 1. Target dependencies — STRICT TWO-LEVEL MODEL:
+#    - Low-level  targets: no other-target deps; recipe does ONE thing.
+#    - High-level targets: compose low-levels only. MARK each high-level
+#      target by putting a COLON in its '##' doc string.
+# 2. Help docstrings — <=60 chars (so 'make help' lines fit 80 columns).
+# 3. Order targets within a section by LOGICAL CALL SEQUENCE.
+# 4. Board settings (FQBN + options) mirror .vscode/arduino.json.
+# ============================================================================
 
 SHELL := /bin/bash
 
@@ -9,31 +21,25 @@ FQBN := esp32:esp32:adafruit_feather_esp32s3_reversetft
 OPTS := USBMode=default,CDCOnBoot=cdc,PSRAM=enabled,PartitionScheme=tinyuf2,FlashSize=4M
 PORT ?= /dev/ttyACM0
 SRC  := $(wildcard *.ino *.cpp *.h)
+ARDUINO_CLI_BINDIR ?= $(HOME)/.local/bin
+
+################################################################################
+## General:: ##
 
 .PHONY: help
 help: ## print this help
-	@echo "usage: make COMMAND   (PORT=$(PORT) for upload)"
+	@echo "Usage: make [TARGET]..."
 	@echo
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' Makefile \
-	| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-16s %s\n", $$1, $$2}'
+	@echo "TARGETs:"
+	@grep -E '^#* *[ a-zA-Z0-9_-]+:.*?##.*$$' Makefile \
+	| awk 'BEGIN {FS = ":[^:]*?##"}; {printf "  %-18s%s\n", $$1, $$2}' \
+	| sed -E 's/^ *#+/\n/g' \
+	| sed -E 's/ +$$//g' \
+	| sed -E 's/\\n/\n                      /g'
+	@grep -E '^##[^#]*$$' Makefile | sed -E 's/^## ?//g'
 
-.PHONY: format
-format: ## clang-format the sources in place
-	clang-format -i $(SRC)
-
-.PHONY: format-check
-format-check: ## check formatting (read-only)
-	clang-format --dry-run --Werror $(SRC)
-
-.PHONY: firmware-build
-firmware-build: ## compile the sketch (arduino-cli)
-	arduino-cli compile -b "$(FQBN):$(OPTS)" .
-
-.PHONY: firmware-upload
-firmware-upload: firmware-build ## build + flash the board + verify (set PORT=...)
-	arduino-cli upload -b "$(FQBN):$(OPTS)" -p "$(PORT)" -t .
-
-ARDUINO_CLI_BINDIR ?= $(HOME)/.local/bin
+################################################################################
+## Setup:: ##
 
 .PHONY: require
 require: ## install the toolchain (arduino-cli + esp32 core)
@@ -48,3 +54,33 @@ require: ## install the toolchain (arduino-cli + esp32 core)
 		https://espressif.github.io/arduino-esp32/package_esp32_index.json || true
 	arduino-cli core update-index
 	arduino-cli core install esp32:esp32
+
+################################################################################
+## Quality:: ##
+
+.PHONY: format
+format: ## clang-format the sources in place
+	clang-format -i $(SRC)
+
+.PHONY: format-check
+format-check: ## check formatting (read-only)
+	clang-format --dry-run --Werror $(SRC)
+
+################################################################################
+## Build and flash:: ##
+
+.PHONY: firmware-build
+firmware-build: ## compile the sketch (arduino-cli)
+	arduino-cli compile -b "$(FQBN):$(OPTS)" .
+
+.PHONY: firmware-upload
+firmware-upload: firmware-build ## build, flash + verify: set PORT (1)
+	arduino-cli upload -b "$(FQBN):$(OPTS)" -p "$(PORT)" -t .
+
+
+################################################################################
+##
+## Notes:
+## - Run all targets from server-esp32s3-rtft/ (next to the .ino).
+## - Board FQBN + options mirror .vscode/arduino.json.
+## - (1) flashes the board on PORT (default /dev/ttyACM0); override PORT=...
