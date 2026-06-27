@@ -47,16 +47,11 @@ CHANGES.md, doc layer, test tiers).
 - **Firmware CI compile gate** — `firmware-build` job (cache + `make require` + `make firmware-build`); `require` installs the libs; core pinned `3.3.0` — #43.
 - **Retire VS Code build docs** — removed `README-VSCODE.md`; server/top READMEs + CLAUDE.md repointed to the `make` build — #45.
 - **Top-level signpost Makefile** — root `make` points to the sub-makefiles (tests live in client-py) — #47.
+- **Firmware version command** — board `version` command; version from firmware `CHANGES.md` → build-injected `version.h`; client prints it on connect — #49.
 
 ## TODO Items
 
-1. **Firmware version command** — add a board command (`version`) returning the
-   firmware version. Maintain the version in a firmware `CHANGES.md` (same
-   `## Version X.Y.Z:` format as `client-py/`), injected into the build
-   (`CHANGES.md` → generated header) so the running firmware reports it.
-   Optionally surface it via the client.
-
-2. **Firmware DRAM headroom / lift the core pin** — pinned to
+1. **Firmware DRAM headroom / lift the core pin** — pinned to
    `esp32:esp32@3.3.0` (`require` + CI cache key) because `3.3.10` overflows
    `dram0_0_seg` by ~4 KB. Lifting the pin needs a (non-trivial) DRAM trim first.
 
@@ -86,6 +81,17 @@ CHANGES.md, doc layer, test tiers).
    _Verify:_ compile against `3.3.10`, confirm it fits, lift the pin in
    `require` + the CI cache key, flash via ROM download mode, runtime-test the
    draw-heavy apps (`monitor-graph`, `asteriods`).
+
+2. **Print/buffer total safety (flow control)** — make the buffered-draw path
+   overflow- and truncation-proof end-to-end (builds on #50's `str` shrink +
+   the null-term / bounds fixes):
+   1. A board query returning `Action.str` capacity (`PRINT_LENGTH`) so the
+      client learns it at runtime — no hard-coded firmware/client constant.
+   2. The Python library slices `print` (and any `str`-bearing command) into
+      chunks of that length: long text spans multiple calls, never truncated.
+   3. Flow control on the `actions[]` FIFO: when full, back-pressure instead of
+      drop/early-flush — the client waits for free slots (query depth/room), or
+      the board blocks the command until the action can be queued.
 
 3. **Protocol single-source** (J) — deferred. Codegen a command spec
    into both `client-py` (gfx strings) and firmware (`command.cpp`
