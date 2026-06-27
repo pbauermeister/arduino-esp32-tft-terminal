@@ -1,7 +1,7 @@
 # Arduino ESP32 TFT Terminal
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Board: ESP32-S3 Reverse TFT](https://img.shields.io/badge/board-ESP32--S3%20Reverse%20TFT-blue.svg)](https://www.adafruit.com/product/5345)
 
 A small gadget with a colour TFT display, enclosed in a 3D-printed case and
@@ -60,7 +60,7 @@ arduino-esp32-tft-terminal --only cube    # run a single app
 
 ### Client (computer)
 
-- Requires Python 3.10+ on Linux.
+- Requires Python 3.11+ on Linux.
 - Install the dependencies and run as shown in [Quick start](#quick-start).
 - The client talks to the board over its USB serial port.
 

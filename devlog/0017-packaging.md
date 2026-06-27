@@ -48,10 +48,13 @@ Make `client-py` an installable, PyPI-publishable package.
 - **License as classifier, not bundled file**: `LICENSE` lives at the repo root (covers firmware/case too), outside the `client-py/` project dir — bundling it would hit the same sdist-boundary issue. The GPLv3 classifier carries the metadata; bundling the file is a minor follow-up.
 - **`run.py` → `cli.py`** broke the documented `./run.py` commands; READMEs/CLAUDE.md updated to `uv tool install .` + the `arduino-esp32-tft-terminal` console command.
 - **`requirements.txt` retained** (added `claude-busy-monitor`) for the editable-dev path; `pyproject` deps are canonical.
+- **Task G (Makefile) folded in** (user request — to test the package via `make`): added `client-py/Makefile` (cbm-based, two-level targets, `Build and install::` + `Publish to PyPI::` groups in call order); removed the superseded interim root `Makefile`; added a `--version` flag to the CLI so `make verify-installed` can match `CHANGES.md`. Firmware `arduino-cli` targets + `.clang-format` deferred (separate follow-up).
+- **`requires-python` corrected `>=3.10` → `>=3.11`**: `claude-busy-monitor` only supports `>=3.11`, so `uv sync` (via `make lint`) could not resolve at the 3.10 floor. Classifiers, ruff `target-version`, and the "Python 3.10+" doc/badge mentions updated to 3.11.
 
 ### 3.2 Verification
 
 - `uv build` → wheel + sdist, version `0.1.0` (from `CHANGES.md`).
+- Makefile cycle: `make help` / `lint` / `build` / `install` / `verify-installed` (version matches `CHANGES.md`) / `uninstall` / `verify-uninstalled` / `clean` all succeed; `arduino-esp32-tft-terminal --version` → `0.1.0`. System left clean.
 - `uv pip install <wheel>` into a throwaway venv pulled `claude-busy-monitor==1.0.5`, `numpy`, `pyserial` from PyPI.
 - `arduino-esp32-tft-terminal --help` → exit 0 (exercises every import + the app registry + config reflection; board-free).
 - `python -m arduino_esp32_tft_terminal --help` → exit 0.

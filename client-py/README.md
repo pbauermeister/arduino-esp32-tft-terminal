@@ -6,7 +6,7 @@ drives the board over USB, sending command lines and reading answers.
 
 ## Requirements
 
-- Python 3.10+ on Linux.
+- Python 3.11+ on Linux.
 - A flashed board (see [`../server-esp32s3-rtft/`](../server-esp32s3-rtft/)) connected over USB.
 - Dependencies: `numpy`, `pyserial`, `claude-busy-monitor`.
 
@@ -40,5 +40,11 @@ Package source lives under `src/arduino_esp32_tft_terminal/`:
 
 ## Development
 
-- Format + lint with [ruff](https://docs.astral.sh/ruff/): `make format` / `make lint` (from the repo root).
-- See the top-level [README](../README.md) and [`../TODO.md`](../TODO.md) for the wider toolchain.
+All `make` targets run from this directory (next to `pyproject.toml`):
+
+- `make help` — list targets.
+- `make lint` / `make format` — ruff check + format-check / autofix.
+- `make build` / `make install` — build the wheel / install the `arduino-esp32-tft-terminal` command.
+- `make publish-quality` then `make publish` — PyPI release (token in keyring first).
+
+See the top-level [README](../README.md) and [`../TODO.md`](../TODO.md) for the wider toolchain.
