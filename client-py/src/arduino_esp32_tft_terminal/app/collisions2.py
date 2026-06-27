@@ -5,8 +5,8 @@ Sparsely crowded, gravity, elastic bumps.
 
 from typing import Type
 
-from app.collisions import CollisionsElastic, Simulation
-from lib.board import Board
+from arduino_esp32_tft_terminal.app.collisions import CollisionsElastic, Simulation
+from arduino_esp32_tft_terminal.lib.board import Board
 
 
 class CollisionsGravity(CollisionsElastic):

@@ -4,10 +4,10 @@ import random
 import time
 from dataclasses import dataclass
 
-import config
-from app import App
-from lib.board import Board
-from lib.gfx import Gfx
+from arduino_esp32_tft_terminal import config
+from arduino_esp32_tft_terminal.app import App
+from arduino_esp32_tft_terminal.lib.board import Board
+from arduino_esp32_tft_terminal.lib.gfx import Gfx
 
 # Parameters
 SHIP_RADIUS = 8 * config.GFX_SCALING

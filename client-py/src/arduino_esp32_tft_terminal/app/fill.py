@@ -1,7 +1,7 @@
 import time
 
-from app import App, TimeEscaper
-from lib.board import Board
+from arduino_esp32_tft_terminal.app import App, TimeEscaper
+from arduino_esp32_tft_terminal.lib.board import Board
 
 
 class Fill(App):

@@ -1,9 +1,9 @@
 import json
 
-import config
-from app import TimeEscaper
-from app.monitor_host import MonitorBase
-from lib.board import Board
+from arduino_esp32_tft_terminal import config
+from arduino_esp32_tft_terminal.app import TimeEscaper
+from arduino_esp32_tft_terminal.app.monitor_host import MonitorBase
+from arduino_esp32_tft_terminal.lib.board import Board
 
 CHOICE_EXIT = 1
 CHOICE_NEXT = 2

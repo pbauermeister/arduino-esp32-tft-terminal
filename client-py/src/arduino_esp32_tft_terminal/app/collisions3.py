@@ -3,13 +3,13 @@
 Quite crowded, no gravity, bubble grow with time and pop on mutual collision.
 """
 
-from app.collisions import (
+from arduino_esp32_tft_terminal.app.collisions import (
     TIME_SUBQUANTAS,
     CollisionsElastic,
     Particle,
     Simulation,
 )
-from lib.board import Board
+from arduino_esp32_tft_terminal.lib.board import Board
 
 RADIUS_MIN = 0.5
 RADIUS_MAX = 25.0

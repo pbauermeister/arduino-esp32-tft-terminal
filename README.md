@@ -33,17 +33,17 @@ Run any of the bundled apps, or write your own:
 
 ## Quick start
 
-The client currently runs from source (a pip-installable package is on the
-way — see [`TODO.md`](TODO.md)). You need a flashed board connected over USB
-(see [Installing](#installing)).
+The client installs as the `arduino-esp32-tft-terminal` command. It is not on
+PyPI yet — install from the cloned source for now (see [`TODO.md`](TODO.md)).
+You need a flashed board connected over USB (see [Installing](#installing)).
 
 ```bash
 git clone https://github.com/pbauermeister/arduino-esp32-tft-terminal.git
 cd arduino-esp32-tft-terminal/client-py
-pip install -r requirements.txt
-./run.py -h           # list options and apps
-./run.py --demo       # cycle through all apps
-./run.py --only cube  # run a single app
+uv tool install .                         # installs the `arduino-esp32-tft-terminal` command
+arduino-esp32-tft-terminal -h             # list options and apps
+arduino-esp32-tft-terminal --demo         # cycle through all apps
+arduino-esp32-tft-terminal --only cube    # run a single app
 ```
 
 ## Installing
@@ -68,7 +68,7 @@ pip install -r requirements.txt
 
 1. Study [`client-py/app/quix.py`](client-py/app/quix.py) as a template.
 2. Create a new module and class.
-3. Register the class in [`client-py/run.py`](client-py/run.py).
+3. Register the class in [`client-py/src/arduino_esp32_tft_terminal/cli.py`](client-py/src/arduino_esp32_tft_terminal/cli.py).
 
 ## Documentation
 

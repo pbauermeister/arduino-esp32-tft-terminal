@@ -1,3 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "arduino-esp32-tft-terminal"
+dynamic = ["version"]
+description = "Python client driving the Arduino ESP32 TFT Terminal gadget over USB."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Pascal Bauermeister", email = "pascal.bauermeister@gmail.com" }]
+keywords = ["arduino", "esp32", "tft", "display", "monitor", "gadget"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Monitoring",
+]
+dependencies = ["numpy>=1.26.1", "pyserial>=3.5", "claude-busy-monitor"]
+
+[project.optional-dependencies]
+dev = ["ruff", "pytest"]
+
+[project.scripts]
+arduino-esp32-tft-terminal = "arduino_esp32_tft_terminal.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/pbauermeister/arduino-esp32-tft-terminal"
+Issues = "https://github.com/pbauermeister/arduino-esp32-tft-terminal/issues"
+
+[tool.hatch.version]
+source = "regex"
+path = "CHANGES.md"
+pattern = '^## Version (?P<version>\d+\.\d+\.\d+(?:\.post\d+)?):'
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/arduino_esp32_tft_terminal"]
+
 [tool.ruff]
 target-version = "py310"
 

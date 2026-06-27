@@ -3,9 +3,9 @@ import sys
 import time
 from typing import Any, Callable
 
-import config
-from lib import NONE, READY, chunkize, until
-from lib.gfx import Gfx
+from arduino_esp32_tft_terminal import config
+from arduino_esp32_tft_terminal.lib import NONE, READY, chunkize, until
+from arduino_esp32_tft_terminal.lib.gfx import Gfx
 
 from .channel import Channel
 from .command import Command

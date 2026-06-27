@@ -5,8 +5,8 @@ import time
 from abc import abstractmethod
 from typing import Callable
 
-import config
-from lib.board import Board
+from arduino_esp32_tft_terminal import config
+from arduino_esp32_tft_terminal.lib.board import Board
 
 CAMEL_RX = re.compile('([a-z][A-Z0-9])')
 

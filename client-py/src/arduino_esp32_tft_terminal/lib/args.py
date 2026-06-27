@@ -1,8 +1,8 @@
 import argparse
 from typing import Any, Type
 
-import config
-from app import App, camel_to_kebab
+from arduino_esp32_tft_terminal import config
+from arduino_esp32_tft_terminal.app import App, camel_to_kebab
 
 
 class Arg:

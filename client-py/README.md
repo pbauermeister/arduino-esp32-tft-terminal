@@ -12,27 +12,31 @@ drives the board over USB, sending command lines and reading answers.
 
 ## Running
 
-From source (a pip/uv-installable package is on the way — see [`../TODO.md`](../TODO.md)):
+Install the `arduino-esp32-tft-terminal` command (not on PyPI yet — install from this directory; see [`../TODO.md`](../TODO.md)):
 
 ```bash
-pip install -r requirements.txt
-./run.py -h           # list options and apps
-./run.py --demo       # cycle through all apps
-./run.py --only cube  # run a single app
+uv tool install .                         # installs the command
+arduino-esp32-tft-terminal -h             # list options and apps
+arduino-esp32-tft-terminal --demo         # cycle through all apps
+arduino-esp32-tft-terminal --only cube    # run a single app
 ```
+
+For development, use an editable install (`uv pip install -e .` in a venv).
 
 ## Layout
 
+Package source lives under `src/arduino_esp32_tft_terminal/`:
+
 - `app/` — one module + class per app (`quix.py` is the template).
 - `lib/` — board communication: serial channel, command protocol, `Board`, `Gfx`, CLI args.
-- `run.py` — entry point; registers the apps.
+- `cli.py` — entry point (`main()`); registers the apps.
 - `config.py` — runtime configuration (also exposed as CLI flags).
 
 ## Writing a new app
 
-1. Study [`app/quix.py`](app/quix.py) as a template.
+1. Study [`src/arduino_esp32_tft_terminal/app/quix.py`](src/arduino_esp32_tft_terminal/app/quix.py) as a template.
 2. Create a new module and class.
-3. Register the class in [`run.py`](run.py).
+3. Register the class in [`src/arduino_esp32_tft_terminal/cli.py`](src/arduino_esp32_tft_terminal/cli.py).
 
 ## Development
 

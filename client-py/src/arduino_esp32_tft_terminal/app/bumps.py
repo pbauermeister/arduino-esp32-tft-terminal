@@ -1,5 +1,5 @@
-from app import App, Sprite, TimeEscaper
-from lib.board import Board
+from arduino_esp32_tft_terminal.app import App, Sprite, TimeEscaper
+from arduino_esp32_tft_terminal.lib.board import Board
 
 
 class Bumps(App):

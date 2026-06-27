@@ -1,9 +1,9 @@
 import math
 from dataclasses import dataclass
 
-import config
-from app import App, TimeEscaper
-from lib.board import Board
+from arduino_esp32_tft_terminal import config
+from arduino_esp32_tft_terminal.app import App, TimeEscaper
+from arduino_esp32_tft_terminal.lib.board import Board
 
 ISOMETRIC = True
 BOUNCE_SIZE = True
