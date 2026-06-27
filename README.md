@@ -1,5 +1,6 @@
 # Arduino ESP32 TFT Terminal
 
+[![CI](https://github.com/pbauermeister/arduino-esp32-tft-terminal/actions/workflows/ci.yml/badge.svg)](https://github.com/pbauermeister/arduino-esp32-tft-terminal/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/arduino-esp32-tft-terminal)](https://pypi.org/project/arduino-esp32-tft-terminal/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
