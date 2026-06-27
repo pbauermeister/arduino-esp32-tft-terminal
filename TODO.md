@@ -42,6 +42,9 @@ CHANGES.md, doc layer, test tiers).
 - **F · CI** — GitHub Actions running `make check` (ruff + pytest) on Python 3.11–3.13 — #29.
 - **I · De-duplicate physics** — _no-op:_ already factored. `collisions.py` holds the shared `Particle`/`Simulation`/`CollisionsElastic` base; `collisions2/3/4` are thin subclasses overriding params/methods. No duplication to extract.
 - **Firmware build toolchain** — `server-esp32s3-rtft/` `.clang-format` + Makefile (`require` bootstraps `arduino-cli` + core; `firmware-build`; `firmware-upload` build+flash+verify, **hardware-tested**) — #33. Build fix for esp32 core 3.3.0 (hash narrowing + `hardcopy` stub) — #35.
+- **Firmware clang-format backlog applied** — `make format` over all sources; binary-identical (498103 bytes), `format-check` clean — #39.
+- **Firmware VS Code format-on-save** — `.vscode/settings.json` clang-formats `.cpp`/`.h`/`.ino` on save with the same binary + `.clang-format` as `make format` (zero diff) — #41.
+- **Firmware CI compile gate** — `firmware-build` job (cache + `make require` + `make firmware-build`); `require` installs the libs; core pinned `3.3.0` — #43.
 
 ## TODO Items
 
@@ -62,11 +65,11 @@ CHANGES.md, doc layer, test tiers).
    the test suites — tests live there because a running app drives the board)
    and `server-esp32s3-rtft/` (firmware build/flash).
 
-4. **Firmware clang-format backlog** — run `make format` over the firmware
-   (`*.ino` / `*.cpp` / `*.h`); ~2730-line pure-formatting diff. Apply as a
-   single reviewed commit, then re-verify on the board (`make firmware-build`
-   + a hardware smoke). Deferred from #33 — no automated behaviour check for
-   firmware, so the reformat is isolated from logic changes.
+4. **Firmware DRAM headroom / core pin** — the firmware sits at ~84% of static
+   RAM on esp32 core `3.3.0`; `3.3.10` overflows `dram0_0_seg` by ~4 KB, so the
+   core is pinned to `3.3.0` (`require` + CI cache key). To track newer cores,
+   trim static DRAM usage (buffers) and lift the pin. Until then, the pin keeps
+   dev/CI/board reproducible.
 
 5. **Protocol single-source** (J) — deferred. Codegen a command spec
    into both `client-py` (gfx strings) and firmware (`command.cpp`
