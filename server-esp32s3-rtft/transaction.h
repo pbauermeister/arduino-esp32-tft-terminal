@@ -27,13 +27,14 @@ class Action {
    public:
     unsigned int hash;
     any args[8];
-    char str[BUFFER_LENGTH];
+    char str[PRINT_LENGTH];
 
     void set(int h) { hash = h; }
 
     void set(int h, char* text) {
         hash = h;
-        strncpy(str, text, sizeof(str));
+        strncpy(str, text, sizeof(str) - 1);
+        str[sizeof(str) - 1] = 0;  // strncpy does not terminate on overflow
     }
 
     void set(int h, int a) {
@@ -113,9 +114,11 @@ class Action {
     }
 };
 
+#define ACTIONS_COUNT 1000
+
 class Transaction {
    public:
-    Action actions[1000];  // FIFO
+    Action actions[ACTIONS_COUNT];  // FIFO
     int next;
     bool enabled;
 

@@ -267,7 +267,8 @@ void Transaction::add() {
         return;
     }
 
-    if (next == sizeof(actions) - 1) {
+    if (next ==
+        ACTIONS_COUNT - 1) {  // buffer full: flush (sizeof bug: never fired)
         commit();
     } else {
         next++;
