@@ -14,6 +14,10 @@ small graphical server (written in C++); all application logic lives on the comp
 developed and tested on Linux) and drives the board over a simple USB text
 protocol.
 
+This repository provides all three parts: the Arduino firmware sketch for the
+board, the Python client with its ready-to-run apps, and the OpenSCAD
+3D-printed case.
+
 ![Asteriods on the TFT](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_133408-thumb.png "Asteriods running on the gadget")
 
 ## Apps
