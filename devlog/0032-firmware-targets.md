@@ -20,6 +20,8 @@ Give the firmware (`server-esp32s3-rtft/`) the same `make` ergonomics as the cli
 1. `.clang-format` matching the documented style (Google, IndentWidth 4).
 2. `server-esp32s3-rtft/Makefile`: `help`, `format`, `format-check`, `firmware-build`, `firmware-upload`, `require`.
 3. Targets use the correct FQBN/options (from `.vscode/arduino.json`).
+4. `require` bootstraps the whole toolchain (installs `arduino-cli` itself, not just the core).
+5. `firmware-upload` is proven against real hardware, not just present.
 
 ## 2. Execution plan
 
@@ -40,6 +42,8 @@ Give the firmware (`server-esp32s3-rtft/`) the same `make` ergonomics as the cli
 - `make help` lists all targets.
 - `make format-check` runs clang-format and reports violations (the tool works).
 - `make firmware-build` invokes `arduino-cli compile -b <fqbn:opts> .` correctly (reaches the compiler).
+- `require` now installs `arduino-cli` (official script → `~/.local/bin`) if absent, then the esp32 core.
+- **`firmware-upload` tested on real hardware** (needed the #35 build fix, merged in): build → flash → `-t` verify (`Hash of data verified`, hard reset, exit 0). Post-flash the board answers the protocol: `width → 240`, `height → 135`, `display → OK`.
 
 ### 3.2 Two findings (NOT fixed here — flagged)
 
