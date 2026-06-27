@@ -531,7 +531,7 @@ class Detect:
         dx = (a.x - x) ** 2
         dy = (a.y - y) ** 2
         r2 = (dx + dy) * factor
-        return r2 < a.r ** 2
+        return r2 < a.r**2
 
 
 class Autoplay:
@@ -600,7 +600,7 @@ class Asteriods(App):
 
     def menu(self) -> int:
         self.show_header('', 'C:next B:play A:demo')
-        self.gfx.print(f'\\n')
+        self.gfx.print('\\n')
         self.gfx.print(f'{self.name.upper()} keys:\\n')
         self.gfx.print(f' {KEY_FIRE}   fire\\n')
         self.gfx.print(f' {KEY_CCW}   cntr-clockwise\\n')

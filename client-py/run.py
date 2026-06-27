@@ -8,6 +8,7 @@ from typing import Any, Type
 import config
 from app import App
 from app.asteriods import Asteriods
+from app.claude_mon import ClaudeMonitor
 
 # from app.bumps import Bumps
 from app.collisions import CollisionsElastic
@@ -20,9 +21,7 @@ from app.monitor_cpus import MonitorCpus
 from app.monitor_graph import MonitorGraph
 from app.monitor_host import MonitorHost
 from app.quix import Quix
-from app.road import Road
 from app.starfield import Starfield
-from app.claude_mon import ClaudeMonitor
 from app.thats_all import ThatsAll
 from app.tunnel import Tunnel
 from lib import ArduinoCommExceptions, RebootedException
@@ -37,10 +36,10 @@ def make_board(chan: Channel) -> Board:
         # board.wait_configured()
         board.clear_buttons()
         return board
-    except ArduinoCommExceptions as e:
+    except ArduinoCommExceptions:
         try:
             chan.close()
-        except:
+        except Exception:
             pass
         raise
 
@@ -125,7 +124,7 @@ while True:
         board.fatal('Keyboard interrupt')
         suppress_ctrl_c()
         raise
-    except Exception as e:
+    except Exception:
         msg = traceback.format_exc()
         board.fatal(msg)
 

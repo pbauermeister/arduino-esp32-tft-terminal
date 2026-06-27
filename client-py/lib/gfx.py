@@ -104,10 +104,10 @@ class Gfx:
         self._command('autoDisplay 0')
 
     def get_width(self) -> int:
-        return int(self._command(f'width'))
+        return int(self._command('width'))
 
     def get_height(self) -> int:
-        return int(self._command(f'height'))
+        return int(self._command('height'))
 
     def read_buttons(self) -> str:
         btns = self._command('readButtons', ignore_error=True)

@@ -17,19 +17,20 @@ board using the `lib.gfx` local library for rendering text and graphics.
 
 from __future__ import annotations
 
-from math import cos, sin
 import random
 import time
 from dataclasses import dataclass
 from enum import Enum
+from math import cos
 
-from app import App, TimeEscaper
 from claude_busy_monitor import (
     ClaudeSession,
     ClaudeState,
     get_sessions,
     get_state_counts,
 )
+
+from app import App, TimeEscaper
 from lib.board import Board
 from lib.gfx import Gfx
 
@@ -261,7 +262,6 @@ class ClaudeChar:
 
 
 class Clauding:
-
     def __init__(self, width):
         self.width = width
         self.claude_chars = ClaudeChar()

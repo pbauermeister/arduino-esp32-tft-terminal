@@ -41,7 +41,7 @@ def get_args(all_apps: list[Type[App]]) -> tuple[argparse.Namespace, list[Type[A
 
     # make config.py declarations accessible as args
     for spec in specs:
-        if spec.type == bool:
+        if spec.type is bool:
             parser.add_argument(spec.as_flag, action='store_true')
         else:
             parser.add_argument(
@@ -50,7 +50,6 @@ def get_args(all_apps: list[Type[App]]) -> tuple[argparse.Namespace, list[Type[A
                 metavar=spec.type.__name__.upper(),
                 help=f'default: {spec.value}',
             )
-    existing = [spec.as_flag for spec in specs]
 
     # make --only arg
     possible_apps: list[str] = []
@@ -59,7 +58,7 @@ def get_args(all_apps: list[Type[App]]) -> tuple[argparse.Namespace, list[Type[A
         name = camel_to_kebab(name)
         possible_apps.append(name)
     parser.add_argument(
-        f'--only',
+        '--only',
         nargs='+',
         metavar="APP",
         help='list of apps to run, among: ' + ' '.join(possible_apps),

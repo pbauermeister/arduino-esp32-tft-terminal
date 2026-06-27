@@ -13,7 +13,6 @@ class Road(App):
         super().__init__(board, auto_read=True)
 
     def _run(self) -> bool:
-        last = None
         escaper = TimeEscaper(self)
 
         i = 0
@@ -39,9 +38,9 @@ class Road(App):
 
     def draw(self, i: int, c: int) -> None:
         i = NB - (i % NB)
-        w = config.WIDTH * K ** i * 2
-        h = config.HEIGHT * K ** i * 2
-        x, y = w / 2, h / 2
+        w = config.WIDTH * K**i * 2
+        h = config.HEIGHT * K**i * 2
+        _, y = w / 2, h / 2
 
         x0 = int(config.WIDTH / 2 - w / 2)
         x1 = int(config.WIDTH / 2 + w / 2)

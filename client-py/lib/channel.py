@@ -4,9 +4,7 @@ from typing import Any, Callable
 import serial  # pip3 install pyserial
 
 import config
-from lib import *
-from lib import ArduinoCommExceptions
-import sys
+from lib import ASCII, ArduinoCommExceptions
 
 
 class Channel:
@@ -98,7 +96,7 @@ class Channel:
                     c = b''
                 try:
                     c = c.decode('ascii')
-                except:
+                except Exception:
                     pass
                 if config.DEBUG:
                     print(c, end='')

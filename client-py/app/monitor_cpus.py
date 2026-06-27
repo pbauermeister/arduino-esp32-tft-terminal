@@ -38,32 +38,31 @@ class MonitorCpus(MonitorBase):
             # CPUs
             self.gfx.set_cursor(0, config.TEXT_SCALING * 12)
             lines = cpus
-            for l in lines:
-                self.gfx.print(f'{l}\\n')
+            for ln in lines:
+                self.gfx.print(f'{ln}\\n')
 
             # Mem
             if len(lines) <= 4:
                 self.gfx.set_cursor(0, config.TEXT_SCALING * 6 * 8)
-                for l in mem:
-                    self.gfx.print(f'{l}\\n')
+                for ln in mem:
+                    self.gfx.print(f'{ln}\\n')
 
             self.gfx.display()
 
     def get_cpus_pcents(self) -> list[str]:
         try:
             out = self.shell_command(
-                (f'mpstat -P ALL {config.MONITOR_CPU_INTERVAL} 1 ' f'-o JSON').split()
+                (f'mpstat -P ALL {config.MONITOR_CPU_INTERVAL} 1 -o JSON').split()
             )
             data = json.loads(out)
             loads = data['sysstat']['hosts'][0]['statistics'][0]['cpu-load']
-            cpus = [l for l in loads if l['cpu'] not in ('all', '-1')]
+            cpus = [entry for entry in loads if entry['cpu'] not in ('all', '-1')]
             pcents = [int(c['usr'] + 0.5) for c in cpus]
 
             pcents.sort(reverse=True)  # DEBATABLE
-        except:
+        except Exception:
             return ['<CPUs: mpstat error>']
         lines = []
-        items_per_line = int(self.chars_per_line / 4)
         line = ''
         for i, pcent in enumerate(pcents):
             line += f'{pcent:3}'
