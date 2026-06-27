@@ -30,11 +30,20 @@ firmware-build: ## compile the sketch (arduino-cli)
 	arduino-cli compile -b "$(FQBN):$(OPTS)" .
 
 .PHONY: firmware-upload
-firmware-upload: ## upload to the board over USB (set PORT=...)
-	arduino-cli upload -b "$(FQBN):$(OPTS)" -p "$(PORT)" .
+firmware-upload: firmware-build ## build + flash the board + verify (set PORT=...)
+	arduino-cli upload -b "$(FQBN):$(OPTS)" -p "$(PORT)" -t .
+
+ARDUINO_CLI_BINDIR ?= $(HOME)/.local/bin
 
 .PHONY: require
-require: ## install the esp32 core for arduino-cli
+require: ## install the toolchain (arduino-cli + esp32 core)
+	@command -v arduino-cli >/dev/null || { \
+		echo "installing arduino-cli into $(ARDUINO_CLI_BINDIR) ..."; \
+		mkdir -p "$(ARDUINO_CLI_BINDIR)"; \
+		curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh \
+			| BINDIR="$(ARDUINO_CLI_BINDIR)" sh; \
+		echo "note: ensure $(ARDUINO_CLI_BINDIR) is on your PATH"; \
+	}
 	arduino-cli config add board_manager.additional_urls \
 		https://espressif.github.io/arduino-esp32/package_esp32_index.json || true
 	arduino-cli core update-index
