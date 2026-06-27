@@ -39,20 +39,15 @@ CHANGES.md, doc layer, test tiers).
 - **E · Tests** — host unit tests: protocol formatting/parsing, button decoding, pure-logic units (24 tests) — #22/#23.
 - **Self-test** — interactive on-board acceptance suite (`make test-board`): boot (logo + NeoPixel), primitive gallery, buttons/reset, unattended command-conformance + soak — #27.
 - **Firmware host-test study** — researched; interactive self-test adopted, FW host-tests + shadow-canvas parked; pixel readback confirmed unavailable — #25.
+- **F · CI** — GitHub Actions running `make check` (ruff + pytest) on Python 3.11–3.13 — #29.
+- **I · De-duplicate physics** — _no-op:_ already factored. `collisions.py` holds the shared `Particle`/`Simulation`/`CollisionsElastic` base; `collisions2/3/4` are thin subclasses overriding params/methods. No duplication to extract.
 
 ## TODO Items
 
-1. **CI** (F) — GitHub Actions: install uv, `make check` (lint +
-   tests); light Python matrix. [cbm]
-
-2. **De-duplicate physics** (I) — extract a shared
-   `Particle`/`Simulation` base from
-   `collisions{,2,3,4}.py` (rule-of-three met). No behaviour change.
-
-3. **Firmware Makefile targets** — split out of G: a committed
+1. **Firmware Makefile targets** — split out of G: a committed
    `.clang-format` for `server-esp32s3-rtft/`, plus `arduino-cli`
    firmware-build / firmware-upload targets.
 
-4. **Protocol single-source** (J) — deferred. Codegen a command spec
+2. **Protocol single-source** (J) — deferred. Codegen a command spec
    into both `client-py` (gfx strings) and firmware (`command.cpp`
    hash-switch). Parked until the duplication actually bites.
