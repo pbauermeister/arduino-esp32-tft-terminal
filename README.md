@@ -1,5 +1,6 @@
 # Arduino ESP32 TFT Terminal
 
+[![PyPI version](https://img.shields.io/pypi/v/arduino-esp32-tft-terminal)](https://pypi.org/project/arduino-esp32-tft-terminal/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Board: ESP32-S3 Reverse TFT](https://img.shields.io/badge/board-ESP32--S3%20Reverse%20TFT-blue.svg)](https://www.adafruit.com/product/5345)
@@ -33,18 +34,17 @@ Run any of the bundled apps, or write your own:
 
 ## Quick start
 
-The client installs as the `arduino-esp32-tft-terminal` command. It is not on
-PyPI yet — install from the cloned source for now (see [`TODO.md`](TODO.md)).
+The client is on PyPI as [`arduino-esp32-tft-terminal`](https://pypi.org/project/arduino-esp32-tft-terminal/).
 You need a flashed board connected over USB (see [Installing](#installing)).
 
 ```bash
-git clone https://github.com/pbauermeister/arduino-esp32-tft-terminal.git
-cd arduino-esp32-tft-terminal/client-py
-uv tool install .                         # installs the `arduino-esp32-tft-terminal` command
+pipx install arduino-esp32-tft-terminal   # see Installing for other methods
 arduino-esp32-tft-terminal -h             # list options and apps
 arduino-esp32-tft-terminal --demo         # cycle through all apps
 arduino-esp32-tft-terminal --only cube    # run a single app
 ```
+
+Or run it without installing: `uvx arduino-esp32-tft-terminal --demo`.
 
 ## Installing
 
@@ -60,9 +60,32 @@ arduino-esp32-tft-terminal --only cube    # run a single app
 
 ### Client (computer)
 
-- Requires Python 3.11+ on Linux.
-- Install the dependencies and run as shown in [Quick start](#quick-start).
-- The client talks to the board over its USB serial port.
+Requires Python 3.11+ on Linux. The client talks to the board over its USB serial port.
+
+**As a command** (most users — isolated per-tool install):
+
+```bash
+pipx install arduino-esp32-tft-terminal
+# or, with uv:
+uv tool install arduino-esp32-tft-terminal
+```
+
+If you have neither, `apt install pipx` (Debian/Ubuntu). Avoid a system-wide `pip install` on modern distros (PEP 668 marks system Python as managed).
+
+**Run without installing:**
+
+```bash
+uvx arduino-esp32-tft-terminal --demo
+# or: pipx run arduino-esp32-tft-terminal --demo
+```
+
+**From source** (contributors):
+
+```bash
+git clone https://github.com/pbauermeister/arduino-esp32-tft-terminal.git
+cd arduino-esp32-tft-terminal/client-py
+make install   # = uv tool install . ; run `make help` for all targets
+```
 
 ## Writing a new app
 

@@ -12,16 +12,18 @@ drives the board over USB, sending command lines and reading answers.
 
 ## Running
 
-Install the `arduino-esp32-tft-terminal` command (not on PyPI yet — install from this directory; see [`../TODO.md`](../TODO.md)):
+The client is on PyPI as `arduino-esp32-tft-terminal`:
 
 ```bash
-uv tool install .                         # installs the command
+pipx install arduino-esp32-tft-terminal   # or: uv tool install arduino-esp32-tft-terminal
 arduino-esp32-tft-terminal -h             # list options and apps
 arduino-esp32-tft-terminal --demo         # cycle through all apps
 arduino-esp32-tft-terminal --only cube    # run a single app
 ```
 
-For development, use an editable install (`uv pip install -e .` in a venv).
+Run without installing: `uvx arduino-esp32-tft-terminal --demo`. From this
+directory: `make install` (= `uv tool install .`); for development,
+`uv pip install -e .` in a venv.
 
 ## Layout
 
