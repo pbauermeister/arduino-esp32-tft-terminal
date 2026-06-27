@@ -96,7 +96,7 @@ const char *interpret(char *input, const Config &config) {
   char *rest = split(input);
   // char *error = NULL;
   ErrorHolder error = ErrorHolder();
-  int hh = hash(cmd);
+  unsigned int hh = hash(cmd);
 
   switch (hh) {
     case hash("reboot"): {  // reboot
@@ -510,10 +510,9 @@ const char *interpret(char *input, const Config &config) {
         case hash("setFont"): {  //
       */
 
-    case hash("hardcopy"): {  // hardcopy
+    case hash("hardcopy"): {  // hardcopy (not implemented)
       transaction.commit();
-      tft.begin();
-      return null;
+      return "ERROR hardcopy not implemented";
     }
 
     default:
