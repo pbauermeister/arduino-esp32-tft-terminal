@@ -48,41 +48,11 @@ CHANGES.md, doc layer, test tiers).
 - **Retire VS Code build docs** — removed `README-VSCODE.md`; server/top READMEs + CLAUDE.md repointed to the `make` build — #45.
 - **Top-level signpost Makefile** — root `make` points to the sub-makefiles (tests live in client-py) — #47.
 - **Firmware version command** — board `version` command; version from firmware `CHANGES.md` → build-injected `version.h`; client prints it on connect — #49.
+- **Firmware DRAM trim / core pin lifted to 3.3.10** — shrank `Action.str` (→ `PRINT_LENGTH` 128): DRAM 84% → 67% on 3.3.10 (~72 KB freed). Fixed two latent buffer bugs (non-terminated `strncpy`; `sizeof`-vs-count FIFO overflow). CI + board + draw-heavy apps verified — #51.
 
 ## TODO Items
 
-1. **Firmware DRAM headroom / lift the core pin** — pinned to
-   `esp32:esp32@3.3.0` (`require` + CI cache key) because `3.3.10` overflows
-   `dram0_0_seg` by ~4 KB. Lifting the pin needs a (non-trivial) DRAM trim first.
-
-   _Why 3.3.10 overflows but 3.3.0 fits:_ our firmware's DRAM is identical on
-   both cores — the esp32 **core's own** static RAM (USB-CDC stack, IDF /
-   FreeRTOS / driver buffers) grew ~4 KB between `3.3.0` and `3.3.10`. The
-   firmware already sat at 84% (~49 KB free), so the core's growth tipped the
-   _combined_ static data over the internal-DRAM region. We didn't grow; the
-   floor under us rose.
-
-   _Where our DRAM goes:_ one global dominates — `Transaction transaction`
-   (`transaction.h`) = **236 KB = 72% of the 320 KB DRAM**. It is
-   `Action actions[1000]` (a draw FIFO); each `Action` ≈ 236 B =
-   `hash` (4) + `args[8]` (32) + **`str[BUFFER_LENGTH=200]`**. Most buffered
-   actions are draws that never touch `str`, so ~200 KB is unused text buffers.
-
-   _Fix ideas (each non-trivial; pick one, verify on 3.3.10, then lift the pin):_
-   1. Shrink the FIFO depth (`actions[1000]` → e.g. 512). One line, frees
-      ~115 KB. Risk: an app buffering more draws than the depth between
-      `display` calls overflows — pick a depth no app exceeds.
-   2. Small `Action.str` + span long prints over multiple `print` calls (the
-      client already has `chunkize`; the firmware caps text per action). Cuts
-      the per-slot waste without dropping long-text support.
-   3. Decouple `str` from `Action` entirely (only `print` actions carry text).
-      The principled fix; most invasive.
-
-   _Verify:_ compile against `3.3.10`, confirm it fits, lift the pin in
-   `require` + the CI cache key, flash via ROM download mode, runtime-test the
-   draw-heavy apps (`monitor-graph`, `asteriods`).
-
-2. **Print/buffer total safety (flow control)** — make the buffered-draw path
+1. **Print/buffer total safety (flow control)** — make the buffered-draw path
    overflow- and truncation-proof end-to-end (builds on #50's `str` shrink +
    the null-term / bounds fixes):
    1. A board query returning `Action.str` capacity (`PRINT_LENGTH`) so the
@@ -93,6 +63,6 @@ CHANGES.md, doc layer, test tiers).
       drop/early-flush — the client waits for free slots (query depth/room), or
       the board blocks the command until the action can be queued.
 
-3. **Protocol single-source** (J) — deferred. Codegen a command spec
+2. **Protocol single-source** (J) — deferred. Codegen a command spec
    into both `client-py` (gfx strings) and firmware (`command.cpp`
    hash-switch). Parked until the duplication actually bites.
