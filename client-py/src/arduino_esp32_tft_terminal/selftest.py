@@ -76,6 +76,7 @@ def connect() -> Board:
 
 
 def _ask(prompt: str) -> bool:
+    prompt = prompt[:1].upper() + prompt[1:]
     return input(f"{prompt} [y/N] ").strip().lower().startswith("y")
 
 
@@ -233,7 +234,7 @@ def phase0_boot(board: Board, results: Results) -> None:
     # when the board comes back.
     _title("boot:logo")
     _prompt_screen(board.gfx, "PRESS", "RESET")
-    print("  >>> press the RESET button now (the board reboots)")
+    print(">>> press the RESET button now (the board reboots)")
     print("  expected boot screen:")
     print(_LOGO_REF)
     results.check("boot:logo", _ask("does the board show that boot/logo screen?"))
@@ -286,7 +287,7 @@ def phase1_buttons(board: Board, results: Results) -> None:
         for code, label in [("A", "A (D0)"), ("B", "B (D1)"), ("C", "C (D2)")]:
             _title(f"button:{code}")
             _prompt_screen(gfx, f"PRESS {code}")
-            print(f"  >>> press button {label}")
+            print(f">>> press button {label}")
             seen = _await_auto_button(board, code)
             results.check(
                 f"button:{code}", code in seen, f'saw {sorted(seen) or "nothing"}'
@@ -297,7 +298,7 @@ def phase1_buttons(board: Board, results: Results) -> None:
 
     _title("button:reset")
     _prompt_screen(gfx, "PRESS", "RESET")
-    print("  >>> press the RESET button (the board reboots)")
+    print(">>> press the RESET button (the board reboots)")
     board.clear_buttons()
     deadline = None if BUTTON_TIMEOUT is None else time.time() + BUTTON_TIMEOUT
     detected = False
