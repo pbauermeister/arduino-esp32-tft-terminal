@@ -8,6 +8,7 @@
 #include "config.h"
 #include "esp32s3-display.h"
 #include "transaction.h"
+#include "version.h"  // generated: FW_VERSION
 
 // constants
 const char *ERR_EXTRA_ARG = "ERROR extra arg";
@@ -102,6 +103,12 @@ const char *interpret(char *input, const Config &config) {
         case hash("reboot"): {  // reboot
             rebootF();
             return ok();
+        }
+
+        case hash("version"): {  // version
+            no_arg(&rest, error);
+            if (error.message) return error.message;
+            return FW_VERSION;
         }
 
         case hash("autoDisplay"): {  // autoDisplay 1
