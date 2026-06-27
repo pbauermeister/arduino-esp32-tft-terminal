@@ -124,53 +124,87 @@ def _gallery_text(gfx: Gfx) -> None:
 
 
 def _gallery_frame(gfx: Gfx) -> None:
+    w, h = config.WIDTH, config.HEIGHT
     gfx.reset()
     gfx.fill_screen(0)
-    gfx.set_fg_color(255, 255, 255)
-    # 1px border exactly at the screen edge
-    gfx.draw_rect(0, 0, config.WIDTH, config.HEIGHT, 1)
-    # crosshatch on round coordinates
+    # inset crosshatch (interior only — never touches the border)
     gfx.set_fg_color(64, 64, 64)
-    for x in range(0, config.WIDTH, 20):
-        gfx.draw_fast_vline(x, 0, config.HEIGHT, 1)
-    for y in range(0, config.HEIGHT, 20):
-        gfx.draw_fast_hline(0, y, config.WIDTH, 1)
+    for x in range(20, w - 1, 20):
+        gfx.draw_fast_vline(x, 1, h - 2, 1)
+    for y in range(20, h - 1, 20):
+        gfx.draw_fast_hline(1, y, w - 2, 1)
+    # 1px border as four explicit edge lines
+    gfx.set_fg_color(255, 255, 255)
+    gfx.draw_fast_hline(0, 0, w, 1)
+    gfx.draw_fast_hline(0, h - 1, w, 1)
+    gfx.draw_fast_vline(0, 0, h, 1)
+    gfx.draw_fast_vline(w - 1, 0, h, 1)
     gfx.display()
 
 
-GALLERY: list[tuple[str, Callable[[Gfx], None], str]] = [
+_SHAPES_REF = """\
+    ╲         □■     ○●
+     ╲
+               ·     │
+               ──────+─
+    ◣  ◢             │
+"""
+
+_TEXT_REF = """\
+  ┌────────────────────┐
+  │ top-left           │  small, white
+  │                    │
+  │ SIZE 2             │  large, yellow
+  │                    │
+  │        bottom-right│  small, cyan
+  └────────────────────┘
+"""
+
+GALLERY: list[tuple[str, Callable[[Gfx], None], str, str]] = [
     (
         'shapes',
         _gallery_shapes,
-        'lines, rects, circles, triangles, hline/vline, pixel — all present and correctly placed?',
+        'do the shapes match the reference (all present, placed alike)?',
+        _SHAPES_REF,
     ),
     (
         'text',
         _gallery_text,
-        'three text labels, right size/colour/position, no wrap artefacts?',
+        'do the labels match the reference (text, size, colour, position)?',
+        _TEXT_REF,
     ),
     (
         'frame',
         _gallery_frame,
-        'a 1px border touching all four edges + an even crosshatch grid?',
+        'a 1px border touching all four edges + an even interior crosshatch?',
+        '',
     ),
 ]
 
 
 def phase1_gallery(board: Board, results: Results) -> None:
     print('\n== Phase 1a: primitive gallery (glance check) ==')
-    for name, draw, question in GALLERY:
+    for name, draw, question, reference in GALLERY:
         draw(board.gfx)
+        if reference:
+            print('  expected layout:')
+            print(reference)
         results.check(f'gallery:{name}', _ask(question))
 
 
-def _await_auto_button(board: Board, code: str, timeout: int = 15) -> set[str]:
+# Seconds to wait for each interactive button press (None = wait forever).
+BUTTON_TIMEOUT: float | None = 60
+
+
+def _await_auto_button(
+    board: Board, code: str, timeout: float | None = BUTTON_TIMEOUT
+) -> set[str]:
     """In auto-report mode the board appends button codes to every OK response.
     Elicit responses (a cheap `display`) and accumulate codes until `code` is
-    seen (or timeout). Returns all codes seen (for diagnostics)."""
+    seen (or `timeout` elapses; None waits forever). Returns codes seen."""
     seen: set[str] = set()
-    deadline = time.time() + timeout
-    while time.time() < deadline:
+    deadline = None if timeout is None else time.time() + timeout
+    while deadline is None or time.time() < deadline:
         try:
             board.gfx.display()  # its OK response carries the current buttons
             seen |= board.auto_read_buttons()
@@ -198,7 +232,7 @@ def phase1_buttons(board: Board, results: Results) -> None:
             gfx.set_cursor(0, config.HEIGHT // 3)
             gfx.print(f'PRESS {code}')
             gfx.display()
-            print(f'  >>> press button {label} (up to 15s)...')
+            print(f'  >>> press button {label}')
             seen = _await_auto_button(board, code)
             results.check(
                 f'button:{code}', code in seen, f'saw {sorted(seen) or "nothing"}'
@@ -207,11 +241,22 @@ def phase1_buttons(board: Board, results: Results) -> None:
     finally:
         board.end_auto_read_buttons()
 
-    print('  >>> now press the RESET button (the board reboots)...')
+    # Show the RESET prompt on the TFT (replaces the last "PRESS X" screen).
+    # "PRESS RESET" doesn't fit on one line at this size, so stack it.
+    gfx.reset()
+    gfx.fill_screen(0)
+    gfx.set_text_color(255, 255, 255)
+    gfx.set_text_size(2, 2)
+    gfx.set_cursor(0, config.HEIGHT // 4)
+    gfx.print('PRESS')
+    gfx.set_cursor(0, config.HEIGHT // 2)
+    gfx.print('RESET')
+    gfx.display()
+    print('  >>> press the RESET button (the board reboots)')
     board.clear_buttons()
-    deadline = time.time() + 20
+    deadline = None if BUTTON_TIMEOUT is None else time.time() + BUTTON_TIMEOUT
     detected = False
-    while time.time() < deadline:
+    while deadline is None or time.time() < deadline:
         try:
             if 'R' in board.read_buttons():
                 detected = True
@@ -219,7 +264,7 @@ def phase1_buttons(board: Board, results: Results) -> None:
         except Exception:
             pass  # serial may drop across the reset; recovery re-opens
         time.sleep(0.2)
-    results.check('button:R (reset->reboot)', detected)
+    results.check('button:reset', detected, 'reset -> reboot reported as R')
 
 
 # ----------------------------------------------------------------------------
@@ -290,6 +335,25 @@ def phase2_unattended(board: Board, results: Results) -> None:
     results.check('soak:no-spurious-reboot', board.boots == boots_before)
 
 
+def _show_done(board: Board, ok: bool) -> None:
+    """Leave a clear end screen on the gadget (not the leftover soak frame)."""
+    gfx = board.gfx
+    gfx.reset()
+    gfx.fill_screen(0)
+    gfx.set_text_size(1, 1)
+    gfx.set_text_color(255, 255, 255)
+    gfx.set_cursor(0, config.HEIGHT // 4)
+    gfx.print('Self-test done')
+    gfx.set_text_size(2, 2)
+    if ok:
+        gfx.set_text_color(0, 255, 0)
+    else:
+        gfx.set_text_color(255, 0, 0)
+    gfx.set_cursor(0, config.HEIGHT // 2)
+    gfx.print('PASS' if ok else 'FAIL')
+    gfx.display()
+
+
 def main() -> None:
     unattended_only = '--unattended-only' in sys.argv
     board = connect()
@@ -299,6 +363,8 @@ def main() -> None:
         phase1_buttons(board, results)
     phase2_unattended(board, results)
     results.summary()
+    _show_done(board, results.ok)
+    print('\nAll tests complete.')
     sys.exit(0 if results.ok else 1)
 
 
