@@ -25,6 +25,7 @@ import time
 from typing import Callable
 
 from arduino_esp32_tft_terminal import config
+from arduino_esp32_tft_terminal.lib import READY
 from arduino_esp32_tft_terminal.lib.board import Board
 from arduino_esp32_tft_terminal.lib.channel import Channel
 from arduino_esp32_tft_terminal.lib.gfx import Gfx
@@ -212,10 +213,11 @@ _LOGO_REF = """\
 
 
 def phase0_boot(board: Board, results: Results) -> None:
-    # Reboot the board and check its power-on behaviour (logo + NeoPixel).
+    # Use the PHYSICAL reset button — NOT the `reboot` command, which would drop
+    # the board into USB-disk/bootloader mode. The channel layer reopens the TTY
+    # when the board comes back.
     _title("boot:logo")
-    print("  rebooting the board...")
-    board.reboot()
+    print("  >>> press the RESET button now (the board reboots)")
     print("  expected boot screen:")
     print(_LOGO_REF)
     results.check("boot:logo", _ask("does the board show that boot/logo screen?"))
@@ -224,7 +226,14 @@ def phase0_boot(board: Board, results: Results) -> None:
         "boot:neopixel",
         _ask("is the RGB (NeoPixel) LED pulsing and slowly cycling colour?"),
     )
-    board.configure()  # re-establish the configured state after the reboot
+    # Reconnect over the freshly re-enumerated TTY and restore the config state.
+    # Disable the READY callback so the reconnect can't trigger a `reboot`.
+    board.chan.set_callback(READY, None)
+    board.chan.open()  # channel retries until the TTY is back
+    board.gfx.set_rotation(config.SCREEN_ROTATION)
+    board.gfx.set_auto_display_off()
+    board.gfx.reset()
+    board.clear_buttons()
 
 
 # Seconds to wait for each interactive button press (None = wait forever).
