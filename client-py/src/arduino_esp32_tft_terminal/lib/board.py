@@ -82,9 +82,14 @@ class Board:
             config.HEIGHT = h
             config.COLUMNS = int(w / 6.4)
             config.ROWS = int(h / 8)
+            try:
+                version = self.gfx._command('version')
+            except Exception:
+                version = 'unknown'  # older firmware without the command
             print('OLED resolution:')
             print(f'  pixels: {w} x {h}')
             print(f'  chars:  {config.COLUMNS} x {config.ROWS}')
+            print(f'firmware version: {version}')
 
         if self.configure_callback:
             self.configure_callback()

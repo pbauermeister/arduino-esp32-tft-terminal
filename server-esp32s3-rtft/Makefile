@@ -20,7 +20,8 @@ FQBN := esp32:esp32:adafruit_feather_esp32s3_reversetft
 # Key board options (the full set lives in .vscode/arduino.json).
 OPTS := USBMode=default,CDCOnBoot=cdc,PSRAM=enabled,PartitionScheme=tinyuf2,FlashSize=4M
 PORT ?= /dev/ttyACM0
-SRC  := $(wildcard *.ino *.cpp *.h)
+# version.h is generated from CHANGES.md (see below) — excluded from formatting.
+SRC  := $(filter-out version.h,$(wildcard *.ino *.cpp *.h))
 ARDUINO_CLI_BINDIR ?= $(HOME)/.local/bin
 # Pinned: the firmware is near the DRAM limit; 3.3.10 overflows it by ~4 KB.
 ESP32_CORE := esp32:esp32@3.3.0
@@ -79,8 +80,15 @@ format-check: ## check formatting (read-only)
 ################################################################################
 ## Build and flash:: ##
 
+# Generated so the firmware can report its version (the `version` command).
+version.h: CHANGES.md
+	@V=$$(awk -F'[ :]' '/^## Version / {print $$3; exit}' CHANGES.md); \
+	if [ -z "$$V" ]; then echo "version.h: no version in CHANGES.md" >&2; exit 1; fi; \
+	printf '// generated from CHANGES.md by make — do not edit\n#define FW_VERSION "%s"\n' "$$V" > version.h; \
+	echo "version.h: FW_VERSION=$$V"
+
 .PHONY: firmware-build
-firmware-build: ## compile the sketch (arduino-cli)
+firmware-build: version.h ## compile the sketch (arduino-cli)
 	arduino-cli compile -b "$(FQBN):$(OPTS)" .
 
 .PHONY: firmware-upload

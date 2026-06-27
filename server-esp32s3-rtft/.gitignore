@@ -1,0 +1,5 @@
+# Generated at build time from CHANGES.md
+version.h
+
+# arduino-cli build output (see .vscode/arduino.json "output")
+/build/
