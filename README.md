@@ -100,7 +100,7 @@ new module and class, and register the class in
 | ![Playing 3D cube](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_142735-thumb.png "Playing 3D cube") | ![Playing Asteriods](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_132939-thumb.png "Playing Asteriods") |
 | ![TFT side](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_144544.jpg "TFT side")       | ![ESP32 side](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_144614.jpg "ESP32 side")   |
 | ![Case on cap](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_124410.jpg "Case on cap") | ![Case closed](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_124520.jpg "Case closed") |
-| ![Case render](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/esp32s3-rtft-case.scad.png "Case render") |                                                                                                                                         |
+| ![Modelling in OpenSCAD](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/esp32s3-rtft-case.scad.png "Modelling in OpenSCAD") |                                                                                                                                         |
 
 ## Links
 
