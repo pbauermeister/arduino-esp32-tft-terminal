@@ -4,6 +4,12 @@
 .DS_Store
 .hypothesis/
 __pycache__
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.venv/
+dist/
+*.egg-info/
 applet
 application.linux-arm64
 application.linux-armv6hf
