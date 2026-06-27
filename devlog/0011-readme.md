@@ -45,10 +45,11 @@ Bring the top-level `README.md` to the `dfd` reference level of finish, per `TOD
 - **Unnumbered `##` headings**, deviating from CLAUDE.md "headings always numbered in documents". Deliberate: the README mirrors `dfd/README.md` (the reference exemplar), and unnumbered headings are the README convention. Scoped to this external-facing file only.
 - **CI and PyPI badges omitted** (only License/Python/Board shown): the CI workflow (task F) and PyPI release (task P) do not exist yet; showing broken badges would misrepresent state. To be added when F/P land.
 - **Quick start uses source install**, not `pip install`: the package is not published yet (task P). Noted as forthcoming in the README.
+- **Added scope (user request):** deleted the local duplicate `client-py/README-STATE-DETECTION.md` and redirected its two pointers (README Documentation link + `CLAUDE.md` Key documents) to the canonical copy in the `claude-busy-monitor` repo. The `CLAUDE.md` edit is a protected-file change reviewed via this PR before merge.
 
 ### 3.3 Verification
 
-- All 13 referenced media files and 8 file/doc links verified present on disk.
+- All 13 referenced media files and 7 remaining file/doc links verified present on disk; the removed state-detection note now points to its canonical URL.
 
 ### 3.4 Retrospective
 

@@ -84,7 +84,7 @@ new module and class, and register the class in
 - [Communication protocol](README-protocol.md) — the USB command/answer protocol between computer and board.
 - [Animation techniques](README-animations.md) — flicker avoidance, in the absence of hardware double-buffering.
 - [Building the firmware](server-esp32s3-rtft/README-VSCODE.md) — VS Code build and upload.
-- [Claude session-state detection](client-py/README-STATE-DETECTION.md) — design notes for the `claude-monitor` app.
+- [Claude session-state detection](https://github.com/pbauermeister/claude-busy-monitor/blob/main/README-STATE-DETECTION.md) — design notes for the `claude-monitor` app (in the `claude-busy-monitor` project).
 
 ## Videos
 

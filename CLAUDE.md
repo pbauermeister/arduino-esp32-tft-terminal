@@ -32,7 +32,7 @@ The protocol is specified in `README-protocol.md`; flicker-avoidance techniques 
 - `README-protocol.md` — USB command/answer protocol between computer and board
 - `README-animations.md` — flicker-avoidance techniques (no hardware double-buffering)
 - `server-esp32s3-rtft/README-VSCODE.md` — building and uploading the board sketch
-- `client-py/README-STATE-DETECTION.md` — design notes for the `claude_mon` app's session-state classifier
+- [README-STATE-DETECTION.md](https://github.com/pbauermeister/claude-busy-monitor/blob/main/README-STATE-DETECTION.md) — design notes for the `claude_mon` app's session-state classifier (lives in the `claude-busy-monitor` project)
 
 ## Document toolchain
 
