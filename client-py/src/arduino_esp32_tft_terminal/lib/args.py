@@ -1,8 +1,16 @@
 import argparse
+import importlib.metadata
 from typing import Any, Type
 
-import config
-from app import App, camel_to_kebab
+from arduino_esp32_tft_terminal import config
+from arduino_esp32_tft_terminal.app import App, camel_to_kebab
+
+
+def _package_version() -> str:
+    try:
+        return importlib.metadata.version('arduino-esp32-tft-terminal')
+    except importlib.metadata.PackageNotFoundError:
+        return '0+unknown'
 
 
 class Arg:
@@ -35,6 +43,9 @@ def get_args(all_apps: list[Type[App]]) -> tuple[argparse.Namespace, list[Type[A
     specs = get_config_args_specs()
 
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        '--version', action='version', version=f'%(prog)s {_package_version()}'
+    )
     parser.add_argument(
         '--once', help='run in demo mode, only once', action='store_true'
     )

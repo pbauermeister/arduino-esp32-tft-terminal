@@ -3,8 +3,8 @@ from typing import Any, Callable
 
 import serial  # pip3 install pyserial
 
-import config
-from lib import ASCII, ArduinoCommExceptions
+from arduino_esp32_tft_terminal import config
+from arduino_esp32_tft_terminal.lib import ASCII, ArduinoCommExceptions
 
 
 class Channel:

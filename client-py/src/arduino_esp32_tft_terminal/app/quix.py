@@ -1,8 +1,8 @@
 import random
 from dataclasses import dataclass
 
-from app import App, Bouncer, TimeEscaper
-from lib.board import Board
+from arduino_esp32_tft_terminal.app import App, Bouncer, TimeEscaper
+from arduino_esp32_tft_terminal.lib.board import Board
 
 NB_LINES = 9
 REDRAW = not False  # True looks cleaner but is slower

@@ -6,35 +6,47 @@ drives the board over USB, sending command lines and reading answers.
 
 ## Requirements
 
-- Python 3.10+ on Linux.
+- Python 3.11+ on Linux.
 - A flashed board (see [`../server-esp32s3-rtft/`](../server-esp32s3-rtft/)) connected over USB.
 - Dependencies: `numpy`, `pyserial`, `claude-busy-monitor`.
 
 ## Running
 
-From source (a pip/uv-installable package is on the way — see [`../TODO.md`](../TODO.md)):
+The client is on PyPI as `arduino-esp32-tft-terminal`:
 
 ```bash
-pip install -r requirements.txt
-./run.py -h           # list options and apps
-./run.py --demo       # cycle through all apps
-./run.py --only cube  # run a single app
+pipx install arduino-esp32-tft-terminal   # or: uv tool install arduino-esp32-tft-terminal
+arduino-esp32-tft-terminal -h             # list options and apps
+arduino-esp32-tft-terminal --demo         # cycle through all apps
+arduino-esp32-tft-terminal --only cube    # run a single app
 ```
+
+Run without installing: `uvx arduino-esp32-tft-terminal --demo`. From this
+directory: `make install` (= `uv tool install .`); for development,
+`uv pip install -e .` in a venv.
 
 ## Layout
 
+Package source lives under `src/arduino_esp32_tft_terminal/`:
+
 - `app/` — one module + class per app (`quix.py` is the template).
 - `lib/` — board communication: serial channel, command protocol, `Board`, `Gfx`, CLI args.
-- `run.py` — entry point; registers the apps.
+- `cli.py` — entry point (`main()`); registers the apps.
 - `config.py` — runtime configuration (also exposed as CLI flags).
 
 ## Writing a new app
 
-1. Study [`app/quix.py`](app/quix.py) as a template.
+1. Study [`src/arduino_esp32_tft_terminal/app/quix.py`](src/arduino_esp32_tft_terminal/app/quix.py) as a template.
 2. Create a new module and class.
-3. Register the class in [`run.py`](run.py).
+3. Register the class in [`src/arduino_esp32_tft_terminal/cli.py`](src/arduino_esp32_tft_terminal/cli.py).
 
 ## Development
 
-- Format + lint with [ruff](https://docs.astral.sh/ruff/): `make format` / `make lint` (from the repo root).
-- See the top-level [README](../README.md) and [`../TODO.md`](../TODO.md) for the wider toolchain.
+All `make` targets run from this directory (next to `pyproject.toml`):
+
+- `make help` — list targets.
+- `make lint` / `make format` — ruff check + format-check / autofix.
+- `make build` / `make install` — build the wheel / install the `arduino-esp32-tft-terminal` command.
+- `make publish-quality` then `make publish` — PyPI release (token in keyring first).
+
+See the top-level [README](../README.md) and [`../TODO.md`](../TODO.md) for the wider toolchain.

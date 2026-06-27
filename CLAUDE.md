@@ -20,7 +20,7 @@ The protocol is specified in `README-protocol.md`; flicker-avoidance techniques 
 
 ## Project structure
 
-- `client-py/` — Python program running on the computer; communicates with the board over USB and implements the apps (`app/`, one module + class per app; registered in `run.py`)
+- `client-py/` — installable Python package (`src/arduino_esp32_tft_terminal/`) running on the computer; communicates with the board over USB and implements the apps (`app/`, one module + class per app; registered in `cli.py`)
 - `server-esp32s3-rtft/` — Arduino sketch: the on-board graphical server (TFT primitives, button readout). Built/uploaded via VS Code (`README-VSCODE.md`)
 - `case-esp32s3-rtft/` — 3D-printed case and cap, designed in OpenSCAD (`.scad` sources, `.stl` outputs)
 - `media/` — photos, thumbnails, YouTube stills used by the READMEs

@@ -6,14 +6,14 @@ Very crowded, reverse gravity (buoyancy), bubble grow with time and merge on mut
 import math
 from typing import Callable
 
-from app.collisions import (
+from arduino_esp32_tft_terminal.app.collisions import (
     TIME_SUBQUANTAS,
     CollisionsElastic,
     Color,
     Particle,
     Simulation,
 )
-from lib.board import Board
+from arduino_esp32_tft_terminal.lib.board import Board
 
 RADIUS_MIN = 1
 RADIUS_GROWTH = 0.95

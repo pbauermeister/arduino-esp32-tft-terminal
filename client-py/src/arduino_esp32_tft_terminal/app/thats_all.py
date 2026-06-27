@@ -1,5 +1,5 @@
-from app import App
-from lib.board import Board
+from arduino_esp32_tft_terminal.app import App
+from arduino_esp32_tft_terminal.lib.board import Board
 
 
 class ThatsAll(App):

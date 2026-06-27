@@ -1,8 +1,8 @@
 import time
 from typing import Callable
 
-import config
-from lib import ERROR, NONE, UNKNOWN, ArduinoCommExceptions
+from arduino_esp32_tft_terminal import config
+from arduino_esp32_tft_terminal.lib import ERROR, NONE, UNKNOWN, ArduinoCommExceptions
 
 from .channel import Channel
 

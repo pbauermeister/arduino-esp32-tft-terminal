@@ -1,6 +1,6 @@
 import time
 
-import config
+from arduino_esp32_tft_terminal import config
 
 from .command import Command
 

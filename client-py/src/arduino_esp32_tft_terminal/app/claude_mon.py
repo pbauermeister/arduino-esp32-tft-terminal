@@ -30,9 +30,9 @@ from claude_busy_monitor import (
     get_state_counts,
 )
 
-from app import App, TimeEscaper
-from lib.board import Board
-from lib.gfx import Gfx
+from arduino_esp32_tft_terminal.app import App, TimeEscaper
+from arduino_esp32_tft_terminal.lib.board import Board
+from arduino_esp32_tft_terminal.lib.gfx import Gfx
 
 TITLE = "Claude Code Monitor"
 TITLE_AREA_H = 12

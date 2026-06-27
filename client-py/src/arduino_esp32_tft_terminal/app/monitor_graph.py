@@ -4,10 +4,10 @@ import re
 import threading
 from dataclasses import dataclass
 
-import config
-from app import TimeEscaper
-from app.monitor_host import MonitorBase
-from lib.board import Board
+from arduino_esp32_tft_terminal import config
+from arduino_esp32_tft_terminal.app import TimeEscaper
+from arduino_esp32_tft_terminal.app.monitor_host import MonitorBase
+from arduino_esp32_tft_terminal.lib.board import Board
 
 DX = 4
 Y_MARGIN = 8 * config.TEXT_SCALING + 1
