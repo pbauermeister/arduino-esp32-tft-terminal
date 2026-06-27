@@ -4,45 +4,32 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Board: ESP32-S3 Reverse TFT](https://img.shields.io/badge/board-ESP32--S3%20Reverse%20TFT-blue.svg)](https://www.adafruit.com/product/5345)
 
-A small gadget with a colour TFT display, enclosed in a 3D-printed
-case and driven from your computer over USB. It runs performance monitors,
-games, and graphical demos — and is easy to extend.
+A small gadget with a colour TFT display, enclosed in a 3D-printed case and
+driven from your computer over USB. It runs performance monitors, games, and
+graphical demos — and is easy to extend.
 
 The display is the [Adafruit ESP32-S3 Reverse TFT Feather](https://www.adafruit.com/product/5345):
-an ESP32-S3 board with a 240×135 colour TFT on its back. The board runs a
-small graphical server (written in C++); all application logic lives on the computer (Python,
-developed and tested on Linux) and drives the board over a simple USB text
-protocol.
+an ESP32-S3 board with a 240×135 colour TFT on its back.
 
-This repository provides all three parts: the Arduino firmware sketch for the
-board, the Python client with its ready-to-run apps, and the OpenSCAD
-3D-printed case.
+This repository provides all three parts:
+
+- **`server-esp32s3-rtft/`** — the Arduino firmware sketch (C++): a graphical server exposing TFT drawing primitives and button readout over USB; holds no app logic.
+- **`client-py/`** — the Python client (Linux): owns all app logic and the ready-to-run apps; drives the board by sending command lines and reading answers.
+- **`case-esp32s3-rtft/`** — the OpenSCAD 3D-printed case and cap.
+
+The board maps most commands directly to TFT library calls; the contract
+between the two sides is the [USB protocol](README-protocol.md).
 
 ![Asteriods on the TFT](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_133408-thumb.png "Asteriods running on the gadget")
 
 ## Apps
 
-Run any of the bundled apps, or write your own.
+Run any of the bundled apps, or write your own:
 
-| Category     | Apps                                                                          |
-| ------------ | ----------------------------------------------------------------------------- |
-| **Monitors** | `claude-monitor`, `monitor-host`, `monitor-cpus`, `monitor-graph` (local or remote computer) |
-| **Games**    | `asteriods`                                                                    |
-| **Physics**  | `collisions-elastic`, `collisions-gravity`, `bubbles-soap`, `bubbles-air`     |
-| **Graphics** | `cube` (3D), `starfield`, `tunnel`, `quix`, `fill`                             |
-
-## How it works
-
-Three parts, with a clean split of concerns:
-
-| Part                   | Role                                                                                   |
-| ---------------------- | -------------------------------------------------------------------------------------- |
-| `case-esp32s3-rtft/`   | 3D-printed case and cap, designed in OpenSCAD.                                          |
-| `server-esp32s3-rtft/` | Arduino firmware: a graphical server exposing TFT drawing primitives and button readout over USB. Holds no app logic. |
-| `client-py/`           | Python program on the computer: owns all app logic, drives the board by sending command lines and reading answers. |
-
-The board maps most commands directly to TFT library calls; the contract
-between the two sides is the [USB protocol](README-protocol.md).
+- **Monitors** — `claude-monitor`, `monitor-host`, `monitor-cpus`, `monitor-graph` (local or remote computer).
+- **Games** — `asteriods`.
+- **Physics** — `collisions-elastic`, `collisions-gravity`, `bubbles-soap`, `bubbles-air`.
+- **Graphics** — `cube` (3D), `starfield`, `tunnel`, `quix`, `fill`.
 
 ## Quick start
 
@@ -68,20 +55,20 @@ pip install -r requirements.txt
 
 ### Firmware (board)
 
-Build and flash `server-esp32s3-rtft/` onto the board. It has been built and
-uploaded with VS Code — see [`server-esp32s3-rtft/README-VSCODE.md`](server-esp32s3-rtft/README-VSCODE.md).
+- Build and flash `server-esp32s3-rtft/` onto the board.
+- It has been built and uploaded with VS Code — see [`server-esp32s3-rtft/README-VSCODE.md`](server-esp32s3-rtft/README-VSCODE.md).
 
 ### Client (computer)
 
-Requires Python 3.10+ on Linux. Install the dependencies and run as shown in
-[Quick start](#quick-start). The client talks to the board over its USB
-serial port.
+- Requires Python 3.10+ on Linux.
+- Install the dependencies and run as shown in [Quick start](#quick-start).
+- The client talks to the board over its USB serial port.
 
 ## Writing a new app
 
-Study [`client-py/app/quix.py`](client-py/app/quix.py) as a template, create a
-new module and class, and register the class in
-[`client-py/run.py`](client-py/run.py).
+1. Study [`client-py/app/quix.py`](client-py/app/quix.py) as a template.
+2. Create a new module and class.
+3. Register the class in [`client-py/run.py`](client-py/run.py).
 
 ## Documentation
 
