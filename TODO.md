@@ -56,11 +56,36 @@ CHANGES.md, doc layer, test tiers).
    (`CHANGES.md` → generated header) so the running firmware reports it.
    Optionally surface it via the client.
 
-2. **Firmware DRAM headroom / core pin** — the firmware sits at ~84% of static
-   RAM on esp32 core `3.3.0`; `3.3.10` overflows `dram0_0_seg` by ~4 KB, so the
-   core is pinned to `3.3.0` (`require` + CI cache key). To track newer cores,
-   trim static DRAM usage (buffers) and lift the pin. Until then, the pin keeps
-   dev/CI/board reproducible.
+2. **Firmware DRAM headroom / lift the core pin** — pinned to
+   `esp32:esp32@3.3.0` (`require` + CI cache key) because `3.3.10` overflows
+   `dram0_0_seg` by ~4 KB. Lifting the pin needs a (non-trivial) DRAM trim first.
+
+   _Why 3.3.10 overflows but 3.3.0 fits:_ our firmware's DRAM is identical on
+   both cores — the esp32 **core's own** static RAM (USB-CDC stack, IDF /
+   FreeRTOS / driver buffers) grew ~4 KB between `3.3.0` and `3.3.10`. The
+   firmware already sat at 84% (~49 KB free), so the core's growth tipped the
+   _combined_ static data over the internal-DRAM region. We didn't grow; the
+   floor under us rose.
+
+   _Where our DRAM goes:_ one global dominates — `Transaction transaction`
+   (`transaction.h`) = **236 KB = 72% of the 320 KB DRAM**. It is
+   `Action actions[1000]` (a draw FIFO); each `Action` ≈ 236 B =
+   `hash` (4) + `args[8]` (32) + **`str[BUFFER_LENGTH=200]`**. Most buffered
+   actions are draws that never touch `str`, so ~200 KB is unused text buffers.
+
+   _Fix ideas (each non-trivial; pick one, verify on 3.3.10, then lift the pin):_
+   1. Shrink the FIFO depth (`actions[1000]` → e.g. 512). One line, frees
+      ~115 KB. Risk: an app buffering more draws than the depth between
+      `display` calls overflows — pick a depth no app exceeds.
+   2. Small `Action.str` + span long prints over multiple `print` calls (the
+      client already has `chunkize`; the firmware caps text per action). Cuts
+      the per-slot waste without dropping long-text support.
+   3. Decouple `str` from `Action` entirely (only `print` actions carry text).
+      The principled fix; most invasive.
+
+   _Verify:_ compile against `3.3.10`, confirm it fits, lift the pin in
+   `require` + the CI cache key, flash via ROM download mode, runtime-test the
+   draw-heavy apps (`monitor-graph`, `asteriods`).
 
 3. **Protocol single-source** (J) — deferred. Codegen a command spec
    into both `client-py` (gfx strings) and firmware (`command.cpp`
