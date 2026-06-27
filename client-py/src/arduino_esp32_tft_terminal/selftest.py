@@ -79,6 +79,21 @@ def _ask(prompt: str) -> bool:
     return input(f"{prompt} [y/N] ").strip().lower().startswith("y")
 
 
+def _prompt_screen(gfx: Gfx, *lines: str) -> None:
+    """Draw stacked size-2 prompt lines on the TFT (e.g. 'PRESS A', or
+    'PRESS' / 'RESET' when it doesn't fit on one line)."""
+    gfx.reset()
+    gfx.fill_screen(0)
+    gfx.set_text_color(255, 255, 255)
+    gfx.set_text_size(2, 2)
+    y = config.HEIGHT // 4
+    for line in lines:
+        gfx.set_cursor(0, y)
+        gfx.print(line)
+        y += config.HEIGHT // 4
+    gfx.display()
+
+
 def _gallery_shapes(gfx: Gfx) -> None:
     # Coordinates derive from the queried resolution so the screen fits any
     # board (the USB protocol is board-agnostic; only W/H and colour differ).
@@ -217,6 +232,7 @@ def phase0_boot(board: Board, results: Results) -> None:
     # the board into USB-disk/bootloader mode. The channel layer reopens the TTY
     # when the board comes back.
     _title("boot:logo")
+    _prompt_screen(board.gfx, "PRESS", "RESET")
     print("  >>> press the RESET button now (the board reboots)")
     print("  expected boot screen:")
     print(_LOGO_REF)
@@ -269,13 +285,7 @@ def phase1_buttons(board: Board, results: Results) -> None:
     try:
         for code, label in [("A", "A (D0)"), ("B", "B (D1)"), ("C", "C (D2)")]:
             _title(f"button:{code}")
-            gfx.reset()
-            gfx.fill_screen(0)
-            gfx.set_text_color(255, 255, 255)
-            gfx.set_text_size(2, 2)
-            gfx.set_cursor(0, config.HEIGHT // 3)
-            gfx.print(f"PRESS {code}")
-            gfx.display()
+            _prompt_screen(gfx, f"PRESS {code}")
             print(f"  >>> press button {label}")
             seen = _await_auto_button(board, code)
             results.check(
@@ -286,17 +296,7 @@ def phase1_buttons(board: Board, results: Results) -> None:
         board.end_auto_read_buttons()
 
     _title("button:reset")
-    # Show the RESET prompt on the TFT (replaces the last "PRESS X" screen).
-    # "PRESS RESET" doesn't fit on one line at this size, so stack it.
-    gfx.reset()
-    gfx.fill_screen(0)
-    gfx.set_text_color(255, 255, 255)
-    gfx.set_text_size(2, 2)
-    gfx.set_cursor(0, config.HEIGHT // 4)
-    gfx.print("PRESS")
-    gfx.set_cursor(0, config.HEIGHT // 2)
-    gfx.print("RESET")
-    gfx.display()
+    _prompt_screen(gfx, "PRESS", "RESET")
     print("  >>> press the RESET button (the board reboots)")
     board.clear_buttons()
     deadline = None if BUTTON_TIMEOUT is None else time.time() + BUTTON_TIMEOUT
