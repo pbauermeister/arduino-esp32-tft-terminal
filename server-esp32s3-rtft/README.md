@@ -11,7 +11,14 @@ no application logic — all behaviour lives in the [Python client](../client-py
 
 ## Building and uploading
 
-- Built and uploaded with VS Code + the Arduino extension — see [`README-VSCODE.md`](README-VSCODE.md).
+Build and flash with `make` (`arduino-cli` under the hood), from this directory:
+
+```bash
+make require          # one-time: arduino-cli + esp32 core + libraries
+make firmware-upload  # build, flash the board, verify
+```
+
+Run `make help` for all targets (`firmware-build`, `format`, `format-check`, ...).
 
 ## Protocol
 
