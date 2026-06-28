@@ -115,7 +115,10 @@ Implemented per the user's explicit verbal "go, implement" — the in-file revie
 
 ### 3.2 Hardware verification (done)
 
-- Flashed 0.2.0 (ROM download mode). Verified on the board: a 292-char print rendered **in full** (3 slices, ending in `OK`); a full-screen pixel-by-pixel rainbow drew **flawlessly** (no specks/jumps) across ~64 auto-commits, with visible latency spikes at the flushes (back-pressure). Now folded into the selftest finale.
+- Flashed 0.2.0 (ROM download mode). Board-verified: a 292-char print rendered **in full** (sliced); the rainbow drew **flawlessly** with visible latency spikes at the auto-commit flushes (back-pressure).
+- **Oracle proven sensitive:** a temporary tamper dropping ~1 % of `drawPixel` commands produced clearly visible white specks — so a passing (speck-free) run is meaningful.
+- `phase1_buffer` finale tuned: a **centered rainbow rect** (~133×75, ~19 countable commits, ~40 s — not the whole screen), no `OK` marker.
+- **Full `make test-board` re-run: all passed**, including `buffer:slicing` and `buffer:flow-control`.
 
 ### 3.3 Verdict
 
