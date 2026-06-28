@@ -435,7 +435,7 @@ def phase1_buffer(board: Board, results: Results) -> None:
     _title("buffer:flow-control")
     w, h = config.WIDTH, config.HEIGHT
     px_per_commit = 500  # ~ACTIONS_COUNT(1000) / 2 actions per pixel
-    area = px_per_commit * 5  # aim for ~5 commits ("a few")
+    area = px_per_commit * 20  # ~20 commits: a larger, clearer rect (still fast)
     rw = min(w, int((area * w / h) ** 0.5))
     rh = min(h, area // rw)
     rx, ry = (w - rw) // 2, (h - rh) // 2
