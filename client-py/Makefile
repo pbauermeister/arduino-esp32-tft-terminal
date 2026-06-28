@@ -115,7 +115,10 @@ uninstall: ## uninstall from user account (1)
 .PHONY: verify-uninstalled
 verify-uninstalled: ## assert command absent
 	@if [ -e "$(CLI)" ]; then \
-		echo "verify-uninstalled: $(CLI) still present (run 'make uninstall' first)" >&2; exit 1; \
+		echo "verify-uninstalled: $(CLI) still present — remove the existing install first:" >&2; \
+		echo "    pipx uninstall arduino-esp32-tft-terminal     (if pipx-installed)" >&2; \
+		echo "    uv tool uninstall arduino-esp32-tft-terminal  (if uv/make-installed)" >&2; \
+		exit 1; \
 	fi; \
 	echo "verify-uninstalled: OK ($(CLI) absent)"
 
