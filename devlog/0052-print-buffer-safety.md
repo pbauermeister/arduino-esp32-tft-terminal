@@ -111,15 +111,15 @@ Implemented per the user's explicit verbal "go, implement" — the in-file revie
 - **FW:** `getPrintMaxLength` (= `PRINT_LENGTH - 1`); `action()` flush-when-full + `add()` simplified — fixes #50's drop; `do_action` no-op; `CHANGES.md` → **0.2.0**. Compiles on 3.3.10 (67% DRAM), format clean.
 - **Client:** `config.DEFAULT_PRINT_MAX=127` + `PRINT_WIRE_MAX=190`; `Gfx.print_max` default + `get_print_max_length()`; `Gfx.print()` slices via `_slice_print` (escape-safe; `str` **and** wire limits); `board._configure` negotiates it and banners it.
 - **Host tests:** `test_print_slicing.py` — 9 tests (slicing, escape boundaries, wire cap, default, negotiation + fallback). ruff clean, **33 tests pass**.
-- **On-board demo:** `make test-board-buffer` (`buffer_safety.py`) — gigantic sliced print + a 1500-draw flow-control latency demo.
+- **On-board checks:** integrated into the selftest as `phase1_buffer` — the **last interactive checks** (`buffer:slicing`, `buffer:flow-control`), so they appear in the final PASS/FAIL summary. No separate target (the standalone `buffer_safety.py` and `test-board-buffer` were folded in). `make test-all` = `lint` + `test` + `test-board`.
 
-### 3.2 Pending (hardware — gadget disconnected; to do together)
+### 3.2 Hardware verification (done)
 
-- Flash 0.2.0 (ROM download mode), then `make test-board-buffer`: confirm the long print renders **in full** and the flow-control **latency spikes** appear near multiples of 1000 with **all** shapes drawn (none dropped).
+- Flashed 0.2.0 (ROM download mode). Verified on the board: a 292-char print rendered **in full** (3 slices, ending in `OK`); a full-screen pixel-by-pixel rainbow drew **flawlessly** (no specks/jumps) across ~64 auto-commits, with visible latency spikes at the flushes (back-pressure). Now folded into the selftest finale.
 
 ### 3.3 Verdict
 
-Accept once the hardware demo passes.
+Accept. (Devlog sections remain `Review: pending` — implemented on verbal go-ahead; the user may attest on `main`.)
 
 ## Governance trace
 
