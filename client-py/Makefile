@@ -109,8 +109,12 @@ verify-installed: ## assert command present and --version matches CHANGES.md
 	echo "verify-installed: OK ($(CLI) v$$ACTUAL)"
 
 .PHONY: uninstall
-uninstall: ## uninstall from user account (1)
-	uv tool uninstall arduino-esp32-tft-terminal
+uninstall: ## uninstall from user account (idempotent) (1)
+	@if uv tool list 2>/dev/null | grep -q '^arduino-esp32-tft-terminal'; then \
+		uv tool uninstall arduino-esp32-tft-terminal; \
+	else \
+		echo "uninstall: arduino-esp32-tft-terminal not installed — nothing to do"; \
+	fi
 
 .PHONY: verify-uninstalled
 verify-uninstalled: ## assert command absent
@@ -124,7 +128,7 @@ cycle: ## from scratch: uninstall clean lint test install verify (1)
 	@echo "About to uninstall arduino-esp32-tft-terminal and rebuild from scratch."
 	@echo "Ctrl-C within 2 seconds to abort."
 	@sleep 2
-	-$(MAKE) uninstall
+	$(MAKE) uninstall
 	$(MAKE) verify-uninstalled
 	$(MAKE) clean
 	$(MAKE) lint
@@ -160,7 +164,7 @@ publish-quality: ## pre-publish gate: ci-green lint test reinstall build (1)
 	$(MAKE) ci-green
 	$(MAKE) lint
 	$(MAKE) test
-	-$(MAKE) uninstall
+	$(MAKE) uninstall
 	$(MAKE) verify-uninstalled
 	$(MAKE) clean
 	$(MAKE) install
