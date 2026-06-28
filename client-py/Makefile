@@ -73,6 +73,12 @@ test-board: ## on-board acceptance suite (needs gadget on USB; not CI)
 	uv sync --extra dev
 	uv run python -m arduino_esp32_tft_terminal.selftest
 
+.PHONY: test-all
+test-all: ## all checks: lint + host tests + on-board suite (needs gadget)
+	$(MAKE) lint
+	$(MAKE) test
+	$(MAKE) test-board
+
 .PHONY: check
 check: lint test ## CI/pre-PR gate: lint test
 

@@ -9,7 +9,9 @@ Two phases, interactive first so the user is needed only briefly at the start:
   Phase 1 — interactive (attended):
     1. a primitive gallery; the user confirms each screen by glance (y/n);
     2. guided button presses, asserted at low level (A/B/C) and high level
-       (RESET -> reboot reported as the `R` event).
+       (RESET -> reboot reported as the `R` event);
+    3. the buffer-safety finale: a long print sliced by the client, and a
+       full-screen rainbow that proves the action-FIFO flow control.
 
   Phase 2 — unattended (walk away):
     - every client primitive is sent and checked for a non-error response;
@@ -20,6 +22,7 @@ Not in CI — needs the gadget on USB. Run: `make test-board`
 (`--unattended-only` skips Phase 1, e.g. for re-runs).
 """
 
+import colorsys
 import sys
 import time
 from typing import Callable
@@ -404,6 +407,65 @@ def _show_done(board: Board, ok: bool) -> None:
     gfx.display()
 
 
+def phase1_buffer(board: Board, results: Results) -> None:
+    # The icing on the cake: the last interactive checks. Runs after the button
+    # RESET test rebooted the board, so restore the configured state first.
+    g = board.gfx
+    g.set_rotation(config.SCREEN_ROTATION)
+    g.set_auto_display_off()
+    g.reset()
+
+    # A. Client slices a print longer than the board's per-action capacity.
+    _title("buffer:slicing")
+    text = " ".join(str(i) for i in range(100)) + " OK"
+    print(f"  printing {len(text)} chars (print_max={g.print_max}) -> client slices it")
+    g.fill_screen(0)
+    g.set_text_color(0, 255, 0)
+    g.set_text_size(0.5, 1)
+    g.set_text_wrap_on()
+    g.home()
+    g.print(text)
+    g.display()
+    results.check("buffer:slicing", _ask("does the text show in full, ending in 'OK'?"))
+
+    # B. Flow control: a centered rainbow rectangle, sized for only a few
+    # auto-commits (the firmware FIFO holds ~1000 actions and each pixel costs 2
+    # -> ~500 px per commit). The picture is the correctness oracle (a lost
+    # action -> a white speck / hue jump); timing only confirms the flushes.
+    _title("buffer:flow-control")
+    w, h = config.WIDTH, config.HEIGHT
+    px_per_commit = 500  # ~ACTIONS_COUNT(1000) / 2 actions per pixel
+    area = px_per_commit * 20  # ~20 commits: a larger, clearer rect (still fast)
+    rw = min(w, int((area * w / h) ** 0.5))
+    rh = min(h, area // rw)
+    rx, ry = (w - rw) // 2, (h - rh) // 2
+    total = rw * rh
+    print(
+        f"  centered {rw}x{rh} rainbow ({total} px) -> ~{total // px_per_commit} commits"
+    )
+    g.reset()
+    g.fill_screen(0)  # black surround
+    g.set_fg_color(255, 255, 255)
+    g.fill_rect(rx, ry, rw, rh, 1)  # white bg: a lost pixel shows as a speck
+    latencies: list[float] = []
+    idx = 0
+    for yy in range(ry, ry + rh):
+        for xx in range(rx, rx + rw):
+            r, gn, b = colorsys.hsv_to_rgb(idx / total, 1.0, 1.0)
+            t0 = time.time()
+            g.set_fg_color(int(r * 255), int(gn * 255), int(b * 255))
+            g.draw_pixel(xx, yy, 1)
+            latencies.append(time.time() - t0)
+            idx += 1
+    g.display()
+    spikes = sorted(latencies, reverse=True)[:5]
+    print("  top latency spikes (ms): " + ", ".join(f"{x * 1000:.0f}" for x in spikes))
+    print("  (spikes = auto-commit back-pressure; the picture is the oracle)")
+    results.check(
+        "buffer:flow-control", _ask("smooth rainbow, no white specks or hue jumps?")
+    )
+
+
 def main() -> None:
     unattended_only = "--unattended-only" in sys.argv
     board = connect()
@@ -412,6 +474,7 @@ def main() -> None:
         phase0_boot(board, results)
         phase1_gallery(board, results)
         phase1_buttons(board, results)
+        phase1_buffer(board, results)  # last interactive — the finale
     phase2_unattended(board, results)
     results.summary()
     _show_done(board, results.ok)

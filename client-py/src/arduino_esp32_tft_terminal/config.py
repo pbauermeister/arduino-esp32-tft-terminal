@@ -19,6 +19,17 @@ SERIAL_BAUDRATE = 115200  # default baudrate of oled-server.ino
 SERIAL_ERROR_RETRY_DELAY = 0.2
 SERIAL_ERROR_RETRY_MAX_BACKOFF = 30
 SERIAL_TIMEOUT = 5.0
+
+# Print buffer safety
+# Usable print-text chars per buffered action, used when the board is too old to
+# answer `getPrintMaxLength`. Floor across all no-query firmware: the #51 build
+# has str=128 -> 127 usable (pre-Claude had 200); 127 is safe for both.
+DEFAULT_PRINT_MAX = 127
+# Max wire length of one command line the board accepts (its BUFFER_LENGTH=200
+# minus "print " and the terminator, with margin). Caps escape-heavy chunks so a
+# sliced print can never overflow the command-line buffer.
+PRINT_WIRE_MAX = 190
+
 # Misc
 DEBUG = False
 

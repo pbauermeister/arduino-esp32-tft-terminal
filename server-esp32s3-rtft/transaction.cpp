@@ -235,6 +235,10 @@ void Transaction::do_action(Action *action) {
             break;
         }
 
+        case hash("getPrintMaxLength"): {  // getPrintMaxLength
+            break;
+        }
+
         case hash("getRotation"): {  // getRotation
             break;
         }
@@ -267,10 +271,6 @@ void Transaction::add() {
         return;
     }
 
-    if (next ==
-        ACTIONS_COUNT - 1) {  // buffer full: flush (sizeof bug: never fired)
-        commit();
-    } else {
-        next++;
-    }
+    next++;  // full-buffer flush is handled in action() (flush, then reuse slot
+             // 0)
 }

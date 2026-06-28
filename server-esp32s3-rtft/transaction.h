@@ -129,7 +129,13 @@ class Transaction {
 
     void clear() { next = 0; }
     void enable(bool en) { enabled = en; }
-    Action* action() { return &actions[next]; }
+    // Full buffer: auto-commit to make room, then reuse slot 0. The new action
+    // is kept (not dropped); its response returns only after the commit, which
+    // back-pressures the client.
+    Action* action() {
+        if (next == ACTIONS_COUNT) commit();
+        return &actions[next];
+    }
     void add();
     void commit();
 
