@@ -456,12 +456,6 @@ def phase1_buffer(board: Board, results: Results) -> None:
             latencies.append(time.time() - t0)
             idx += 1
     g.display()
-    g.set_text_size(1, 1)
-    tw, th = g.get_text_bounds(0, 0, "OK")
-    g.set_text_color(0, 0, 0)
-    g.set_cursor((w - tw) // 2, (h - th) // 2)
-    g.print("OK")
-    g.display()
     spikes = sorted(latencies, reverse=True)[:5]
     print("  top latency spikes (ms): " + ", ".join(f"{x * 1000:.0f}" for x in spikes))
     print("  (spikes = auto-commit back-pressure; the picture is the oracle)")
