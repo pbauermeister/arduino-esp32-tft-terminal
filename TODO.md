@@ -49,20 +49,10 @@ CHANGES.md, doc layer, test tiers).
 - **Top-level signpost Makefile** — root `make` points to the sub-makefiles (tests live in client-py) — #47.
 - **Firmware version command** — board `version` command; version from firmware `CHANGES.md` → build-injected `version.h`; client prints it on connect — #49.
 - **Firmware DRAM trim / core pin lifted to 3.3.10** — shrank `Action.str` (→ `PRINT_LENGTH` 128): DRAM 84% → 67% on 3.3.10 (~72 KB freed). Fixed two latent buffer bugs (non-terminated `strncpy`; `sizeof`-vs-count FIFO overflow). CI + board + draw-heavy apps verified — #51.
+- **Print/buffer total safety** — FW 0.2.0 `getPrintMaxLength` (runtime-negotiated cap) + auto-commit-then-queue flow-control fix; client escape-safe `print` slicing; selftest finale (`buffer:slicing` / `buffer:flow-control`, gradient continuity oracle). Hardware-verified — #53.
 
 ## TODO Items
 
-1. **Print/buffer total safety (flow control)** — make the buffered-draw path
-   overflow- and truncation-proof end-to-end (builds on #50's `str` shrink +
-   the null-term / bounds fixes):
-   1. A board query returning `Action.str` capacity (`PRINT_LENGTH`) so the
-      client learns it at runtime — no hard-coded firmware/client constant.
-   2. The Python library slices `print` (and any `str`-bearing command) into
-      chunks of that length: long text spans multiple calls, never truncated.
-   3. Flow control on the `actions[]` FIFO: when full, back-pressure instead of
-      drop/early-flush — the client waits for free slots (query depth/room), or
-      the board blocks the command until the action can be queued.
-
-2. **Protocol single-source** (J) — deferred. Codegen a command spec
+1. **Protocol single-source** (J) — deferred. Codegen a command spec
    into both `client-py` (gfx strings) and firmware (`command.cpp`
    hash-switch). Parked until the duplication actually bites.
