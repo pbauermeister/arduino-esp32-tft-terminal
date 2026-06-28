@@ -428,20 +428,27 @@ def phase1_buffer(board: Board, results: Results) -> None:
     g.display()
     results.check("buffer:slicing", _ask("does the text show in full, ending in 'OK'?"))
 
-    # B. Flow control: a pixel-by-pixel rainbow far exceeds the action FIFO, so
-    # the firmware auto-commits in bands. The picture is the correctness oracle
-    # (a lost action -> a white speck / hue jump); timing only confirms flushes.
+    # B. Flow control: a centered rainbow rectangle, sized for only a few
+    # auto-commits (the firmware FIFO holds ~1000 actions and each pixel costs 2
+    # -> ~500 px per commit). The picture is the correctness oracle (a lost
+    # action -> a white speck / hue jump); timing only confirms the flushes.
     _title("buffer:flow-control")
     w, h = config.WIDTH, config.HEIGHT
-    total = w * h
-    print(f"  painting a {total}-pixel rainbow; FIFO=1000 auto-commits in bands...")
+    px_per_commit = 500  # ~ACTIONS_COUNT(1000) / 2 actions per pixel
+    area = px_per_commit * 5  # aim for ~5 commits ("a few")
+    rw = min(w, int((area * w / h) ** 0.5))
+    rh = min(h, area // rw)
+    rx, ry = (w - rw) // 2, (h - rh) // 2
+    total = rw * rh
+    print(f"  centered {rw}x{rh} rainbow ({total} px) -> ~{total // px_per_commit} commits")
     g.reset()
+    g.fill_screen(0)  # black surround
     g.set_fg_color(255, 255, 255)
-    g.fill_screen(1)  # white: any lost pixel shows as a speck
+    g.fill_rect(rx, ry, rw, rh, 1)  # white bg: a lost pixel shows as a speck
     latencies: list[float] = []
     idx = 0
-    for yy in range(h):
-        for xx in range(w):
+    for yy in range(ry, ry + rh):
+        for xx in range(rx, rx + rw):
             r, gn, b = colorsys.hsv_to_rgb(idx / total, 1.0, 1.0)
             t0 = time.time()
             g.set_fg_color(int(r * 255), int(gn * 255), int(b * 255))
@@ -449,7 +456,7 @@ def phase1_buffer(board: Board, results: Results) -> None:
             latencies.append(time.time() - t0)
             idx += 1
     g.display()
-    g.set_text_size(3, 3)
+    g.set_text_size(1, 1)
     tw, th = g.get_text_bounds(0, 0, "OK")
     g.set_text_color(0, 0, 0)
     g.set_cursor((w - tw) // 2, (h - th) // 2)
