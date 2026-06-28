@@ -440,7 +440,9 @@ def phase1_buffer(board: Board, results: Results) -> None:
     rh = min(h, area // rw)
     rx, ry = (w - rw) // 2, (h - rh) // 2
     total = rw * rh
-    print(f"  centered {rw}x{rh} rainbow ({total} px) -> ~{total // px_per_commit} commits")
+    print(
+        f"  centered {rw}x{rh} rainbow ({total} px) -> ~{total // px_per_commit} commits"
+    )
     g.reset()
     g.fill_screen(0)  # black surround
     g.set_fg_color(255, 255, 255)
