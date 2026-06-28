@@ -79,7 +79,8 @@ test-board-buffer: ## on-board print/buffer-safety demo (needs gadget; not CI)
 	uv run python -m arduino_esp32_tft_terminal.buffer_safety
 
 .PHONY: test-all
-test-all: ## all tests: host + buffer demo + on-board suite (needs gadget)
+test-all: ## all checks: lint + host + buffer demo + on-board (needs gadget)
+	$(MAKE) lint
 	$(MAKE) test
 	$(MAKE) test-board-buffer
 	$(MAKE) test-board
