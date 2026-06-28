@@ -118,7 +118,21 @@ On connect (in `board._configure`, beside the resolution/version query): query `
 - `phase1_buffer` finale tuned: a **centered rainbow rect** (~133×75, ~19 countable commits, ~40 s — not the whole screen), no `OK` marker.
 - **Full `make test-board` re-run: all passed**, including `buffer:slicing` and `buffer:flow-control`.
 
-### 3.3 Verdict
+### 3.3 Retrospective
+
+Agent votes filled; User column for the reviewer to vote.
+
+| #   | Point                                                                            | Agent      | User |
+| --- | -------------------------------------------------------------------------------- | ---------- | ---- |
+| 1   | Gradient continuity oracle — tamper-proven to actually catch dropped actions     | well       |      |
+| 2   | Dropped the buffer-depth query; flow control kept firmware-side (YAGNI)          | well       |      |
+| 3   | Found + fixed #50's `sizeof`-vs-count `add()` drop while implementing            | well       |      |
+| 4   | Default 127 — caught that #51's `str=128` is the floor, not pre-Claude's 200     | well       |      |
+| 5   | Slicing respects both the `str` cap and the command-line wire limit, escape-safe | well       |      |
+| 6   | Demo iterated well on feedback (full-screen → centered rect; dropped `OK`)        | ended well |      |
+| 7   | Ran `ruff check` but not `ruff format` after edits → broke `make lint` twice      | not well   |      |
+
+### 3.4 Verdict
 
 Accept.
 
