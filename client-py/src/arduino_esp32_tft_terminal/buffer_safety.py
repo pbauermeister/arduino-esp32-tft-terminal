@@ -5,15 +5,19 @@ Two demonstrations, run on the gadget (`make test-board-buffer`):
 A. **Slicing** — print a string far longer than the board's per-action `str`
    capacity; the client slices it into multiple `print` calls so it renders in
    full instead of being truncated.
-B. **Flow control** — queue far more buffered draws than the action FIFO holds
-   (`ACTIONS_COUNT=1000`) without a `display`. The firmware auto-commits when
-   full and keeps going; the command that triggers the flush returns only after
-   the draw completes, so the client is back-pressured (visible as a latency
-   spike near each multiple of 1000). Every shape is drawn — none dropped.
+B. **Flow control (gradient)** — paint a full-screen rainbow pixel by pixel
+   (`setFgColor` + `drawPixel` per pixel, on a white background), far more
+   buffered actions than the FIFO holds (`ACTIONS_COUNT=1000`). The firmware
+   auto-commits when full, so the image fills in bands. The correctness oracle
+   is the **picture**: a smooth rainbow with no white specks or hue jumps means
+   no action was lost. Response times are reported only to *confirm* that flow
+   control happens (latency spikes at the flushes) — never to count commits, as
+   a board may be fast, cache, or commit differently.
 
 Connect cleanly first: reset the board (boot logo), then run this.
 """
 
+import colorsys
 import time
 
 from arduino_esp32_tft_terminal import config
@@ -62,33 +66,52 @@ def demo_slicing(board: Board) -> None:
     print('  -> TFT should show the FULL text (wrapped), not truncated.')
 
 
-def demo_flow_control(board: Board, n: int = 1500) -> None:
+def demo_gradient(board: Board, step: int = 1) -> None:
     g = board.gfx
     w, h = config.WIDTH, config.HEIGHT
-    print(f'\n=== B. {n} buffered draws, no display (FIFO=1000) ===')
+    nx, ny = len(range(0, w, step)), len(range(0, h, step))
+    total = nx * ny
+    print(f'\n=== B. rainbow gradient, pixel by pixel ({total} px, step={step}) ===')
+    print('  ~2 buffered actions/pixel; fills in bands as the FIFO auto-commits.')
     g.reset()
-    g.fill_screen(0)
-    g.set_fg_color(0, 255, 0)
+    g.set_fg_color(255, 255, 255)
+    g.fill_screen(1)  # white: a lost pixel shows as a white speck on the rainbow
     latencies: list[tuple[int, float]] = []
-    for i in range(n):
-        x, y = (i * 7) % (w - 8), (i * 11) % (h - 6)
-        t0 = time.time()
-        g.draw_rect(x, y, 8, 6, 1)  # buffered (auto-display off)
-        latencies.append((i, time.time() - t0))
-    g.display()  # flush the remainder
+    idx = 0
+    for yy in range(0, h, step):
+        for xx in range(0, w, step):
+            r, gn, b = colorsys.hsv_to_rgb(idx / total, 1.0, 1.0)
+            t0 = time.time()
+            g.set_fg_color(int(r * 255), int(gn * 255), int(b * 255))
+            if step == 1:
+                g.draw_pixel(xx, yy, 1)
+            else:
+                g.fill_rect(xx, yy, step, step, 1)
+            latencies.append((idx, time.time() - t0))
+            idx += 1
+    g.display()
+    # Final centered black "OK" marker -> the demo completed.
+    g.set_text_size(3, 3)
+    tw, th = g.get_text_bounds(0, 0, 'OK')
+    g.set_text_color(0, 0, 0)
+    g.set_cursor((w - tw) // 2, (h - th) // 2)
+    g.print('OK')
+    g.display()
     latencies.sort(key=lambda p: -p[1])
-    print('  slowest commands (auto-commit flushes = back-pressure):')
-    for i, dt in latencies[:5]:
-        print(f'    draw #{i}: {dt * 1000:.0f} ms')
-    print('  -> spikes near multiples of 1000 are the firmware auto-committing;')
-    print('     the client waited for the response. All shapes drew, none dropped.')
+    print('  slowest pixels (auto-commit flushes = back-pressure):')
+    for i, dt in latencies[:6]:
+        print(f'    pixel #{i}: {dt * 1000:.0f} ms')
+    print('  -> CORRECTNESS = the picture: a smooth rainbow with NO white specks')
+    print('     or hue jumps means every action survived (none dropped).')
+    print('  -> timing only CONFIRMS flow control happens; it is not a commit')
+    print('     counter (a board may be fast / cache / commit differently).')
 
 
 def main() -> None:
     board = _connect()
     demo_slicing(board)
     time.sleep(3)
-    demo_flow_control(board)
+    demo_gradient(board)
     board.chan.close()
     print('\nbuffer-safety demo complete.')
 
