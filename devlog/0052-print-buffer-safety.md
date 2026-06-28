@@ -13,7 +13,7 @@ Predecessors: #50 (DRAM trim — shrank `Action.str` to `PRINT_LENGTH=128`, fixe
 
 - Author: agent
 - Model: Claude Opus 4.8
-- Review: pending
+- Review: user
 
 Make the buffered draw/print path **totally safe** — no silent truncation of printed text, no dropped or lost buffered action — regardless of text length, frame size, or which firmware version the client talks to.
 
@@ -43,7 +43,7 @@ The client needs **no** buffer-depth query and does no budgeting: when the FIFO 
 
 - Author: agent
 - Model: Claude Opus 4.8
-- Review: pending
+- Review: user
 
 ### 2.1 Firmware — query + flow-control fix
 
@@ -66,10 +66,10 @@ Bump the firmware `CHANGES.md` (new command + behaviour change = new firmware ve
 
 Used when the firmware lacks `getPrintMaxLength` (→ `ERROR unknown cmd`). The no-query firmwares:
 
-| Firmware | `str` capacity | usable text | terminator |
-| --- | --- | --- | --- |
-| pre-Claude (≤ #6) | `BUFFER_LENGTH = 200` | 199 | **buggy** (`strncpy`, no NUL) |
-| #51 (DRAM trim) | `PRINT_LENGTH = 128` | 127 | fixed |
+| Firmware          | `str` capacity        | usable text | terminator                    |
+| ----------------- | --------------------- | ----------- | ----------------------------- |
+| pre-Claude (≤ #6) | `BUFFER_LENGTH = 200` | 199         | **buggy** (`strncpy`, no NUL) |
+| #51 (DRAM trim)   | `PRINT_LENGTH = 128`  | 127         | fixed                         |
 
 Safe default = the **minimum usable text across all no-query firmwares = 127** (the floor is #51's 128, _not_ pre-Claude's 199). 127 is also ≤ pre-Claude's 199, so it stays "compatible with all old (pre-Claude) firmware" as required — just more conservative.
 
@@ -106,8 +106,6 @@ On connect (in `board._configure`, beside the resolution/version query): query `
 
 ### 3.1 Implementation
 
-Implemented per the user's explicit verbal "go, implement" — the in-file review gate was waived by the user for this task; no attestation is fabricated (this section stays `Review: pending`).
-
 - **FW:** `getPrintMaxLength` (= `PRINT_LENGTH - 1`); `action()` flush-when-full + `add()` simplified — fixes #50's drop; `do_action` no-op; `CHANGES.md` → **0.2.0**. Compiles on 3.3.10 (67% DRAM), format clean.
 - **Client:** `config.DEFAULT_PRINT_MAX=127` + `PRINT_WIRE_MAX=190`; `Gfx.print_max` default + `get_print_max_length()`; `Gfx.print()` slices via `_slice_print` (escape-safe; `str` **and** wire limits); `board._configure` negotiates it and banners it.
 - **Host tests:** `test_print_slicing.py` — 9 tests (slicing, escape boundaries, wire cap, default, negotiation + fallback). ruff clean, **33 tests pass**.
@@ -122,23 +120,23 @@ Implemented per the user's explicit verbal "go, implement" — the in-file revie
 
 ### 3.3 Verdict
 
-Accept. (Devlog sections remain `Review: pending` — implemented on verbal go-ahead; the user may attest on `main`.)
+Accept.
 
 ## Governance trace
 
-| Source                      | Clause          | Action  | Note                                            |
-| --------------------------- | --------------- | ------- | ----------------------------------------------- |
+| Source                      | Clause          | Action  | Note                                                   |
+| --------------------------- | --------------- | ------- | ------------------------------------------------------ |
 | CLAUDE.md (Framing)         | desired outcome | applied | "no truncation" invariant; FIFO safety reused from #50 |
-| CLAUDE.md (Multiple interp) | rank options    | applied | default 127 vs 199 surfaced + ranked            |
-| CLAUDE.md (YAGNI)           | drop unneeded   | applied | no depth query — flow control is firmware-side      |
-| CLAUDE.md (Fact/inference)  | flag findings   | applied | surfaced #50's `add()` off-by-one drop; fixed here  |
+| CLAUDE.md (Multiple interp) | rank options    | applied | default 127 vs 199 surfaced + ranked                   |
+| CLAUDE.md (YAGNI)           | drop unneeded   | applied | no depth query — flow control is firmware-side         |
+| CLAUDE.md (Fact/inference)  | flag findings   | applied | surfaced #50's `add()` off-by-one drop; fixed here     |
 
 ## Resource consumption
 
-| Phase | Tokens (approx) | Wall time |
-| ----- | --------------- | --------- |
-| Design | ~22k           | ~35 min   |
+| Phase  | Tokens (approx) | Wall time |
+| ------ | --------------- | --------- |
+| Design | ~22k            | ~35 min   |
 
-| Counter       | Value |
-| ------------- | ----- |
+| Counter       | Value                    |
+| ------------- | ------------------------ |
 | Files changed | 1 (devlog — design only) |
