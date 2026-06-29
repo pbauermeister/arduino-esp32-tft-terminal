@@ -88,7 +88,7 @@ Per command: `name`, `args`, `returns`, `category`, `doc`. Two fields are **load
 | field      | role                                                                  | values                                               |
 | ---------- | --------------------------------------------------------------------- | ---------------------------------------------------- |
 | `name`     | command keyword (wire token, also the `hash()` key)                   | —                                                    |
-| `args`     | load-bearing both ends (parse / format)                               | list of `{n, t, optional?, default?}`; `t` see below |
+| `args`     | load-bearing both ends (parse / format)                               | list of `{name, type, optional?, default?}`; see below |
 | `returns`  | **load-bearing (client)** — whether/how to read & parse the response  | `ok` · `none` · `int` · `[names…]` · `string`        |
 | `category` | developer-facing cluster; sole codegen effect: `buffered` ⇒ enqueue   | `buffered` · `control` · `query` · `button` · `misc` |
 | `doc`      | **mandatory** human description                                       | free text                                            |
@@ -100,7 +100,7 @@ Why this split (per discussion #54):
 - **Commit-before-read is not in the spec**: `getRotation` commits, `width` does not — but that lives inside the hand-written query handler (hand-written regardless). No `commit` field.
 - **Async button reporting is not in the spec**: the OK-suffix and `watchButtons` streaming are the client's low-level channel strategy (`command.py` `auto_btn_handler`), not per-command codegen. `readButtons`/`waitButton` are just `returns: string` to the generator.
 
-**`t`** — arg type (parse + the C++ cast / handler type):
+**`type`** — arg type (parse + the C++ cast / handler type):
 
 | value         | wire form                                                 | C++ reader      | C++ type        | Python |
 | ------------- | --------------------------------------------------------- | --------------- | --------------- | ------ |
@@ -129,18 +129,25 @@ Sketch (the hard cases that prove expressiveness):
 ```yaml
 - name: drawRect
   category: buffered
-  args: [{n: x, t: int16}, {n: y, t: int16}, {n: w, t: int16}, {n: h, t: int16}, {n: color, t: int}]
+  args:
+    [
+      {name: x, type: int16},
+      {name: y, type: int16},
+      {name: w, type: int16},
+      {name: h, type: int16},
+      {name: color, type: int},
+    ]
   doc: Outline rectangle at (x,y), size w×h, in palette colour `color`.
   # returns omitted ⇒ ok
 
 - name: setTextSize          # optional trailing arg, cross-arg default
   category: buffered
-  args: [{n: sx, t: int}, {n: sy, t: int, optional: true, default: sx}]
+  args: [{name: sx, type: int}, {name: sy, type: int, optional: true, default: sx}]
   doc: Set text magnification; sy defaults to sx (square).
 
 - name: getTextBounds        # query: trailing required string + ints tuple
   category: query
-  args: [{n: x, t: int16}, {n: y, t: int16}, {n: text, t: last-string}]
+  args: [{name: x, type: int16}, {name: y, type: int16}, {name: text, type: last-string}]
   returns: [x1, y1, w, h]
   doc: Pixel bounding box of `text` rendered at (x,y).
 
@@ -151,7 +158,7 @@ Sketch (the hard cases that prove expressiveness):
 
 - name: waitButton           # button, blocking, string return
   category: button
-  args: [{n: during, t: int}, {n: up, t: int}]
+  args: [{name: during, type: int}, {name: up, type: int}]
   returns: string
   doc: Block up to `during` ms for a button; `up` selects press/release edge.
 ```

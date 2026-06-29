@@ -65,14 +65,14 @@ PY_TYPE: dict[ArgType, str] = {
 class Arg(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    n: str  # argument name
-    t: ArgType
+    name: str
+    type: ArgType
     optional: bool = False
     # A literal int/bool default, or the name of an earlier arg (cross-arg
     # default, e.g. setTextSize sy defaults to sx).
     default: bool | int | str | None = None
 
-    @field_validator("n")
+    @field_validator("name")
     @classmethod
     def _name_is_identifier(cls, v: str) -> str:
         if not v.isidentifier():
@@ -82,7 +82,7 @@ class Arg(BaseModel):
     @model_validator(mode="after")
     def _default_requires_optional(self) -> "Arg":
         if self.default is not None and not self.optional:
-            raise ValueError(f"arg {self.n!r} has a default but is not optional")
+            raise ValueError(f"arg {self.name!r} has a default but is not optional")
         return self
 
 
@@ -117,15 +117,15 @@ class Command(BaseModel):
     @model_validator(mode="after")
     def _trailing_last_and_defaults_resolve(self) -> "Command":
         for i, a in enumerate(self.args):
-            if a.t in TRAILING_TYPES and i != len(self.args) - 1:
+            if a.type in TRAILING_TYPES and i != len(self.args) - 1:
                 raise ValueError(
-                    f"{self.name}: {a.t.value} arg {a.n!r} must be the last argument"
+                    f"{self.name}: {a.type.value} arg {a.name!r} must be the last argument"
                 )
             if isinstance(a.default, str):
-                earlier = {p.n for p in self.args[:i]}
+                earlier = {p.name for p in self.args[:i]}
                 if a.default not in earlier:
                     raise ValueError(
-                        f"{self.name}: default {a.default!r} of {a.n!r} "
+                        f"{self.name}: default {a.default!r} of {a.name!r} "
                         "names no earlier argument"
                     )
         return self
