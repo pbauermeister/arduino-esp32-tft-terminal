@@ -1,10 +1,11 @@
 # AUTO-GENERATED from protocol/protocol.yaml — DO NOT EDIT.
 # Regenerate with: make protocol-gen
-"""Typed raw command layer for the TFT protocol — one method per command.
+"""Typed protocol command layer — one method per command.
 
-Generated from protocol.yaml. Each method formats the wire command and parses
-the typed response. App conveniences (text scaling, print slicing, HSV,
-recovery handling) live in the hand-written Gfx facade, not here.
+Generated from protocol.yaml. Each method assembles the wire command and
+parses the typed response, then defers to `Command.do_command`. App
+conveniences (text scaling, print slicing, HSV, recovery handling) live in
+the hand-written Gfx facade, not here.
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ from __future__ import annotations
 from .command import Command
 
 
-class RawProtocol:
+class ProtocolCommands:
     def __init__(self, command: Command) -> None:
         self._command = command
 

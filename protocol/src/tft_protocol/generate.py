@@ -24,8 +24,8 @@ BANNER = (
 )
 
 # Where each generated stub lands, relative to the repo root.
-CLIENT_RAW_PATH = (
-    "client-py/src/arduino_esp32_tft_terminal/lib/protocol_raw.py"
+CLIENT_COMMANDS_PATH = (
+    "client-py/src/arduino_esp32_tft_terminal/lib/protocol_commands_autogen.py"
 )
 
 
@@ -45,7 +45,7 @@ def snake(name: str) -> str:
     return s.lower()
 
 
-# --- client raw layer -------------------------------------------------------
+# --- client command layer ---------------------------------------------------
 
 
 def _py_param(arg) -> str:
@@ -105,9 +105,9 @@ def _client_method(cmd: Command) -> str:
     return "\n".join(lines)
 
 
-def render_client_raw(proto: Protocol) -> str:
+def render_client_commands(proto: Protocol) -> str:
     methods = "\n\n".join(_client_method(c) for c in proto.commands)
-    template = _env().get_template("client_raw.py.jinja")
+    template = _env().get_template("client_commands.py.jinja")
     return template.render(banner=BANNER, methods=methods)
 
 
@@ -115,8 +115,8 @@ def generate_all(proto: Protocol, repo_root: Path | None = None) -> list[Path]:
     root = repo_root or REPO_ROOT
     written: list[Path] = []
 
-    client_raw = root / CLIENT_RAW_PATH
-    client_raw.write_text(render_client_raw(proto), encoding="utf-8")
-    written.append(client_raw)
+    client_commands = root / CLIENT_COMMANDS_PATH
+    client_commands.write_text(render_client_commands(proto), encoding="utf-8")
+    written.append(client_commands)
 
     return written
