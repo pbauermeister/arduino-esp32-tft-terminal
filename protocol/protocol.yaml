@@ -1,0 +1,314 @@
+# TFT Terminal USB command protocol — single source of truth.
+#
+# Each entry defines one command. Fields (see devlog 0054 § 2.2):
+#   name      wire token, also the firmware hash() key
+#   category  buffered | control | query | button | misc  (developer-facing;
+#             only `buffered` changes codegen — it selects the enqueue path)
+#   args      [{n, t, optional?, default?}]  t: int16|int|int8|uchar|bool|
+#             last-string|raw-rest ; default may be a literal or an earlier arg
+#   returns   ok (default) | none | int | string | [field names] (int tuple)
+#   doc       mandatory human description
+#
+# Extracted from command.cpp (parse), transaction.cpp (replay) and gfx.py.
+# This file is human-authored and human-reviewed; the generated stubs derive
+# from it. Regenerate stubs via `make protocol-gen`.
+
+# --- Control: immediate side effects ----------------------------------------
+
+- name: reboot
+  category: control
+  returns: none
+  doc: Reboot the board; sends no response, so the client must not wait.
+
+- name: reset
+  category: control
+  doc: Reset display state and clear the pending action buffer.
+
+- name: display
+  category: control
+  doc: Flush the buffered draw actions to the screen.
+
+- name: autoDisplay
+  category: control
+  args: [{n: "on", t: bool}]
+  doc: If on=1 draw commands render immediately; if 0 they buffer until `display`.
+
+- name: autoReadButtons
+  category: control
+  args: [{n: "on", t: bool}]
+  doc: If on=1, every OK response carries the current button-state suffix.
+
+# --- Query: read a value (handler commits first where state-dependent) -------
+
+- name: version
+  category: query
+  returns: string
+  doc: Firmware version string.
+
+- name: width
+  category: query
+  returns: int
+  doc: Display width in pixels.
+
+- name: height
+  category: query
+  returns: int
+  doc: Display height in pixels.
+
+- name: getPrintMaxLength
+  category: query
+  returns: int
+  doc: Maximum unescaped text length storable by one buffered `print`.
+
+- name: getRotation
+  category: query
+  returns: int
+  doc: Current display rotation (0-3).
+
+- name: getCursorX
+  category: query
+  returns: int
+  doc: Current text-cursor X coordinate.
+
+- name: getCursorY
+  category: query
+  returns: int
+  doc: Current text-cursor Y coordinate.
+
+- name: getTextBounds
+  category: query
+  args: [{n: x, t: int16}, {n: y, t: int16}, {n: text, t: last-string}]
+  returns: [x1, y1, w, h]
+  doc: Pixel bounding box (x1,y1,w,h) of `text` rendered at (x,y).
+
+# --- Buffered: enqueued draw / state actions, render on commit --------------
+
+- name: print
+  category: buffered
+  args: [{n: text, t: raw-rest}]
+  doc: 'Print text at the cursor; supports \n, \t and \\ escapes.'
+
+- name: clearDisplay
+  category: buffered
+  doc: Clear the screen to the background colour.
+
+- name: clear
+  category: buffered
+  doc: Clear the screen to the background colour (alias of clearDisplay).
+
+- name: home
+  category: buffered
+  doc: Move the text cursor to (0,0).
+
+- name: setFgColor
+  category: buffered
+  args: [{n: r, t: int}, {n: g, t: int}, {n: b, t: int}]
+  doc: Set the foreground (palette index 1) colour from RGB 0-255.
+
+- name: setBgColor
+  category: buffered
+  args: [{n: r, t: int}, {n: g, t: int}, {n: b, t: int}]
+  doc: Set the background (palette index 0) colour from RGB 0-255.
+
+- name: drawPixel
+  category: buffered
+  args: [{n: x, t: int16}, {n: y, t: int16}, {n: color, t: int16}]
+  doc: Plot a pixel at (x,y) in palette `color`.
+
+- name: setRotation
+  category: buffered
+  args: [{n: m, t: int}]
+  doc: Set display rotation (0-3, in 90 degree steps).
+
+- name: invertDisplay
+  category: buffered
+  args: [{n: inv, t: bool, optional: true, default: true}]
+  doc: Invert display colours; inv defaults to 1 (on).
+
+- name: drawFastVLine
+  category: buffered
+  args: [{n: x, t: int16}, {n: y, t: int16}, {n: h, t: int16}, {n: color, t: int}]
+  doc: Vertical line from (x,y), height h, in palette `color`.
+
+- name: drawFastHLine
+  category: buffered
+  args: [{n: x, t: int16}, {n: y, t: int16}, {n: w, t: int16}, {n: color, t: int}]
+  doc: Horizontal line from (x,y), width w, in palette `color`.
+
+- name: fillScreen
+  category: buffered
+  args: [{n: color, t: int}]
+  doc: Fill the whole screen with palette `color`.
+
+- name: drawLine
+  category: buffered
+  args:
+    [
+      {n: x0, t: int16},
+      {n: y0, t: int16},
+      {n: x1, t: int16},
+      {n: y1, t: int16},
+      {n: color, t: int},
+    ]
+  doc: Line from (x0,y0) to (x1,y1) in palette `color`.
+
+- name: drawRect
+  category: buffered
+  args:
+    [
+      {n: x, t: int16},
+      {n: y, t: int16},
+      {n: w, t: int16},
+      {n: h, t: int16},
+      {n: color, t: int},
+    ]
+  doc: Outline rectangle at (x,y), size w x h, in palette `color`.
+
+- name: fillRect
+  category: buffered
+  args:
+    [
+      {n: x, t: int16},
+      {n: y, t: int16},
+      {n: w, t: int16},
+      {n: h, t: int16},
+      {n: color, t: int},
+    ]
+  doc: Filled rectangle at (x,y), size w x h, in palette `color`.
+
+- name: drawCircle
+  category: buffered
+  args: [{n: x, t: int16}, {n: y, t: int16}, {n: r, t: int16}, {n: color, t: int}]
+  doc: Outline circle centred (x,y), radius r, in palette `color`.
+
+- name: fillCircle
+  category: buffered
+  args: [{n: x, t: int16}, {n: y, t: int16}, {n: r, t: int16}, {n: color, t: int}]
+  doc: Filled circle centred (x,y), radius r, in palette `color`.
+
+- name: drawTriangle
+  category: buffered
+  args:
+    [
+      {n: x0, t: int16},
+      {n: y0, t: int16},
+      {n: x1, t: int16},
+      {n: y1, t: int16},
+      {n: x2, t: int16},
+      {n: y2, t: int16},
+      {n: color, t: int},
+    ]
+  doc: Outline triangle through the three vertices, in palette `color`.
+
+- name: fillTriangle
+  category: buffered
+  args:
+    [
+      {n: x0, t: int16},
+      {n: y0, t: int16},
+      {n: x1, t: int16},
+      {n: y1, t: int16},
+      {n: x2, t: int16},
+      {n: y2, t: int16},
+      {n: color, t: int},
+    ]
+  doc: Filled triangle through the three vertices, in palette `color`.
+
+- name: drawRoundRect
+  category: buffered
+  args:
+    [
+      {n: x, t: int16},
+      {n: y, t: int16},
+      {n: w, t: int16},
+      {n: h, t: int16},
+      {n: r, t: int16},
+      {n: color, t: int},
+    ]
+  doc: Outline rounded rectangle, corner radius r, in palette `color`.
+
+- name: fillRoundRect
+  category: buffered
+  args:
+    [
+      {n: x, t: int16},
+      {n: y, t: int16},
+      {n: w, t: int16},
+      {n: h, t: int16},
+      {n: r, t: int16},
+      {n: color, t: int},
+    ]
+  doc: Filled rounded rectangle, corner radius r, in palette `color`.
+
+- name: drawChar
+  category: buffered
+  args:
+    [
+      {n: x, t: int16},
+      {n: y, t: int16},
+      {n: c, t: uchar},
+      {n: fg, t: bool},
+      {n: bg, t: bool},
+      {n: size, t: int8},
+    ]
+  doc: Draw character code c at (x,y) with fg/bg flags and magnification `size`.
+
+- name: setTextSize
+  category: buffered
+  args: [{n: sx, t: int}, {n: sy, t: int, optional: true, default: sx}]
+  doc: Set text magnification; sy defaults to sx (square).
+
+- name: setCursor
+  category: buffered
+  args: [{n: x, t: int16}, {n: y, t: int16}]
+  doc: Move the text cursor to (x,y).
+
+- name: setTextColor
+  category: buffered
+  args: [{n: r, t: int}, {n: g, t: int}, {n: b, t: int}]
+  doc: Set text colour from RGB 0-255.
+
+- name: setTextWrap
+  category: buffered
+  args: [{n: w, t: bool}]
+  doc: Enable (1) or disable (0) automatic text wrapping at the screen edge.
+
+# --- Button: read input, may block; async streaming is a client concern -----
+
+- name: readButtons
+  category: button
+  returns: string
+  doc: 'Currently pressed buttons, e.g. "A", "AB", or "NONE".'
+
+- name: waitButton
+  category: button
+  args: [{n: during, t: int}, {n: up, t: int}]
+  returns: string
+  doc: Block up to `during` ms for a button event; up=1 waits for release, 0 for press.
+
+- name: monitorButtons
+  category: button
+  args: [{n: during, t: int}, {n: interval, t: int, optional: true, default: 100}]
+  doc: Stream button states for `during` ms every `interval` ms (default 100), then OK.
+
+- name: watchButtons
+  category: button
+  args:
+    [
+      {n: during, t: int, optional: true, default: 0},
+      {n: interval, t: int, optional: true, default: 100},
+    ]
+  returns: none
+  doc: Report button changes for `during` ms (0 = until reset) every `interval` ms; no terminating response.
+
+# --- Misc: special-cased handlers -------------------------------------------
+
+- name: test
+  category: misc
+  returns: string
+  doc: Run the built-in display diagnostic.
+
+- name: hardcopy
+  category: misc
+  returns: string
+  doc: Screen capture (not implemented; returns an error).

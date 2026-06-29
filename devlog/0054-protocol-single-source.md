@@ -72,7 +72,7 @@ Arg type vocabulary (already enumerated by the firmware readers): `int16` · `in
 
 - Author: agent
 - Model: Claude Opus 4.8
-- Review: user
+- Review: pending
 
 ### 2.1 New subproject `protocol/`
 
@@ -83,70 +83,77 @@ Arg type vocabulary (already enumerated by the firmware readers): `int16` · `in
 
 ### 2.2 Spec schema
 
-Per command: `name`, `kind`, `args` (each `{n, t, optional?, default?}`), `returns`, `doc`. The three enumerated fields below are **closed sets** — defined once as Pydantic `Enum`s in the generator (the authoritative list, validated at load), mirrored in these tables. A spec value outside an enum is a load-time error.
+Per command: `name`, `args`, `returns`, `category`, `doc`. Two fields are **load-bearing for codegen**, `category` is developer-facing (one load-bearing edge), `doc` is mandatory. Enumerated fields are **closed sets** — Pydantic `Enum`s in the generator (authoritative), mirrored in these tables; an out-of-enum value is a load-time error.
 
-**`kind`** — dispatch shape (drives which template branch emits the handler):
+| field      | role                                                                  | values                                               |
+| ---------- | --------------------------------------------------------------------- | ---------------------------------------------------- |
+| `name`     | command keyword (wire token, also the `hash()` key)                   | —                                                    |
+| `args`     | load-bearing both ends (parse / format)                               | list of `{n, t, optional?, default?}`; `t` see below |
+| `returns`  | **load-bearing (client)** — whether/how to read & parse the response  | `ok` · `none` · `int` · `[names…]` · `string`        |
+| `category` | developer-facing cluster; sole codegen effect: `buffered` ⇒ enqueue   | `buffered` · `control` · `query` · `button` · `misc` |
+| `doc`      | **mandatory** human description                                       | free text                                            |
 
-| value      | meaning                               | returns      |
-| ---------- | ------------------------------------- | ------------ |
-| `buffered` | enqueue `Action`, defer to `commit()` | `ok`         |
-| `query`    | `commit()` then read board state      | `int`/`ints` |
-| `control`  | immediate side-effect                 | `ok`/`none`  |
-| `button`   | immediate, **may block**              | `string`     |
-| `misc`     | special-cased (`test`, `hardcopy`)    | `string`     |
+Why this split (per discussion #54):
 
-**`t`** — arg type (parse + emit). Maps to the existing firmware readers:
+- The **client** keys off `returns` alone — read-and-parse (`int`/`ints`/`string`), read-and-discard (`ok`), or don't read (`none`). `category` is invisible to it.
+- The **server** keys off `category == buffered`: buffered ⇒ generated enqueue (`action()->set(…); add(); ok()`) + generated replay dispatch calling the hand-written `tft.*()` binding; every other category ⇒ generated parse + call the hand-written handler returning the response. So `control`/`query`/`button`/`misc` are indistinguishable to the generator — they are documentation.
+- **Commit-before-read is not in the spec**: `getRotation` commits, `width` does not — but that lives inside the hand-written query handler (hand-written regardless). No `commit` field.
+- **Async button reporting is not in the spec**: the OK-suffix and `watchButtons` streaming are the client's low-level channel strategy (`command.py` `auto_btn_handler`), not per-command codegen. `readButtons`/`waitButton` are just `returns: string` to the generator.
+
+**`t`** — arg type (parse + the C++ cast / handler type):
 
 | value         | wire form                                                 | C++ reader      | C++ type        | Python |
 | ------------- | --------------------------------------------------------- | --------------- | --------------- | ------ |
 | `int16`       | integer                                                   | `read_int`      | `int16_t`       | `int`  |
 | `int`         | integer                                                   | `read_int`      | `int`           | `int`  |
+| `int8`        | integer                                                   | `read_int`      | `int8_t`        | `int`  |
 | `uchar`       | integer                                                   | `read_int`      | `unsigned char` | `int`  |
 | `bool`        | `0`/`1`                                                   | `read_bool`     | `bool`          | `bool` |
 | `last-string` | trailing text, **required** (errors if absent)            | `read_last_str` | `const char*`   | `str`  |
 | `raw-rest`    | line remainder, **verbatim, may be empty** (e.g. `print`) | `rest`          | `const char*`   | `str`  |
 
-(`last-string` vs `raw-rest`: the former missing-arg-checks one trailing string — `getTextBounds`; the latter passes the unparsed remainder straight to `Action.str` and accepts empty — `print`.)
+(`last-string` vs `raw-rest`: the former missing-arg-checks one trailing string — `getTextBounds`; the latter passes the unparsed remainder straight to `Action.str` and accepts empty — `print`. `int8` is `drawChar.size`; per-arg C++ type also lets `drawPixel.color` be `int16_t` while other `color`s are `int`.)
 
-**`returns`** — response shape (omitted ⇒ `ok`):
+**`returns`** — response shape (omitted ⇒ `ok`), independent of `category`:
 
 | spec value       | response shape                                      | example                       |
 | ---------------- | --------------------------------------------------- | ----------------------------- |
-| _omitted_ / `ok` | `OK` sentinel (+ optional auto-button suffix)       | most buffered                 |
-| `none`           | empty / no response                                 | `reboot`, `watchButtons`      |
+| _omitted_ / `ok` | `OK` sentinel (+ optional auto-button suffix)       | most buffered, `display`      |
+| `none`           | no response read                                    | `reboot`, `watchButtons`      |
 | `int`            | single integer                                      | `width`, `getRotation`        |
 | `[a, b, …]`      | fixed named-integer tuple, space-separated (`ints`) | `getTextBounds` → `x1 y1 w h` |
-| `string`         | opaque string                                       | `readButtons`, `waitButton`   |
+| `string`         | opaque string                                       | `version`, `readButtons`      |
 
-Sketch (the four hard cases that prove expressiveness):
+Sketch (the hard cases that prove expressiveness):
 
 ```yaml
 - name: drawRect
-  kind: buffered
-  args:
-    [
-      { n: x, t: int16 },
-      { n: y, t: int16 },
-      { n: w, t: int16 },
-      { n: h, t: int16 },
-      { n: color, t: int },
-    ]
-  doc: Outline rectangle at (x,y), size w×h, palette color.
+  category: buffered
+  args: [{n: x, t: int16}, {n: y, t: int16}, {n: w, t: int16}, {n: h, t: int16}, {n: color, t: int}]
+  doc: Outline rectangle at (x,y), size w×h, in palette colour `color`.
   # returns omitted ⇒ ok
 
-- name: setTextSize # optional trailing arg, cross-arg default
-  kind: buffered
-  args: [{ n: sx, t: int }, { n: sy, t: int, optional: true, default: sx }]
+- name: setTextSize          # optional trailing arg, cross-arg default
+  category: buffered
+  args: [{n: sx, t: int}, {n: sy, t: int, optional: true, default: sx}]
+  doc: Set text magnification; sy defaults to sx (square).
 
-- name: getTextBounds # query: trailing required string + ints tuple
-  kind: query
-  args: [{ n: x, t: int16 }, { n: y, t: int16 }, { n: text, t: last-string }]
+- name: getTextBounds        # query: trailing required string + ints tuple
+  category: query
+  args: [{n: x, t: int16}, {n: y, t: int16}, {n: text, t: last-string}]
   returns: [x1, y1, w, h]
+  doc: Pixel bounding box of `text` rendered at (x,y).
 
-- name: waitButton # blocking, string return
-  kind: button
-  args: [{ n: during, t: int }, { n: up, t: int }]
+- name: version              # query returning a string; no commit (handler detail)
+  category: query
   returns: string
+  doc: Firmware version string.
+
+- name: waitButton           # button, blocking, string return
+  category: button
+  args: [{n: during, t: int}, {n: up, t: int}]
+  returns: string
+  doc: Block up to `during` ms for a button; `up` selects press/release edge.
 ```
 
 ### 2.3 Generated outputs — the symmetric split
