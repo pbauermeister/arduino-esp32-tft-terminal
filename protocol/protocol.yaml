@@ -280,7 +280,7 @@
 - name: setTextSize
   category: buffered
   args: [{ name: sx, type: int }, { name: sy, type: int, default: -1 }]
-  doc: Set text magnification; sy defaults to sx (square).
+  doc: Set text magnification; omit sy (default -1) for square.
 
 - name: setCursor
   category: buffered

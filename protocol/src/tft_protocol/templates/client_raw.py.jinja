@@ -1,0 +1,17 @@
+{{ banner }}"""Typed raw command layer for the TFT protocol — one method per command.
+
+Generated from protocol.yaml. Each method formats the wire command and parses
+the typed response. App conveniences (text scaling, print slicing, HSV,
+recovery handling) live in the hand-written Gfx facade, not here.
+"""
+
+from __future__ import annotations
+
+from .command import Command
+
+
+class RawProtocol:
+    def __init__(self, command: Command) -> None:
+        self._command = command
+
+{{ methods }}
