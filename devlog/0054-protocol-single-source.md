@@ -83,7 +83,42 @@ Arg type vocabulary (already enumerated by the firmware readers): `int16` · `in
 
 ### 2.2 Spec schema
 
-Per command: `name`, `kind`, `args` (each `{n, t, optional?, default?}`), `returns`, `doc`. Sketch (the four hard cases that prove expressiveness):
+Per command: `name`, `kind`, `args` (each `{n, t, optional?, default?}`), `returns`, `doc`. The three enumerated fields below are **closed sets** — defined once as Pydantic `Enum`s in the generator (the authoritative list, validated at load), mirrored in these tables. A spec value outside an enum is a load-time error.
+
+**`kind`** — dispatch shape (drives which template branch emits the handler):
+
+| value      | meaning                                | returns       |
+| ---------- | -------------------------------------- | ------------- |
+| `buffered` | enqueue `Action`, defer to `commit()`  | `ok`          |
+| `query`    | `commit()` then read board state       | `int`/`ints`  |
+| `control`  | immediate side-effect                  | `ok`/`none`   |
+| `button`   | immediate, **may block**               | `string`      |
+| `misc`     | special-cased (`test`, `hardcopy`)     | `string`      |
+
+**`t`** — arg type (parse + emit). Maps to the existing firmware readers:
+
+| value         | wire form            | C++ reader       | C++ type        | Python |
+| ------------- | -------------------- | ---------------- | --------------- | ------ |
+| `int16`       | integer              | `read_int`       | `int16_t`       | `int`  |
+| `int`         | integer              | `read_int`       | `int`           | `int`  |
+| `uchar`       | integer              | `read_int`       | `unsigned char` | `int`  |
+| `bool`        | `0`/`1`              | `read_bool`      | `bool`          | `bool` |
+| `last-string` | trailing text, **required** (errors if absent) | `read_last_str` | `const char*` | `str` |
+| `raw-rest`    | line remainder, **verbatim, may be empty** (e.g. `print`) | `rest` | `const char*` | `str` |
+
+(`last-string` vs `raw-rest`: the former missing-arg-checks one trailing string — `getTextBounds`; the latter passes the unparsed remainder straight to `Action.str` and accepts empty — `print`.)
+
+**`returns`** — response shape (omitted ⇒ `ok`):
+
+| spec value           | response shape                                       | example          |
+| -------------------- | --------------------------------------------------- | ---------------- |
+| _omitted_ / `ok`     | `OK` sentinel (+ optional auto-button suffix)        | most buffered    |
+| `none`               | empty / no response                                  | `reboot`, `watchButtons` |
+| `int`                | single integer                                       | `width`, `getRotation` |
+| `[a, b, …]`          | fixed named-integer tuple, space-separated (`ints`)  | `getTextBounds` → `x1 y1 w h` |
+| `string`             | opaque string                                        | `readButtons`, `waitButton` |
+
+Sketch (the four hard cases that prove expressiveness):
 
 ```yaml
 - name: drawRect
@@ -91,12 +126,13 @@ Per command: `name`, `kind`, `args` (each `{n, t, optional?, default?}`), `retur
   args: [{n: x, t: int16}, {n: y, t: int16}, {n: w, t: int16},
          {n: h, t: int16}, {n: color, t: int}]
   doc: Outline rectangle at (x,y), size w×h, palette color.
+  # returns omitted ⇒ ok
 
 - name: setTextSize          # optional trailing arg, cross-arg default
   kind: buffered
   args: [{n: sx, t: int}, {n: sy, t: int, optional: true, default: sx}]
 
-- name: getTextBounds        # query: trailing raw string + multi-int return
+- name: getTextBounds        # query: trailing required string + ints tuple
   kind: query
   args: [{n: x, t: int16}, {n: y, t: int16}, {n: text, t: last-string}]
   returns: [x1, y1, w, h]
