@@ -14,7 +14,7 @@
 
 - Author: agent
 - Model: Claude Opus 4.8
-- Review: pending
+- Review: user
 
 Make the command vocabulary **single-sourced**: define each command once, generate every mechanical surface, so adding or changing a command is one spec edit — no silent drift.
 
@@ -72,7 +72,7 @@ Arg type vocabulary (already enumerated by the firmware readers): `int16` · `in
 
 - Author: agent
 - Model: Claude Opus 4.8
-- Review: pending
+- Review: user
 
 ### 2.1 New subproject `protocol/`
 
@@ -85,13 +85,13 @@ Arg type vocabulary (already enumerated by the firmware readers): `int16` · `in
 
 Per command: `name`, `args`, `returns`, `category`, `doc`. Two fields are **load-bearing for codegen**, `category` is developer-facing (one load-bearing edge), `doc` is mandatory. Enumerated fields are **closed sets** — Pydantic `Enum`s in the generator (authoritative), mirrored in these tables; an out-of-enum value is a load-time error.
 
-| field      | role                                                                 | values                                                 |
-| ---------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
-| `name`     | command keyword (wire token, also the `hash()` key)                  | —                                                      |
+| field      | role                                                                 | values                                                               |
+| ---------- | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `name`     | command keyword (wire token, also the `hash()` key)                  | —                                                                    |
 | `args`     | load-bearing both ends (parse / format)                              | list of `{name, type, default?}`; a `default` makes the arg optional |
-| `returns`  | **load-bearing (client)** — whether/how to read & parse the response | `ok` · `none` · `int` · `[names…]` · `string`          |
-| `category` | developer-facing cluster; sole codegen effect: `buffered` ⇒ enqueue  | `buffered` · `control` · `query` · `button` · `misc`   |
-| `doc`      | **mandatory** human description                                      | free text                                              |
+| `returns`  | **load-bearing (client)** — whether/how to read & parse the response | `ok` · `none` · `int` · `[names…]` · `string`                        |
+| `category` | developer-facing cluster; sole codegen effect: `buffered` ⇒ enqueue  | `buffered` · `control` · `query` · `button` · `misc`                 |
+| `doc`      | **mandatory** human description                                      | free text                                                            |
 
 Why this split (per discussion #54):
 
@@ -142,11 +142,7 @@ Sketch (the hard cases that prove expressiveness):
 
 - name: setTextSize # trailing arg with a default ⇒ optional
   category: buffered
-  args:
-    [
-      { name: sx, type: int },
-      { name: sy, type: int, default: -1 },
-    ]
+  args: [{ name: sx, type: int }, { name: sy, type: int, default: -1 }]
   doc: Set text magnification; omit sy (default -1) for square.
 
 - name: getTextBounds # query: trailing required string + ints tuple
