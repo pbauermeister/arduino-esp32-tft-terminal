@@ -2,7 +2,7 @@
 
 The whole client talks to the board through a single serial boundary,
 `lib.channel.Channel`. `FakeChannel` stands in for it, so everything above
-(Command, Gfx, Board) runs as real code with no hardware. Tests focus on the
+(CommandExecutor, Gfx, Board) runs as real code with no hardware. Tests focus on the
 protocol contract — command formatting, response parsing, button decoding —
 which is where the bug surface is (devlog 0019, revised per review in 0021).
 """

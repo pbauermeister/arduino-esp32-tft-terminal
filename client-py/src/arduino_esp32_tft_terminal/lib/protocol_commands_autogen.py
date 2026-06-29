@@ -10,11 +10,11 @@ the hand-written Gfx facade, not here.
 
 from __future__ import annotations
 
-from .command import Command
+from .command import CommandExecutor
 
 
 class ProtocolCommands:
-    def __init__(self, command: Command) -> None:
+    def __init__(self, command: CommandExecutor) -> None:
         self._command = command
 
     def reboot(self) -> None:

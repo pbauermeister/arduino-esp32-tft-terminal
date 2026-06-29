@@ -8,13 +8,13 @@ from arduino_esp32_tft_terminal.lib import NONE, READY, chunkize, until
 from arduino_esp32_tft_terminal.lib.gfx import Gfx
 
 from .channel import Channel
-from .command import Command
+from .command import CommandExecutor
 
 
 class Board:
     def __init__(self, channel: Channel) -> None:
         self.app_comm_error_handler: Callable[[], None] | None = None
-        self.command = Command(channel)
+        self.command = CommandExecutor(channel)
         self.command.set_auto_btn_handler(self.handle_auto_buttons)
         self.command.set_comm_error_handler(self.board_comm_error_handler)
         self.gfx = Gfx(self.command)

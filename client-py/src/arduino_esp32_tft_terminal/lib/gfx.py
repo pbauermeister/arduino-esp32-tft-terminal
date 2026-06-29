@@ -2,7 +2,7 @@ import time
 
 from arduino_esp32_tft_terminal import config
 
-from .command import Command
+from .command import CommandExecutor
 
 
 def _slice_print(s: str, max_text: int, max_wire: int) -> list[str]:
@@ -27,7 +27,7 @@ def _slice_print(s: str, max_text: int, max_wire: int) -> list[str]:
 
 
 class Gfx:
-    def __init__(self, command: Command):
+    def __init__(self, command: CommandExecutor):
         self.command = command
         self.APPS_INTERFRAME_DELAY = config.APPS_INTERFRAME_DELAY_MS / 1000.0
         # Usable print-text length; refined from the board on connect (else default).
