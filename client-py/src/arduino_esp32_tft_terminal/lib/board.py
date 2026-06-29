@@ -8,7 +8,7 @@ from arduino_esp32_tft_terminal.lib import NONE, READY, chunkize, until
 from arduino_esp32_tft_terminal.lib.gfx import Gfx
 
 from .channel import Channel
-from .command import CommandExecutor
+from .command_executor import CommandExecutor
 
 
 class Board:

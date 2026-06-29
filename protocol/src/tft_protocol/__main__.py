@@ -45,7 +45,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  wrote {path}")
         return 0
 
-    print(f"unknown command {command!r}; supported: validate, generate", file=sys.stderr)
+    print(
+        f"unknown command {command!r}; supported: validate, generate", file=sys.stderr
+    )
     return 2
 
 

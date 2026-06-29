@@ -2,7 +2,7 @@ import time
 
 from arduino_esp32_tft_terminal import config
 
-from .command import CommandExecutor
+from .command_executor import CommandExecutor
 
 
 def _slice_print(s: str, max_text: int, max_wire: int) -> list[str]:
