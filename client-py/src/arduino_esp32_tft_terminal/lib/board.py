@@ -83,7 +83,7 @@ class Board:
             config.COLUMNS = int(w / 6.4)
             config.ROWS = int(h / 8)
             try:
-                version = self.gfx._command('version')
+                version = self.gfx.version()
             except Exception:
                 version = 'unknown'  # older firmware without the command
             try:

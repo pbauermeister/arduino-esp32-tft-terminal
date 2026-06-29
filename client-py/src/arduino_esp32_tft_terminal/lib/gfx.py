@@ -3,6 +3,7 @@ import time
 from arduino_esp32_tft_terminal import config
 
 from .command_executor import CommandExecutor
+from .command_line_autogen import CommandLine
 
 
 def _slice_print(s: str, max_text: int, max_wire: int) -> list[str]:
@@ -27,121 +28,129 @@ def _slice_print(s: str, max_text: int, max_wire: int) -> list[str]:
 
 
 class Gfx:
+    """App-facing facade over the generated `CommandLine` layer.
+
+    Adds the conveniences that are NOT part of the wire protocol: text-size
+    scaling, print slicing, HSV, and the on/off and get_* aliases the apps use.
+    Plain draw calls delegate straight to `CommandLine`.
+    """
+
     def __init__(self, command: CommandExecutor):
-        self.command = command
+        self.command = command  # kept for read_buttons' error policy + recoveries
+        self.cmd = CommandLine(command)
         self.APPS_INTERFRAME_DELAY = config.APPS_INTERFRAME_DELAY_MS / 1000.0
         # Usable print-text length; refined from the board on connect (else default).
         self.print_max = config.DEFAULT_PRINT_MAX
 
-    def _command(
-        self, cmd: str, ignore_error: bool = False, ignore_response: bool = False
-    ) -> str:
-        return self.command.do_command(cmd, ignore_error, ignore_response)
-
     def reboot(self) -> None:
-        self._command('reboot', ignore_error=True, ignore_response=True)
+        self.cmd.reboot()
 
     def reset(self) -> None:
-        self._command('reset')
+        self.cmd.reset()
 
     def clear(self) -> None:
-        self._command('clear')
+        self.cmd.clear()
+
+    def version(self) -> str:
+        return self.cmd.version()
 
     def set_text_size(self, w: float, h: float) -> None:
         w = int(config.TEXT_SCALING * w + 0.5)
         h = int(config.TEXT_SCALING * h + 0.5)
-        self._command(f'setTextSize {w} {h}')
+        self.cmd.set_text_size(w, h)
 
     def set_cursor(self, x: int, y: int) -> None:
-        self._command(f'setCursor {x} {y}')
+        self.cmd.set_cursor(x, y)
 
     def get_print_max_length(self) -> int:
-        return int(self._command('getPrintMaxLength'))
+        return self.cmd.get_print_max_length()
 
     def print(self, s: str) -> None:
         # Fast path: wire length <= print_max <= every limit -> one command.
         if len(s) <= self.print_max:
-            self._command(f'print {s}')
+            self.cmd.print(s)
             return
         for chunk in _slice_print(s, self.print_max, config.PRINT_WIRE_MAX):
-            self._command(f'print {chunk}')
+            self.cmd.print(chunk)
 
     def display(self) -> None:
-        self._command('display')
+        self.cmd.display()
         time.sleep(self.APPS_INTERFRAME_DELAY)
 
     def get_text_bounds(self, x: int, y: int, text: str) -> tuple[int, int]:
-        ans = self._command(f'getTextBounds 0 0 {text}')
-        vals = [int(v) for v in ans.split()]
-        w, h = vals[-2:]
+        # Bounds are measured at the origin; only width/height are returned.
+        _, _, w, h = self.cmd.get_text_bounds(0, 0, text)
         return w, h
 
     def draw_rect(self, x: int, y: int, w: int, h: int, fg: int) -> None:
-        self._command(f'drawRect {x} {y} {w} {h} {fg}')
+        self.cmd.draw_rect(x, y, w, h, fg)
 
     def fill_rect(self, x: int, y: int, w: int, h: int, fg: int) -> None:
-        self._command(f'fillRect {x} {y} {w} {h} {fg}')
+        self.cmd.fill_rect(x, y, w, h, fg)
 
     def set_text_color(self, r: int, g: int, b: int) -> None:
-        self._command(f'setTextColor {r} {g} {b}')
+        self.cmd.set_text_color(r, g, b)
 
     def home(self) -> None:
-        self._command('home')
+        self.cmd.home()
 
     def draw_pixel(self, x: int, y: int, fg: int) -> None:
-        self._command(f'drawPixel {x} {y} {fg}')
+        self.cmd.draw_pixel(x, y, fg)
 
     def draw_circle(self, x: int, y: int, r: int, fg: int) -> None:
-        self._command(f'drawCircle {x} {y} {r} {fg}')
+        self.cmd.draw_circle(x, y, r, fg)
 
     def fill_circle(self, x: int, y: int, r: int, fg: int) -> None:
-        self._command(f'fillCircle {x} {y} {r} {fg}')
+        self.cmd.fill_circle(x, y, r, fg)
 
     def draw_triangle(
         self, x0: int, y0: int, x1: int, y1: int, x2: int, y2: int, fg: int
     ) -> None:
-        self._command(f'drawTriangle {x0} {y0} {x1} {y1} {x2} {y2} {fg}')
+        self.cmd.draw_triangle(x0, y0, x1, y1, x2, y2, fg)
 
     def fill_triangle(
         self, x0: int, y0: int, x1: int, y1: int, x2: int, y2: int, fg: int
     ) -> None:
-        self._command(f'fillTriangle {x0} {y0} {x1} {y1} {x2} {y2} {fg}')
+        self.cmd.fill_triangle(x0, y0, x1, y1, x2, y2, fg)
 
     def set_text_wrap_on(self) -> None:
-        self._command('setTextWrap 1')
+        self.cmd.set_text_wrap(True)
 
     def set_text_wrap_off(self) -> None:
-        self._command('setTextWrap 0')
+        self.cmd.set_text_wrap(False)
 
     def draw_line(self, x0: int, y0: int, x1: int, y1: int, fg: int) -> None:
-        self._command(f'drawLine {x0} {y0} {x1} {y1} {fg}')
+        self.cmd.draw_line(x0, y0, x1, y1, fg)
 
     def fill_screen(self, fg: int) -> None:
-        self._command(f'fillScreen {fg}')
+        self.cmd.fill_screen(fg)
 
     def draw_fast_vline(self, x: int, y: int, h: int, fg: int) -> None:
-        self._command(f'drawFastVLine {x} {y} {h} {fg}')
+        self.cmd.draw_fast_v_line(x, y, h, fg)
 
     def draw_fast_hline(self, x: int, y: int, w: int, fg: int) -> None:
-        self._command(f'drawFastHLine {x} {y} {w} {fg}')
+        self.cmd.draw_fast_h_line(x, y, w, fg)
 
     def set_rotation(self, r: int) -> None:
-        self._command(f'setRotation {r}')
+        self.cmd.set_rotation(r)
 
     def set_auto_display_on(self) -> None:
-        self._command('autoDisplay 1')
+        self.cmd.auto_display(True)
 
     def set_auto_display_off(self) -> None:
-        self._command('autoDisplay 0')
+        self.cmd.auto_display(False)
 
     def get_width(self) -> int:
-        return int(self._command('width'))
+        return self.cmd.width()
 
     def get_height(self) -> int:
-        return int(self._command('height'))
+        return self.cmd.height()
 
     def read_buttons(self) -> str:
-        btns = self._command('readButtons', ignore_error=True)
+        # Direct executor call: ignore_error keeps polling non-blocking through
+        # board recoveries (the generated CommandLine has no error policy), and
+        # a recovery is surfaced to the app as a trailing 'R'.
+        btns = self.command.do_command('readButtons', ignore_error=True)
         if self.command.had_recoveries():
             if btns == 'NONE':
                 btns = ''
@@ -149,16 +158,16 @@ class Gfx:
         return btns
 
     def set_auto_read_buttons_on(self) -> None:
-        self._command('autoReadButtons 1')
+        self.cmd.auto_read_buttons(True)
 
     def set_auto_read_buttons_off(self) -> None:
-        self._command('autoReadButtons 0')
+        self.cmd.auto_read_buttons(False)
 
     def set_fg_color(self, r: int, g: int, b: int) -> None:
-        self._command(f'setFgColor {r} {g} {b}')
+        self.cmd.set_fg_color(r, g, b)
 
     def set_bg_color(self, r: int, g: int, b: int) -> None:
-        self._command(f'setBgColor {r} {g} {b}')
+        self.cmd.set_bg_color(r, g, b)
 
     @staticmethod
     def hsv_to_rgb(
