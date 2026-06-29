@@ -12,7 +12,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from .schema import PY_TYPE, ArgType, Command, Protocol
+from .schema import PY_TYPE, TRAILING_TYPES, ArgType, Command, Protocol
 
 _HERE = Path(__file__).resolve().parent
 _TEMPLATES = _HERE / "templates"
@@ -27,6 +27,15 @@ BANNER = (
 COMMAND_LINE_PATH = (
     "client-py/src/arduino_esp32_tft_terminal/lib/command_line_autogen.py"
 )
+README_PROTOCOL_PATH = "README-protocol.md"
+
+# Managed-block markers in README-protocol.md (the table is spliced between them;
+# the surrounding prose is hand-written and preserved).
+DOC_BEGIN = (
+    "<!-- BEGIN GENERATED COMMANDS (protocol.yaml) — "
+    "do not edit; regenerate with: make protocol-gen -->"
+)
+DOC_END = "<!-- END GENERATED COMMANDS -->"
 
 
 def _env() -> Environment:
@@ -111,6 +120,49 @@ def render_command_line(proto: Protocol) -> str:
     return template.render(banner=BANNER, methods=methods)
 
 
+# --- protocol doc (README command table) ------------------------------------
+
+
+_ANSWER = {"ok": "OK", "none": "—", "int": "int", "string": "string"}
+
+
+def _arg_syntax(cmd: Command) -> str:
+    parts = []
+    for a in cmd.args:
+        token = f"<{a.name}>" if a.type in TRAILING_TYPES else a.name
+        parts.append(f"[{token}]" if a.optional else token)
+    return " ".join(parts) or "—"
+
+
+def _answer_syntax(cmd: Command) -> str:
+    ints = cmd.returns_ints
+    return " ".join(ints) if ints is not None else _ANSWER[cmd.returns]
+
+
+def render_protocol_doc(proto: Protocol) -> str:
+    header = ["Command", "Arguments", "Answer", "Category", "Description"]
+    rows = [
+        [f"`{c.name}`", _arg_syntax(c), _answer_syntax(c), c.category.value, c.doc]
+        for c in proto.commands
+    ]
+    # Pad each column to its widest cell — canonical (Prettier-equivalent) markdown,
+    # so the table is stable with or without a downstream formatter.
+    widths = [max(len(r[i]) for r in (header, *rows)) for i in range(len(header))]
+
+    def line(cells: list[str]) -> str:
+        return "| " + " | ".join(c.ljust(w) for c, w in zip(cells, widths)) + " |"
+
+    separator = "| " + " | ".join("-" * w for w in widths) + " |"
+    return "\n".join([line(header), separator, *(line(r) for r in rows)])
+
+
+def _splice_managed_block(path: Path, begin: str, end: str, body: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    head = text[: text.index(begin) + len(begin)]
+    tail = text[text.index(end) :]
+    path.write_text(f"{head}\n\n{body}\n\n{tail}", encoding="utf-8")
+
+
 def generate_all(proto: Protocol, repo_root: Path | None = None) -> list[Path]:
     root = repo_root or REPO_ROOT
     written: list[Path] = []
@@ -118,5 +170,9 @@ def generate_all(proto: Protocol, repo_root: Path | None = None) -> list[Path]:
     command_line = root / COMMAND_LINE_PATH
     command_line.write_text(render_command_line(proto), encoding="utf-8")
     written.append(command_line)
+
+    readme = root / README_PROTOCOL_PATH
+    _splice_managed_block(readme, DOC_BEGIN, DOC_END, render_protocol_doc(proto))
+    written.append(readme)
 
     return written
