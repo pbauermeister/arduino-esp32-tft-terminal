@@ -14,7 +14,7 @@
 
 - Author: agent
 - Model: Claude Opus 4.8
-- Review: pending
+- Review: user
 
 Make the command vocabulary **single-sourced**: define each command once, generate every mechanical surface, so adding or changing a command is one spec edit — no silent drift.
 
@@ -36,13 +36,13 @@ The two server switches are separate by design (flicker-avoidance: parse now, ex
 
 ### 1.2 Command kinds (the spec must model shape, not just arg lists)
 
-| Kind     | ~N | Examples                         | Server flow                  | Returns        |
-| -------- | -- | -------------------------------- | ---------------------------- | -------------- |
-| buffered | 25 | `drawRect`, `print`, `setCursor` | enqueue `Action`, defer      | `ok`           |
-| query    | 7  | `getTextBounds`, `width`         | `commit()` then read state   | int / int-tuple |
-| control  | 6  | `reboot`, `display`, `reset`     | immediate side-effect        | `ok` / empty   |
-| button   | 4  | `readButtons`, `waitButton`      | immediate, **may block**     | string         |
-| misc     | 2  | `test`, `hardcopy`               | special                      | string         |
+| Kind     | ~N  | Examples                         | Server flow                | Returns         |
+| -------- | --- | -------------------------------- | -------------------------- | --------------- |
+| buffered | 25  | `drawRect`, `print`, `setCursor` | enqueue `Action`, defer    | `ok`            |
+| query    | 7   | `getTextBounds`, `width`         | `commit()` then read state | int / int-tuple |
+| control  | 6   | `reboot`, `display`, `reset`     | immediate side-effect      | `ok` / empty    |
+| button   | 4   | `readButtons`, `waitButton`      | immediate, **may block**   | string          |
+| misc     | 2   | `test`, `hardcopy`               | special                    | string          |
 
 Arg type vocabulary (already enumerated by the firmware readers): `int16` · `int` · `uchar` · `bool` · `last-string` · `raw-rest`, each optionally with a default (incl. cross-arg defaults, e.g. `setTextSize sy=sx`).
 
@@ -72,7 +72,7 @@ Arg type vocabulary (already enumerated by the firmware readers): `int16` · `in
 
 - Author: agent
 - Model: Claude Opus 4.8
-- Review: pending
+- Review: user
 
 ### 2.1 New subproject `protocol/`
 
@@ -87,59 +87,65 @@ Per command: `name`, `kind`, `args` (each `{n, t, optional?, default?}`), `retur
 
 **`kind`** — dispatch shape (drives which template branch emits the handler):
 
-| value      | meaning                                | returns       |
-| ---------- | -------------------------------------- | ------------- |
-| `buffered` | enqueue `Action`, defer to `commit()`  | `ok`          |
-| `query`    | `commit()` then read board state       | `int`/`ints`  |
-| `control`  | immediate side-effect                  | `ok`/`none`   |
-| `button`   | immediate, **may block**               | `string`      |
-| `misc`     | special-cased (`test`, `hardcopy`)     | `string`      |
+| value      | meaning                               | returns      |
+| ---------- | ------------------------------------- | ------------ |
+| `buffered` | enqueue `Action`, defer to `commit()` | `ok`         |
+| `query`    | `commit()` then read board state      | `int`/`ints` |
+| `control`  | immediate side-effect                 | `ok`/`none`  |
+| `button`   | immediate, **may block**              | `string`     |
+| `misc`     | special-cased (`test`, `hardcopy`)    | `string`     |
 
 **`t`** — arg type (parse + emit). Maps to the existing firmware readers:
 
-| value         | wire form            | C++ reader       | C++ type        | Python |
-| ------------- | -------------------- | ---------------- | --------------- | ------ |
-| `int16`       | integer              | `read_int`       | `int16_t`       | `int`  |
-| `int`         | integer              | `read_int`       | `int`           | `int`  |
-| `uchar`       | integer              | `read_int`       | `unsigned char` | `int`  |
-| `bool`        | `0`/`1`              | `read_bool`      | `bool`          | `bool` |
-| `last-string` | trailing text, **required** (errors if absent) | `read_last_str` | `const char*` | `str` |
-| `raw-rest`    | line remainder, **verbatim, may be empty** (e.g. `print`) | `rest` | `const char*` | `str` |
+| value         | wire form                                                 | C++ reader      | C++ type        | Python |
+| ------------- | --------------------------------------------------------- | --------------- | --------------- | ------ |
+| `int16`       | integer                                                   | `read_int`      | `int16_t`       | `int`  |
+| `int`         | integer                                                   | `read_int`      | `int`           | `int`  |
+| `uchar`       | integer                                                   | `read_int`      | `unsigned char` | `int`  |
+| `bool`        | `0`/`1`                                                   | `read_bool`     | `bool`          | `bool` |
+| `last-string` | trailing text, **required** (errors if absent)            | `read_last_str` | `const char*`   | `str`  |
+| `raw-rest`    | line remainder, **verbatim, may be empty** (e.g. `print`) | `rest`          | `const char*`   | `str`  |
 
 (`last-string` vs `raw-rest`: the former missing-arg-checks one trailing string — `getTextBounds`; the latter passes the unparsed remainder straight to `Action.str` and accepts empty — `print`.)
 
 **`returns`** — response shape (omitted ⇒ `ok`):
 
-| spec value           | response shape                                       | example          |
-| -------------------- | --------------------------------------------------- | ---------------- |
-| _omitted_ / `ok`     | `OK` sentinel (+ optional auto-button suffix)        | most buffered    |
-| `none`               | empty / no response                                  | `reboot`, `watchButtons` |
-| `int`                | single integer                                       | `width`, `getRotation` |
-| `[a, b, …]`          | fixed named-integer tuple, space-separated (`ints`)  | `getTextBounds` → `x1 y1 w h` |
-| `string`             | opaque string                                        | `readButtons`, `waitButton` |
+| spec value       | response shape                                      | example                       |
+| ---------------- | --------------------------------------------------- | ----------------------------- |
+| _omitted_ / `ok` | `OK` sentinel (+ optional auto-button suffix)       | most buffered                 |
+| `none`           | empty / no response                                 | `reboot`, `watchButtons`      |
+| `int`            | single integer                                      | `width`, `getRotation`        |
+| `[a, b, …]`      | fixed named-integer tuple, space-separated (`ints`) | `getTextBounds` → `x1 y1 w h` |
+| `string`         | opaque string                                       | `readButtons`, `waitButton`   |
 
 Sketch (the four hard cases that prove expressiveness):
 
 ```yaml
 - name: drawRect
   kind: buffered
-  args: [{n: x, t: int16}, {n: y, t: int16}, {n: w, t: int16},
-         {n: h, t: int16}, {n: color, t: int}]
+  args:
+    [
+      { n: x, t: int16 },
+      { n: y, t: int16 },
+      { n: w, t: int16 },
+      { n: h, t: int16 },
+      { n: color, t: int },
+    ]
   doc: Outline rectangle at (x,y), size w×h, palette color.
   # returns omitted ⇒ ok
 
-- name: setTextSize          # optional trailing arg, cross-arg default
+- name: setTextSize # optional trailing arg, cross-arg default
   kind: buffered
-  args: [{n: sx, t: int}, {n: sy, t: int, optional: true, default: sx}]
+  args: [{ n: sx, t: int }, { n: sy, t: int, optional: true, default: sx }]
 
-- name: getTextBounds        # query: trailing required string + ints tuple
+- name: getTextBounds # query: trailing required string + ints tuple
   kind: query
-  args: [{n: x, t: int16}, {n: y, t: int16}, {n: text, t: last-string}]
+  args: [{ n: x, t: int16 }, { n: y, t: int16 }, { n: text, t: last-string }]
   returns: [x1, y1, w, h]
 
-- name: waitButton           # blocking, string return
+- name: waitButton # blocking, string return
   kind: button
-  args: [{n: during, t: int}, {n: up, t: int}]
+  args: [{ n: during, t: int }, { n: up, t: int }]
   returns: string
 ```
 
@@ -202,14 +208,14 @@ _(pending implementation)_
 
 ## Governance trace
 
-| Source                          | Clause             | Action  | Note                                                              |
-| ------------------------------- | ------------------ | ------- | ---------------------------------------------------------------- |
-| CLAUDE.md (Code-reuse)          | frameworks/libs    | applied | Pydantic + Jinja2 surfaced and confirmed before plan finalised   |
-| CLAUDE.md (Research methods)    | established methods | applied | IDL/stub-gen is the standard cross-language single-source pattern |
-| CLAUDE.md (YAGNI)               | drop unneeded      | applied | goldens scoped to feature axes, not params×returns cross-product |
-| CLAUDE.md (Proportionality)     | cost vs problem    | applied | "now is the time" — user confirmed after triple-site cost shown  |
-| CLAUDE.md (Multiple interp)     | rank options       | applied | free-fns vs pure-virtual ranked → linker enforcement chosen      |
-| CEREMONIES.md:13                | mandate gate       | applied | §1 + §2 to be user-attested before implementation                |
+| Source                       | Clause              | Action  | Note                                                              |
+| ---------------------------- | ------------------- | ------- | ----------------------------------------------------------------- |
+| CLAUDE.md (Code-reuse)       | frameworks/libs     | applied | Pydantic + Jinja2 surfaced and confirmed before plan finalised    |
+| CLAUDE.md (Research methods) | established methods | applied | IDL/stub-gen is the standard cross-language single-source pattern |
+| CLAUDE.md (YAGNI)            | drop unneeded       | applied | goldens scoped to feature axes, not params×returns cross-product  |
+| CLAUDE.md (Proportionality)  | cost vs problem     | applied | "now is the time" — user confirmed after triple-site cost shown   |
+| CLAUDE.md (Multiple interp)  | rank options        | applied | free-fns vs pure-virtual ranked → linker enforcement chosen       |
+| CEREMONIES.md:13             | mandate gate        | applied | §1 + §2 to be user-attested before implementation                 |
 
 ## Resource consumption
 
