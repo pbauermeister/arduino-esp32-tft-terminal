@@ -14,7 +14,7 @@
 
 - Author: agent
 - Model: Claude Opus 4.8
-- Review: user
+- Review: pending
 
 Make the command vocabulary **single-sourced**: define each command once, generate every mechanical surface, so adding or changing a command is one spec edit — no silent drift.
 
@@ -44,7 +44,7 @@ The two server switches are separate by design (flicker-avoidance: parse now, ex
 | button   | 4   | `readButtons`, `waitButton`      | immediate, **may block**   | string          |
 | misc     | 2   | `test`, `hardcopy`               | special                    | string          |
 
-Arg type vocabulary (already enumerated by the firmware readers): `int16` · `int` · `uchar` · `bool` · `last-string` · `raw-rest`, each optionally with a default (incl. cross-arg defaults, e.g. `setTextSize sy=sx`).
+Arg type vocabulary (already enumerated by the firmware readers): `int16` · `int` · `int8` · `uchar` · `bool` · `last-string` · `raw-rest`. An arg may carry a literal `default`; its presence makes the arg optional (e.g. `setTextSize` omits `sy`, `monitorButtons` omits `interval`).
 
 ### 1.3 Acceptance criteria
 
@@ -72,7 +72,7 @@ Arg type vocabulary (already enumerated by the firmware readers): `int16` · `in
 
 - Author: agent
 - Model: Claude Opus 4.8
-- Review: user
+- Review: pending
 
 ### 2.1 New subproject `protocol/`
 
@@ -88,7 +88,7 @@ Per command: `name`, `args`, `returns`, `category`, `doc`. Two fields are **load
 | field      | role                                                                 | values                                                 |
 | ---------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
 | `name`     | command keyword (wire token, also the `hash()` key)                  | —                                                      |
-| `args`     | load-bearing both ends (parse / format)                              | list of `{name, type, optional?, default?}`; see below |
+| `args`     | load-bearing both ends (parse / format)                              | list of `{name, type, default?}`; a `default` makes the arg optional |
 | `returns`  | **load-bearing (client)** — whether/how to read & parse the response | `ok` · `none` · `int` · `[names…]` · `string`          |
 | `category` | developer-facing cluster; sole codegen effect: `buffered` ⇒ enqueue  | `buffered` · `control` · `query` · `button` · `misc`   |
 | `doc`      | **mandatory** human description                                      | free text                                              |
@@ -140,14 +140,14 @@ Sketch (the hard cases that prove expressiveness):
   doc: Outline rectangle at (x,y), size w×h, in palette colour `color`.
   # returns omitted ⇒ ok
 
-- name: setTextSize # optional trailing arg, cross-arg default
+- name: setTextSize # trailing arg with a default ⇒ optional
   category: buffered
   args:
     [
       { name: sx, type: int },
-      { name: sy, type: int, optional: true, default: sx },
+      { name: sy, type: int, default: -1 },
     ]
-  doc: Set text magnification; sy defaults to sx (square).
+  doc: Set text magnification; omit sy (default -1) for square.
 
 - name: getTextBounds # query: trailing required string + ints tuple
   category: query

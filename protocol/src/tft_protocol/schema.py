@@ -67,10 +67,9 @@ class Arg(BaseModel):
 
     name: str
     type: ArgType
-    optional: bool = False
-    # A literal int/bool default, or the name of an earlier arg (cross-arg
-    # default, e.g. setTextSize sy defaults to sx).
-    default: bool | int | str | None = None
+    # A literal int/bool default. Its presence makes the argument optional;
+    # there is no separate `optional` flag.
+    default: bool | int | None = None
 
     @field_validator("name")
     @classmethod
@@ -79,11 +78,9 @@ class Arg(BaseModel):
             raise ValueError(f"arg name {v!r} is not a valid identifier")
         return v
 
-    @model_validator(mode="after")
-    def _default_requires_optional(self) -> "Arg":
-        if self.default is not None and not self.optional:
-            raise ValueError(f"arg {self.name!r} has a default but is not optional")
-        return self
+    @property
+    def optional(self) -> bool:
+        return self.default is not None
 
 
 class Command(BaseModel):
@@ -115,19 +112,19 @@ class Command(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _trailing_last_and_defaults_resolve(self) -> "Command":
+    def _arg_order_invariants(self) -> "Command":
+        seen_optional = False
         for i, a in enumerate(self.args):
             if a.type in TRAILING_TYPES and i != len(self.args) - 1:
                 raise ValueError(
                     f"{self.name}: {a.type.value} arg {a.name!r} must be the last argument"
                 )
-            if isinstance(a.default, str):
-                earlier = {p.name for p in self.args[:i]}
-                if a.default not in earlier:
-                    raise ValueError(
-                        f"{self.name}: default {a.default!r} of {a.name!r} "
-                        "names no earlier argument"
-                    )
+            if a.optional:
+                seen_optional = True
+            elif seen_optional:
+                raise ValueError(
+                    f"{self.name}: required arg {a.name!r} follows an optional arg"
+                )
         return self
 
     @property

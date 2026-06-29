@@ -4,8 +4,8 @@
 #   name      wire token, also the firmware hash() key
 #   category  buffered | control | query | button | misc  (developer-facing;
 #             only `buffered` changes codegen — it selects the enqueue path)
-#   args      [{name, type, optional?, default?}]  type: int16|int|int8|
-#             last-string|raw-rest ; default may be a literal or an earlier arg
+#   args      [{name, type, default?}]  type: int16|int|int8|
+#             last-string|raw-rest ; a literal default (int/bool) makes the arg optional
 #   returns   ok (default) | none | int | string | [field names] (int tuple)
 #   doc       mandatory human description
 #
@@ -122,7 +122,7 @@
 
 - name: invertDisplay
   category: buffered
-  args: [{ name: inv, type: bool, optional: true, default: true }]
+  args: [{ name: inv, type: bool, default: true }]
   doc: Invert display colours; inv defaults to 1 (on).
 
 - name: drawFastVLine
@@ -279,7 +279,7 @@
 
 - name: setTextSize
   category: buffered
-  args: [{ name: sx, type: int }, { name: sy, type: int, optional: true, default: sx }]
+  args: [{ name: sx, type: int }, { name: sy, type: int, default: -1 }]
   doc: Set text magnification; sy defaults to sx (square).
 
 - name: setCursor
@@ -315,7 +315,7 @@
   args:
     [
       { name: during, type: int },
-      { name: interval, type: int, optional: true, default: 100 },
+      { name: interval, type: int, default: 100 },
     ]
   doc: Stream button states for `during` ms every `interval` ms (default 100), then OK.
 
@@ -323,8 +323,8 @@
   category: button
   args:
     [
-      { name: during, type: int, optional: true, default: 0 },
-      { name: interval, type: int, optional: true, default: 100 },
+      { name: during, type: int, default: 0 },
+      { name: interval, type: int, default: 100 },
     ]
   returns: none
   doc: Report button changes for `during` ms (0 = until reset) every `interval` ms; no terminating response.
