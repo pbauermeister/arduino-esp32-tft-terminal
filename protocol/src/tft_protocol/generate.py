@@ -12,7 +12,15 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
-from .schema import PY_TYPE, TRAILING_TYPES, ArgType, Command, Protocol
+from .schema import (
+    CPP_TYPE,
+    PY_TYPE,
+    TRAILING_TYPES,
+    ArgType,
+    Category,
+    Command,
+    Protocol,
+)
 
 _HERE = Path(__file__).resolve().parent
 _TEMPLATES = _HERE / "templates"
@@ -36,6 +44,14 @@ DOC_BEGIN = (
     "do not edit; regenerate with: make protocol-gen -->"
 )
 DOC_END = "<!-- END GENERATED COMMANDS -->"
+
+CPP_BANNER = (
+    "// AUTO-GENERATED from protocol/protocol.yaml — DO NOT EDIT.\n"
+    "// Regenerate with: make protocol-gen\n"
+)
+SERVER_DISPATCH_PATH = "server-esp32s3-rtft/command_dispatch.autogen.inc"
+SERVER_REPLAY_PATH = "server-esp32s3-rtft/replay_dispatch.autogen.inc"
+SERVER_HANDLERS_PATH = "server-esp32s3-rtft/protocol_handlers.autogen.h"
 
 
 def _env() -> Environment:
@@ -163,6 +179,113 @@ def _splice_managed_block(path: Path, begin: str, end: str, body: str) -> None:
     path.write_text(f"{head}\n\n{body}\n\n{tail}", encoding="utf-8")
 
 
+# --- server C++ (parse dispatch, replay dispatch, handler header) ------------
+
+
+def _is_buffered(cmd: Command) -> bool:
+    return cmd.category == Category.BUFFERED
+
+
+def _cpp_default(arg) -> str:
+    if isinstance(arg.default, bool):
+        return "1" if arg.default else "0"
+    return str(arg.default)
+
+
+def _cpp_parse_case(cmd: Command) -> str:
+    """One `interpret()` switch case: read + validate args, then dispatch."""
+    lines = [f'case hash("{cmd.name}"): {{']
+    numeric = []
+    raw_rest = cmd.args and cmd.args[0].type == ArgType.RAW_REST
+    for a in cmd.args:
+        if a.type == ArgType.RAW_REST:
+            continue  # consumed as the remaining `rest`, no read
+        elif a.type == ArgType.LAST_STRING:
+            lines.append(f"const char *{a.name} = read_last_str(&rest, error);")
+        elif a.optional:
+            lines.append(
+                f"int {a.name} = read_int(&rest, error, true, {_cpp_default(a)});"
+            )
+            numeric.append(a.name)
+        else:
+            lines.append(f"int {a.name} = read_int(&rest, error);")
+            numeric.append(a.name)
+
+    if not cmd.args:
+        lines.append("no_arg(&rest, error);")
+        lines.append("if (error.message) return error.message;")
+    elif not raw_rest:
+        lines.append("if (error.message) return error.message;")
+
+    if _is_buffered(cmd):
+        if raw_rest:
+            lines.append("transaction.action()->set(hh, rest);")
+        elif cmd.args:
+            lines.append(f"transaction.action()->set(hh, {', '.join(numeric)});")
+        else:
+            lines.append("transaction.action()->set(hh);")
+        lines.append("transaction.add();")
+        lines.append("return ok();")
+    else:
+        call = ", ".join(a.name for a in cmd.args)
+        lines.append(f"return handle_{cmd.name}({call});")
+    body = "\n".join(f"    {ln}" for ln in lines[1:])
+    return f"{lines[0]}\n{body}\n}}"
+
+
+def _cpp_replay_case(cmd: Command) -> str:
+    """One `do_action()` switch case: extract typed args, call the binding."""
+    exprs = []
+    idx = 0
+    for a in cmd.args:
+        if a.type in TRAILING_TYPES:
+            exprs.append("action->str")
+        else:
+            exprs.append(f"({CPP_TYPE[a.type]})action->args[{idx}]")
+            idx += 1
+    return (
+        f'case hash("{cmd.name}"): {{\n'
+        f"    replay_{cmd.name}({', '.join(exprs)});\n"
+        f"    break;\n}}"
+    )
+
+
+def _cpp_proto(cmd: Command) -> str:
+    params = ", ".join(f"{CPP_TYPE[a.type]} {a.name}" for a in cmd.args)
+    if _is_buffered(cmd):
+        return f"void replay_{cmd.name}({params});"
+    return f"const char *handle_{cmd.name}({params});"
+
+
+def render_command_dispatch(proto: Protocol) -> str:
+    cases = "\n\n".join(_cpp_parse_case(c) for c in proto.commands)
+    return f"{CPP_BANNER}\n{cases}\n"
+
+
+def render_replay_dispatch(proto: Protocol) -> str:
+    cases = "\n\n".join(_cpp_replay_case(c) for c in proto.commands if _is_buffered(c))
+    return f"{CPP_BANNER}\n{cases}\n"
+
+
+def render_server_handlers(proto: Protocol) -> str:
+    replay = [_cpp_proto(c) for c in proto.commands if _is_buffered(c)]
+    handle = [_cpp_proto(c) for c in proto.commands if not _is_buffered(c)]
+    return (
+        f"{CPP_BANNER}\n"
+        "#ifndef PROTOCOL_HANDLERS_AUTOGEN_H\n"
+        "#define PROTOCOL_HANDLERS_AUTOGEN_H\n\n"
+        "#include <stdint.h>\n\n"
+        "// Buffered replay handlers — the TFT binding for each draw command.\n"
+        "// Hand-written in transaction.cpp; a missing one is a link error.\n"
+        + "\n".join(replay)
+        + "\n\n"
+        "// Immediate command handlers — return the response string.\n"
+        "// Hand-written in command.cpp.\n"
+        + "\n".join(handle)
+        + "\n\n#endif  // PROTOCOL_HANDLERS_AUTOGEN_H\n"
+    )
+
+
 def generate_all(proto: Protocol, repo_root: Path | None = None) -> list[Path]:
     root = repo_root or REPO_ROOT
     written: list[Path] = []
@@ -174,5 +297,14 @@ def generate_all(proto: Protocol, repo_root: Path | None = None) -> list[Path]:
     readme = root / README_PROTOCOL_PATH
     _splice_managed_block(readme, DOC_BEGIN, DOC_END, render_protocol_doc(proto))
     written.append(readme)
+
+    for rel, text in (
+        (SERVER_DISPATCH_PATH, render_command_dispatch(proto)),
+        (SERVER_REPLAY_PATH, render_replay_dispatch(proto)),
+        (SERVER_HANDLERS_PATH, render_server_handlers(proto)),
+    ):
+        path = root / rel
+        path.write_text(text, encoding="utf-8")
+        written.append(path)
 
     return written
