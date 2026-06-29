@@ -223,7 +223,11 @@ Each phase is independently verifiable; phases 1–2 can land before 3–4 if sc
 - Model: Claude Opus 4.8
 - Review: pending
 
-_(pending implementation)_
+### 3.0 Scope addenda (in-flight)
+
+- **`test` fall-through fix (agreed in-task):** `command.cpp:511` `case hash("test")` lacks a `break`/`return`, so it falls through into `hardcopy` and returns `"ERROR hardcopy not implemented"`. The Phase-3 generated dispatch emits a `return` per case, so the fall-through is **eliminated by construction**; `test` will invoke the diagnostic and return its own response. Deliberate exception to acceptance criterion 4 (functional equivalence) — confirm at closure.
+
+_(remaining closure pending implementation)_
 
 ## Governance trace
 
