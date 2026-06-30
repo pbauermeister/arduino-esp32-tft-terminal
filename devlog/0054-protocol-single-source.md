@@ -3,7 +3,7 @@
 - GH issue: #54
 - Branch: impl/0054-protocol-single-source
 - Opened: 2026-06-29
-- Closed: —
+- Closed: 2026-06-30
 
 ### Context
 
@@ -227,7 +227,91 @@ Each phase is independently verifiable; phases 1–2 can land before 3–4 if sc
 
 - **`test` fall-through fix (agreed in-task):** `command.cpp:511` `case hash("test")` lacks a `break`/`return`, so it falls through into `hardcopy` and returns `"ERROR hardcopy not implemented"`. The Phase-3 generated dispatch emits a `return` per case, so the fall-through is **eliminated by construction**; `test` will invoke the diagnostic and return its own response. Deliberate exception to acceptance criterion 4 (functional equivalence) — confirm at closure.
 
-_(remaining closure pending implementation)_
+### 3.1 Implementation
+
+Delivered in four phases; one source (`protocol/protocol.yaml`, 45 commands) feeds every surface.
+
+- **Generator** (`protocol/`): Pydantic schema (`schema.py`) + loader/`fw_hash` (`load.py`) + emitters (`generate.py`) — Jinja for the client, string-builders for C++ and the doc table. `validate` / `generate` CLIs.
+- **Client**: generated `CommandLine` (`command_line_autogen.py`); `Gfx` rewired to delegate (public API + conveniences intact); `Command`→`CommandExecutor`, module names aligned to classes.
+- **Docs**: `README-protocol.md` command table in a managed block (prose preserved).
+- **Server**: generated parse + replay dispatch (`*.autogen.inc`) + handler header (free-fn protos → linker-enforced); hand-written arsenal (`replay_*` TFT bindings, `handle_*` immediate handlers); `config` captured file-scope; `test`→`hardcopy` fall-through removed.
+- **Tooling**: `make protocol-gen`, drift gate (`make -C protocol check`), generator goldens, CI `protocol` job.
+
+Two user-led refinements improved the design mid-flight: naming converged on the codebase's ubiquitous term (`CommandLine`/`CommandExecutor`, module↔class alignment); the schema dropped a redundant `optional` flag (presence of `default` implies it) and spelled out `n`/`t` → `name`/`type`.
+
+### 3.2 File inventory
+
+33 files, +3086 / −736, 17 commits (`git diff --stat main...HEAD`).
+
+- New `protocol/` subproject: spec, generator (`src/tft_protocol/`), `Makefile`, goldens (`tests/`), `uv.lock`.
+- Generated stubs (committed): `command_line_autogen.py`, `command_dispatch.autogen.inc`, `replay_dispatch.autogen.inc`, `protocol_handlers.autogen.h`, the `README-protocol.md` table.
+- `command.cpp` / `transaction.cpp`: switches → `#include` + hand-written arsenal (net large reduction).
+- Client: `command_executor.py` (rename), `gfx.py` rewire, `tests/unit/test_command_line.py`.
+- `Makefile` (`protocol-gen`), `.github/workflows/ci.yml` (`protocol` job).
+
+### 3.3 Verification commands
+
+| Command                                     | Checks                                       |
+| ------------------------------------------- | -------------------------------------------- |
+| `make -C protocol validate`                 | spec valid; 45 names + hashes unique         |
+| `make -C protocol lint`                     | ruff check + format-check                    |
+| `make -C protocol test`                     | generator goldens (5 outputs)                |
+| `make -C protocol check`                    | drift gate: regenerate+format == committed   |
+| `make -C client-py check`                   | ruff + 36 host tests                         |
+| `make -C server-esp32s3-rtft firmware-build`| compiles; flash 34%, DRAM 67%                |
+| `make -C server-esp32s3-rtft test-board`    | **hardware self-test — passed** (criterion 4)|
+
+### 3.4 Demo scenario
+
+Replayable at the merge commit:
+
+```
+# 1. one source defines a command end-to-end
+grep -A4 'name: drawRect' protocol/protocol.yaml
+
+# 2. regenerate every surface — nothing drifts
+make protocol-gen && git diff --stat        # → no changes
+
+# 3. the gate catches a stale / invalid spec
+printf '\n- name: bogus\n' >> protocol/protocol.yaml
+make -C protocol check                       # → ERROR (validation / stale stubs)
+git checkout protocol/protocol.yaml
+
+# 4. client + firmware build from the generated stubs
+make -C client-py test                       # 36 pass
+make -C server-esp32s3-rtft firmware-build   # DRAM 67%
+```
+
+### 3.5 Test coverage review
+
+| Change                       | Decision                                                                                                       |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Generator emitters           | **Added** `tests/test_goldens.py` — feature-fixture spec → expected emission, all 5 outputs.                    |
+| Real-spec regeneration       | **Added** drift gate (`make -C protocol check`) in CI — committed stubs must equal regenerated.                 |
+| Client `CommandLine`         | **Added** `test_command_line.py` (bool→0/1, optional defaults, ints-tuple parse).                              |
+| `Gfx` rewire                 | **Existing** `test_protocol.py` asserts wire strings (byte-identical) — exercises the new layer; still passes. |
+| Server codegen + arsenal     | **Justified (no host test)**: firmware host-testing was parked (#25); covered by the compile gate + interactive `make test-board` (hardware-passed). |
+
+### 3.6 Retrospective
+
+Agent votes filled; User column for the reviewer (well / not well / surprise / don't care).
+
+| #   | Point                                                                       | Agent    | User |
+| --- | --------------------------------------------------------------------------- | -------- | ---- |
+| 1   | Single source across all four surfaces; drift gate enforces it              | well     |      |
+| 2   | DRAM unchanged (67%), flash comparable — firmware equivalence held          | well     |      |
+| 3   | `handle_*`/`replay_*` split kept the spec free of C++ binding detail        | well     |      |
+| 4   | config-as-global over threading — cleaner handler signatures                | well     |      |
+| 5   | `test`→`hardcopy` fall-through fixed by construction, not patched           | well     |      |
+| 6   | Drift gate is generate **+ format** + diff (not generate alone) — found late | surprise |      |
+| 7   | `.inc` clang-format non-idempotent → left generator-emitted, indented       | surprise |      |
+| 8   | ruff reformatted a golden `.py` → late test failure; fixed via ruff exclude | not well |      |
+| 9   | Caught the optional-arg-dropped-from-`set()` generator bug before regen     | well     |      |
+| 10  | Naming + schema converged over several user-led rounds — productive refinement | well  |      |
+
+### 3.7 Verdict
+
+Accept. Acceptance criteria 1–6 met; criterion 4 (functional equivalence) confirmed on hardware. The sole deliberate exception — the `test` fall-through (§ 3.0) — is a fix, not a regression.
 
 ## Governance trace
 
@@ -238,14 +322,31 @@ _(remaining closure pending implementation)_
 | CLAUDE.md (YAGNI)            | drop unneeded       | applied | goldens scoped to feature axes, not params×returns cross-product  |
 | CLAUDE.md (Proportionality)  | cost vs problem     | applied | "now is the time" — user confirmed after triple-site cost shown   |
 | CLAUDE.md (Multiple interp)  | rank options        | applied | free-fns vs pure-virtual ranked → linker enforcement chosen       |
-| CEREMONIES.md:13             | mandate gate        | applied | §1 + §2 to be user-attested before implementation                 |
+| CEREMONIES.md:13             | mandate gate        | applied | §1 + §2 user-attested before implementation; re-attested after schema edits |
+| CLAUDE.md (Naming discipline)| what-not-how        | applied | converged on ubiquitous term: CommandLine / CommandExecutor       |
+| CLAUDE.md (Convergence check)| reaching vs retreating | tension | naming ran several rounds — judged productive (added clarity), not scope-narrowing; mundane |
+| CLAUDE.md (YAGNI)            | drop unneeded       | applied | dropped redundant `optional` flag + unused cross-arg defaults      |
+| CLAUDE.md (Task execution)   | massive → debrief   | applied | paused at each phase boundary for review                          |
+| CLAUDE.md (Fact/inference)   | flag findings       | applied | surfaced + fixed the optional-arg-dropped-from-`set()` generator bug |
+| CEREMONIES.md (test coverage)| §3.5 review         | applied | firmware host-test skipped — justified (#25), hardware self-test instead |
 
 ## Resource consumption
 
-| Phase  | Tokens (approx) | Wall time |
-| ------ | --------------- | --------- |
-| Design | ~30k            | ~50 min   |
+| Phase                       | Tokens (approx) | Wall time   |
+| --------------------------- | --------------- | ----------- |
+| Mandate + plan (incl. revisions) | ~60k       | ~2 h        |
+| Phase 1 — client            | ~70k            | ~1.5 h      |
+| Phase 2 — docs              | ~25k            | ~30 min     |
+| Phase 3 — server + hardware | ~90k            | ~2 h        |
+| Phase 4 — tooling + goldens | ~50k            | ~1 h        |
+| Closure                     | ~25k            | ~30 min     |
+| **Total**                   | **~320k**       | **~7.5 h** over 2 days |
 
-| Counter       | Value                    |
-| ------------- | ------------------------ |
-| Files changed | 1 (devlog — design only) |
+| Counter                | Value                              |
+| ---------------------- | ---------------------------------- |
+| Pre-commit hook fails  | ~3 (ruff format-check after edits) |
+| Subagent invocations   | 0                                  |
+| `/clear` events        | 0                                  |
+| Memory rotation events | 0                                  |
+| LOC changed            | +3086 / −736 (`git diff main...`)  |
+| Files changed          | 33                                 |
