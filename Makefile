@@ -3,8 +3,10 @@
 #
 #   client-py/            Python client + app logic + the test suites
 #   server-esp32s3-rtft/  board firmware (build / flash via arduino-cli)
+#   protocol/             command-protocol meta-spec + code generator
 #
 # Run 'make' here for this signpost; 'cd' into a sub-project and 'make help'.
+# The one cross-cutting target lives here: 'make protocol-gen'.
 
 .DEFAULT_GOAL := help
 
@@ -18,3 +20,13 @@ help:
 	@echo
 	@echo "  server-esp32s3-rtft/  board firmware (build / flash via arduino-cli)"
 	@echo "                          cd server-esp32s3-rtft && make help"
+	@echo
+	@echo "  protocol/             command-protocol meta-spec + code generator"
+	@echo "                          cd protocol && make help"
+	@echo
+	@echo "Cross-cutting target:"
+	@echo "  make protocol-gen     regenerate client + server + docs stubs from the spec"
+
+.PHONY: protocol-gen
+protocol-gen: ## regenerate the generated stubs from protocol/protocol.yaml
+	$(MAKE) -C protocol gen

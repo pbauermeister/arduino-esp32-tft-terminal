@@ -1,0 +1,51 @@
+# Synthetic feature-coverage spec for the generator goldens — NOT the real
+# protocol. One command per schema feature: every arg type, optional + default,
+# raw-rest, last-string + int-tuple return, and each return shape.
+
+- name: bufNoArgs
+  category: buffered
+  doc: Buffered command with no arguments.
+
+- name: bufAllTypes
+  category: buffered
+  args:
+    [
+      { name: x, type: int16 },
+      { name: ch, type: uchar },
+      { name: flag, type: bool },
+      { name: sz, type: int8 },
+      { name: color, type: int },
+    ]
+  doc: Buffered command exercising every numeric arg type.
+
+- name: bufOptional
+  category: buffered
+  args: [{ name: a, type: int }, { name: b, type: int, default: -1 }]
+  doc: Buffered command with an optional defaulted arg.
+
+- name: bufText
+  category: buffered
+  args: [{ name: text, type: raw-rest }]
+  doc: 'Buffered raw-rest text; supports \n escapes.'
+
+- name: qBounds
+  category: query
+  args: [{ name: x, type: int16 }, { name: s, type: last-string }]
+  returns: [a, b, c, d]
+  doc: Query with a trailing string returning an int tuple.
+
+- name: qValue
+  category: query
+  returns: int
+  doc: Query returning a single int.
+
+- name: ctlVoid
+  category: control
+  returns: none
+  doc: Control command with no response.
+
+- name: btnRead
+  category: button
+  args: [{ name: ms, type: int, default: 100 }]
+  returns: string
+  doc: Button command returning a string.
