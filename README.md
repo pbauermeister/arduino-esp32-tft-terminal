@@ -108,19 +108,38 @@ make install   # = uv tool install . ; run `make help` for all targets
 
 ## Videos
 
-|                                                                                                                                              |                                                                                                                                              |                                                                                                                                              |
-| -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                                                               |                                                                                                                                                               |                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [![Video on YouTube](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/yt-Nq5qLFQl3gA.jpg)](https://youtu.be/Nq5qLFQl3gA) | [![Video on YouTube](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/yt-HaPi0cx6-W8.jpg)](https://youtu.be/HaPi0cx6-W8) | [![Video on YouTube](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/yt-vNK-JPLklLs.jpg)](https://youtu.be/vNK-JPLklLs) |
 
 ## Photos
 
-|                                                                                                                                          |                                                                                                                                          |
-| --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| ![CPU + net monitor](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_145648.jpg "CPU + net monitor") | ![CPU + net monitor](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_144050.jpg "CPU + net monitor") |
-| ![Playing 3D cube](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_142735-thumb.png "Playing 3D cube") | ![Playing Asteriods](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_132939-thumb.png "Playing Asteriods") |
-| ![TFT side](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_144544.jpg "TFT side")       | ![ESP32 side](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_144614.jpg "ESP32 side")   |
-| ![Case on cap](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_124410.jpg "Case on cap") | ![Case closed](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_124520.jpg "Case closed") |
-| ![Modelling in OpenSCAD](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/esp32s3-rtft-case.scad.png "Modelling in OpenSCAD") |                                                                                                                                         |
+|                                                                                                                                                                    |                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ![CPU + net monitor](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_145648.jpg "CPU + net monitor")                | ![CPU + net monitor](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_144050.jpg "CPU + net monitor")       |
+| ![Playing 3D cube](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_142735-thumb.png "Playing 3D cube")              | ![Playing Asteriods](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_132939-thumb.png "Playing Asteriods") |
+| ![TFT side](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_144544.jpg "TFT side")                                  | ![ESP32 side](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_144614.jpg "ESP32 side")                     |
+| ![Case on cap](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_124410.jpg "Case on cap")                            | ![Case closed](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_124520.jpg "Case closed")                   |
+| ![Modelling in OpenSCAD](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/esp32s3-rtft-case.scad.png "Modelling in OpenSCAD") |                                                                                                                                                           |
+
+## Claude Code monitor
+
+To see how many Claude Code sessions you have (also when your screen is locked), and which ones need your attention, run the `claude-monitor` app:
+
+```
+arduino-esp32-tft-terminal --only claude-monitor
+```
+
+- Idle: Doing nothing, or waiting for your prompt.
+- Busy: Crunching.
+- Asking: Waiting for your choice to a menu.
+
+It uses my Python library [claude-busy-monitor](https://github.com/pbauermeister/claude-busy-monitor).
+
+|                                                                                                                                          |                                                                                                                                                                             |     |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --- |
+| ![Banner](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/claude-mon-1.png "Banner")               | ![2x busy](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/claude-mon-2.png "2x busy")                                                |
+| ![Asking + idle](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/claude-mon-3.png "Asking + idle") | [![Video on YouTube](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/claude-mon-yt.png)](https://www.youtube.com/watch?v=zP2yS1vV7uc) |
 
 ## Links
 
