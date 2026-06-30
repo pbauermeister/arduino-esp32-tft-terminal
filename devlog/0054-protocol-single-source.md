@@ -221,7 +221,7 @@ Each phase is independently verifiable; phases 1–2 can land before 3–4 if sc
 
 - Author: agent
 - Model: Claude Opus 4.8
-- Review: pending
+- Review: user
 
 ### 3.0 Scope addenda (in-flight)
 
@@ -251,15 +251,15 @@ Two user-led refinements improved the design mid-flight: naming converged on the
 
 ### 3.3 Verification commands
 
-| Command                                     | Checks                                       |
-| ------------------------------------------- | -------------------------------------------- |
-| `make -C protocol validate`                 | spec valid; 45 names + hashes unique         |
-| `make -C protocol lint`                     | ruff check + format-check                    |
-| `make -C protocol test`                     | generator goldens (5 outputs)                |
-| `make -C protocol check`                    | drift gate: regenerate+format == committed   |
-| `make -C client-py check`                   | ruff + 36 host tests                         |
-| `make -C server-esp32s3-rtft firmware-build`| compiles; flash 34%, DRAM 67%                |
-| `make -C server-esp32s3-rtft test-board`    | **hardware self-test — passed** (criterion 4)|
+| Command                                      | Checks                                        |
+| -------------------------------------------- | --------------------------------------------- |
+| `make -C protocol validate`                  | spec valid; 45 names + hashes unique          |
+| `make -C protocol lint`                      | ruff check + format-check                     |
+| `make -C protocol test`                      | generator goldens (5 outputs)                 |
+| `make -C protocol check`                     | drift gate: regenerate+format == committed    |
+| `make -C client-py check`                    | ruff + 36 host tests                          |
+| `make -C server-esp32s3-rtft firmware-build` | compiles; flash 34%, DRAM 67%                 |
+| `make -C server-esp32s3-rtft test-board`     | **hardware self-test — passed** (criterion 4) |
 
 ### 3.4 Demo scenario
 
@@ -284,30 +284,30 @@ make -C server-esp32s3-rtft firmware-build   # DRAM 67%
 
 ### 3.5 Test coverage review
 
-| Change                       | Decision                                                                                                       |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Generator emitters           | **Added** `tests/test_goldens.py` — feature-fixture spec → expected emission, all 5 outputs.                    |
-| Real-spec regeneration       | **Added** drift gate (`make -C protocol check`) in CI — committed stubs must equal regenerated.                 |
-| Client `CommandLine`         | **Added** `test_command_line.py` (bool→0/1, optional defaults, ints-tuple parse).                              |
-| `Gfx` rewire                 | **Existing** `test_protocol.py` asserts wire strings (byte-identical) — exercises the new layer; still passes. |
-| Server codegen + arsenal     | **Justified (no host test)**: firmware host-testing was parked (#25); covered by the compile gate + interactive `make test-board` (hardware-passed). |
+| Change                   | Decision                                                                                                                                             |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Generator emitters       | **Added** `tests/test_goldens.py` — feature-fixture spec → expected emission, all 5 outputs.                                                         |
+| Real-spec regeneration   | **Added** drift gate (`make -C protocol check`) in CI — committed stubs must equal regenerated.                                                      |
+| Client `CommandLine`     | **Added** `test_command_line.py` (bool→0/1, optional defaults, ints-tuple parse).                                                                    |
+| `Gfx` rewire             | **Existing** `test_protocol.py` asserts wire strings (byte-identical) — exercises the new layer; still passes.                                       |
+| Server codegen + arsenal | **Justified (no host test)**: firmware host-testing was parked (#25); covered by the compile gate + interactive `make test-board` (hardware-passed). |
 
 ### 3.6 Retrospective
 
 Agent votes filled; User column for the reviewer (well / not well / surprise / don't care).
 
-| #   | Point                                                                       | Agent    | User |
-| --- | --------------------------------------------------------------------------- | -------- | ---- |
-| 1   | Single source across all four surfaces; drift gate enforces it              | well     |      |
-| 2   | DRAM unchanged (67%), flash comparable — firmware equivalence held          | well     |      |
-| 3   | `handle_*`/`replay_*` split kept the spec free of C++ binding detail        | well     |      |
-| 4   | config-as-global over threading — cleaner handler signatures                | well     |      |
-| 5   | `test`→`hardcopy` fall-through fixed by construction, not patched           | well     |      |
-| 6   | Drift gate is generate **+ format** + diff (not generate alone) — found late | surprise |      |
-| 7   | `.inc` clang-format non-idempotent → left generator-emitted, indented       | surprise |      |
-| 8   | ruff reformatted a golden `.py` → late test failure; fixed via ruff exclude | not well |      |
-| 9   | Caught the optional-arg-dropped-from-`set()` generator bug before regen     | well     |      |
-| 10  | Naming + schema converged over several user-led rounds — productive refinement | well  |      |
+| #   | Point                                                                          | Agent    | User       |
+| --- | ------------------------------------------------------------------------------ | -------- | ---------- |
+| 1   | Single source across all four surfaces; drift gate enforces it                 | well     | well       |
+| 2   | DRAM unchanged (67%), flash comparable — firmware equivalence held             | well     | well       |
+| 3   | `handle_*`/`replay_*` split kept the spec free of C++ binding detail           | well     | well       |
+| 4   | config-as-global over threading — cleaner handler signatures                   | well     | well       |
+| 5   | `test`→`hardcopy` fall-through fixed by construction, not patched              | well     | well       |
+| 6   | Drift gate is generate **+ format** + diff (not generate alone) — found late   | surprise | don't care |
+| 7   | `.inc` clang-format non-idempotent → left generator-emitted, indented          | surprise | don't care |
+| 8   | ruff reformatted a golden `.py` → late test failure; fixed via ruff exclude    | not well | ended well |
+| 9   | Caught the optional-arg-dropped-from-`set()` generator bug before regen        | well     | well       |
+| 10  | Naming + schema converged over several user-led rounds — productive refinement | well     | well       |
 
 ### 3.7 Verdict
 
@@ -315,32 +315,32 @@ Accept. Acceptance criteria 1–6 met; criterion 4 (functional equivalence) conf
 
 ## Governance trace
 
-| Source                       | Clause              | Action  | Note                                                              |
-| ---------------------------- | ------------------- | ------- | ----------------------------------------------------------------- |
-| CLAUDE.md (Code-reuse)       | frameworks/libs     | applied | Pydantic + Jinja2 surfaced and confirmed before plan finalised    |
-| CLAUDE.md (Research methods) | established methods | applied | IDL/stub-gen is the standard cross-language single-source pattern |
-| CLAUDE.md (YAGNI)            | drop unneeded       | applied | goldens scoped to feature axes, not params×returns cross-product  |
-| CLAUDE.md (Proportionality)  | cost vs problem     | applied | "now is the time" — user confirmed after triple-site cost shown   |
-| CLAUDE.md (Multiple interp)  | rank options        | applied | free-fns vs pure-virtual ranked → linker enforcement chosen       |
-| CEREMONIES.md:13             | mandate gate        | applied | §1 + §2 user-attested before implementation; re-attested after schema edits |
-| CLAUDE.md (Naming discipline)| what-not-how        | applied | converged on ubiquitous term: CommandLine / CommandExecutor       |
-| CLAUDE.md (Convergence check)| reaching vs retreating | tension | naming ran several rounds — judged productive (added clarity), not scope-narrowing; mundane |
-| CLAUDE.md (YAGNI)            | drop unneeded       | applied | dropped redundant `optional` flag + unused cross-arg defaults      |
-| CLAUDE.md (Task execution)   | massive → debrief   | applied | paused at each phase boundary for review                          |
-| CLAUDE.md (Fact/inference)   | flag findings       | applied | surfaced + fixed the optional-arg-dropped-from-`set()` generator bug |
-| CEREMONIES.md (test coverage)| §3.5 review         | applied | firmware host-test skipped — justified (#25), hardware self-test instead |
+| Source                        | Clause                 | Action  | Note                                                                                        |
+| ----------------------------- | ---------------------- | ------- | ------------------------------------------------------------------------------------------- |
+| CLAUDE.md (Code-reuse)        | frameworks/libs        | applied | Pydantic + Jinja2 surfaced and confirmed before plan finalised                              |
+| CLAUDE.md (Research methods)  | established methods    | applied | IDL/stub-gen is the standard cross-language single-source pattern                           |
+| CLAUDE.md (YAGNI)             | drop unneeded          | applied | goldens scoped to feature axes, not params×returns cross-product                            |
+| CLAUDE.md (Proportionality)   | cost vs problem        | applied | "now is the time" — user confirmed after triple-site cost shown                             |
+| CLAUDE.md (Multiple interp)   | rank options           | applied | free-fns vs pure-virtual ranked → linker enforcement chosen                                 |
+| CEREMONIES.md:13              | mandate gate           | applied | §1 + §2 user-attested before implementation; re-attested after schema edits                 |
+| CLAUDE.md (Naming discipline) | what-not-how           | applied | converged on ubiquitous term: CommandLine / CommandExecutor                                 |
+| CLAUDE.md (Convergence check) | reaching vs retreating | tension | naming ran several rounds — judged productive (added clarity), not scope-narrowing; mundane |
+| CLAUDE.md (YAGNI)             | drop unneeded          | applied | dropped redundant `optional` flag + unused cross-arg defaults                               |
+| CLAUDE.md (Task execution)    | massive → debrief      | applied | paused at each phase boundary for review                                                    |
+| CLAUDE.md (Fact/inference)    | flag findings          | applied | surfaced + fixed the optional-arg-dropped-from-`set()` generator bug                        |
+| CEREMONIES.md (test coverage) | §3.5 review            | applied | firmware host-test skipped — justified (#25), hardware self-test instead                    |
 
 ## Resource consumption
 
-| Phase                       | Tokens (approx) | Wall time   |
-| --------------------------- | --------------- | ----------- |
-| Mandate + plan (incl. revisions) | ~60k       | ~2 h        |
-| Phase 1 — client            | ~70k            | ~1.5 h      |
-| Phase 2 — docs              | ~25k            | ~30 min     |
-| Phase 3 — server + hardware | ~90k            | ~2 h        |
-| Phase 4 — tooling + goldens | ~50k            | ~1 h        |
-| Closure                     | ~25k            | ~30 min     |
-| **Total**                   | **~320k**       | **~7.5 h** over 2 days |
+| Phase                            | Tokens (approx) | Wall time              |
+| -------------------------------- | --------------- | ---------------------- |
+| Mandate + plan (incl. revisions) | ~60k            | ~2 h                   |
+| Phase 1 — client                 | ~70k            | ~1.5 h                 |
+| Phase 2 — docs                   | ~25k            | ~30 min                |
+| Phase 3 — server + hardware      | ~90k            | ~2 h                   |
+| Phase 4 — tooling + goldens      | ~50k            | ~1 h                   |
+| Closure                          | ~25k            | ~30 min                |
+| **Total**                        | **~320k**       | **~7.5 h** over 2 days |
 
 | Counter                | Value                              |
 | ---------------------- | ---------------------------------- |
