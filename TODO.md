@@ -20,12 +20,10 @@ CHANGES.md, doc layer, test tiers).
    Existing type hints stay as documentation, unenforced.
 2. tox multi-version matrix — CI matrix is enough at this scale.
 3. README auto-generation (`<!-- AUTO: -->` + tooling) — no CLI help
-   worth embedding; write the README static.
+   worth embedding; write the README static. (Exception: the
+   `README-protocol.md` command table is generated from the protocol spec — #54.)
 4. pre-commit hooks — disproportionate here (cbm and dfd both skip).
 5. Rename `Asteriods` → `Asteroids` — the spelling is intentional.
-6. Single-source protocol (codegen for client + firmware) — real fix
-   for the double-definition, but needs codegen on both sides;
-   parked (see the **Protocol single-source** TODO item below).
 
 ## Done
 
@@ -50,9 +48,8 @@ CHANGES.md, doc layer, test tiers).
 - **Firmware version command** — board `version` command; version from firmware `CHANGES.md` → build-injected `version.h`; client prints it on connect — #49.
 - **Firmware DRAM trim / core pin lifted to 3.3.10** — shrank `Action.str` (→ `PRINT_LENGTH` 128): DRAM 84% → 67% on 3.3.10 (~72 KB freed). Fixed two latent buffer bugs (non-terminated `strncpy`; `sizeof`-vs-count FIFO overflow). CI + board + draw-heavy apps verified — #51.
 - **Print/buffer total safety** — FW 0.2.0 `getPrintMaxLength` (runtime-negotiated cap) + auto-commit-then-queue flow-control fix; client escape-safe `print` slicing; selftest finale (`buffer:slicing` / `buffer:flow-control`, gradient continuity oracle). Hardware-verified — #53.
+- **J · Protocol single-source** — one `protocol/protocol.yaml` (45 commands) generates the client `CommandLine` layer, the server parse/replay dispatch + linker-enforced handler header, and the `README-protocol.md` table; `make protocol-gen` + drift gate + generator goldens; `Command`→`CommandExecutor` rename; `test`→`hardcopy` fall-through fixed. DRAM unchanged (67%), hardware self-test passed — #54.
 
 ## TODO Items
 
-1. **Protocol single-source** (J) — deferred. Codegen a command spec
-   into both `client-py` (gfx strings) and firmware (`command.cpp`
-   hash-switch). Parked until the duplication actually bites.
+_(none currently)_
