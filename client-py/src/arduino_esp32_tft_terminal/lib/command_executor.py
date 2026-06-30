@@ -7,7 +7,7 @@ from arduino_esp32_tft_terminal.lib import ERROR, NONE, UNKNOWN, ArduinoCommExce
 from .channel import Channel
 
 
-class Command:
+class CommandExecutor:
     def __init__(self, channel: Channel):
         self.chan = channel
         self.comm_error_handler: Callable[[], None] | None = None

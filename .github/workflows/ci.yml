@@ -40,3 +40,21 @@ jobs:
           make require
           export PATH="$HOME/.local/bin:$PATH"
           make firmware-build
+
+  protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.13"
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+      - name: Lint, goldens, and drift gate
+        working-directory: protocol
+        run: |
+          make require
+          make lint
+          make test
+          make check

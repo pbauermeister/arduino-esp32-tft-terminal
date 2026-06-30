@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tft-protocol"
+version = "0.1.0"
+description = "Meta-spec and code generator for the Arduino ESP32 TFT Terminal USB command protocol."
+requires-python = ">=3.11"
+authors = [{ name = "Pascal Bauermeister", email = "pascal.bauermeister@gmail.com" }]
+dependencies = ["pydantic>=2", "PyYAML>=6", "Jinja2>=3"]
+
+[project.optional-dependencies]
+dev = ["ruff", "pytest"]
+
+[project.scripts]
+tft-protocol = "tft_protocol.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tft_protocol"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+extend-exclude = ["tests/golden"] # golden data is compared raw, never reformatted
+
+[tool.ruff.lint]
+extend-select = ["I"] # isort import ordering
+
+[tool.ruff.format]
+quote-style = "preserve"
