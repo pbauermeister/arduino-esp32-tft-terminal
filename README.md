@@ -13,14 +13,16 @@ graphical demos — and is easy to extend.
 The display is the [Adafruit ESP32-S3 Reverse TFT Feather](https://www.adafruit.com/product/5345):
 an ESP32-S3 board with a 240×135 colour TFT on its back.
 
-This repository provides all three parts:
+This repository provides all four parts:
 
 - **[`server-esp32s3-rtft/`](server-esp32s3-rtft/)** — the Arduino firmware sketch (C++): a graphical server exposing TFT drawing primitives and button readout over USB; holds no app logic.
 - **[`client-py/`](client-py/)** — the Python client (Linux): owns all app logic and the ready-to-run apps; drives the board by sending command lines and reading answers.
+- **[`protocol/`](protocol/)** — the single-source protocol model (`protocol.yaml` + code generator): the one authoritative definition of the command vocabulary, from which the client stubs, firmware handlers, and protocol documentation are generated.
 - **[`case-esp32s3-rtft/`](case-esp32s3-rtft/)** — the OpenSCAD 3D-printed case and cap.
 
 The board maps most commands directly to TFT library calls; the contract
-between the two sides is the [USB protocol](README-protocol.md).
+between the two sides is the [USB protocol](README-protocol.md), generated from
+the shared protocol model.
 
 ![Asteriods on the TFT](https://raw.githubusercontent.com/pbauermeister/arduino-esp32-tft-terminal/main/media/20240525_133408-thumb.png "Asteriods running on the gadget")
 
