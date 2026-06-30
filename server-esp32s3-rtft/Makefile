@@ -96,6 +96,13 @@ firmware-build: version.h ## compile the sketch (arduino-cli)
 firmware-upload: firmware-build ## build, flash + verify: set PORT (1)
 	arduino-cli upload -b "$(FQBN):$(OPTS)" -p "$(PORT)" -t .
 
+################################################################################
+## Test:: ##
+
+.PHONY: test-board
+test-board: ## on-board acceptance suite (relays to client-py)
+	$(MAKE) -C ../client-py test-board
+
 
 ################################################################################
 ##
