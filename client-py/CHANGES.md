@@ -1,5 +1,9 @@
 # Changes
 
+## Version 0.2.1:
+
+- Require `claude-busy-monitor>=1.0.6`.
+
 ## Version 0.2.0:
 
 - `print` now slices long text to the board's per-action capacity (negotiated at runtime via `getPrintMaxLength`, with a safe fallback for older firmware), so long strings are no longer truncated.

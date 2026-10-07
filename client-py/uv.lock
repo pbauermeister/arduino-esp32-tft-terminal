@@ -24,7 +24,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "claude-busy-monitor" },
+    { name = "claude-busy-monitor", specifier = ">=1.0.6" },
     { name = "numpy", specifier = ">=1.26.1" },
     { name = "pyserial", specifier = ">=3.5" },
     { name = "pytest", marker = "extra == 'dev'" },
@@ -34,11 +34,11 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "claude-busy-monitor"
-version = "1.0.5"
+version = "1.0.6"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d2/a4/93fa5c0a88cb7a08e980474cc6bc8e243d61a2e8ec9cd07feb6c16edff51/claude_busy_monitor-1.0.5.tar.gz", hash = "sha256:c50e6485f3fe5b3a8544a21791e7fe4b7982f7232746f564060b0ca45d9086fc", size = 107160, upload-time = "2026-06-14T05:26:43.4Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/01/7140ed05104be1245f17fdb4c48e015f685f2431ff74be4525ec86233146/claude_busy_monitor-1.0.6.tar.gz", hash = "sha256:873367b7be0dff81777f5485c34972bb28f47a6e14ad990892be834eaa99db6b", size = 116317, upload-time = "2026-10-07T12:27:12.697Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c5/d7/7af5c0fbe834a98037929a916219765c8596d6cebe83ef43a87e3745c424/claude_busy_monitor-1.0.5-py3-none-any.whl", hash = "sha256:8bb9ec5d5b4447270a984c11a81fa2c07fba2102ec6ba29daee16fd20a45d18d", size = 11067, upload-time = "2026-06-14T05:26:44.638Z" },
+    { url = "https://files.pythonhosted.org/packages/77/75/97c950f5bd74e7961334a756d5dc663e353a21569819f07893c45c89007c/claude_busy_monitor-1.0.6-py3-none-any.whl", hash = "sha256:b796b03d8b6bc3a3ce7bc6a6a39faf0ddff8cbe6b1dca6dded9d91a284accf6e", size = 11360, upload-time = "2026-10-07T12:27:10.836Z" },
 ]
 
 [[package]]
