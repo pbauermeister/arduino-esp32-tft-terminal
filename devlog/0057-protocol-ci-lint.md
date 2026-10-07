@@ -11,7 +11,7 @@ Fast-path task (brief in chat).
 
 - Author: agent
 - Model: Claude Fable 5.1
-- Review: pending
+- Review: user
 
 Scope source: chat brief, accepted on 2026-10-07 — "Do the fix as a new task, fast path. It will be part of version 0.2.1."
 
@@ -32,7 +32,7 @@ Acceptance criteria:
 
 - Author: agent
 - Model: Claude Fable 5.1
-- Review: pending
+- Review: user
 
 Steps as taken:
 
@@ -47,7 +47,7 @@ Not done: bumping the locked ruff to 0.16. The lock stays at 0.15.20; the source
 
 - Author: agent
 - Model: Claude Fable 5.1
-- Review: pending
+- Review: user
 
 ### 3.1 Deviations
 
@@ -78,20 +78,20 @@ Accept.
 
 ## Governance trace
 
-| Source       | Clause                 | Action  | Note                                        |
-| ------------ | ---------------------- | ------- | ------------------------------------------- |
-| CEREMONIES   | Fast-path task flow    | applied | brief in chat; single-pass devlog           |
-| CLAUDE.md    | Task nature            | applied | execution                                   |
-| CLAUDE.md    | Code-reuse             | n/a     | no new code                                 |
-| CLAUDE.md    | Devlog + GH issue      | applied | #57                                         |
+| Source     | Clause              | Action  | Note                              |
+| ---------- | ------------------- | ------- | --------------------------------- |
+| CEREMONIES | Fast-path task flow | applied | brief in chat; single-pass devlog |
+| CLAUDE.md  | Task nature         | applied | execution                         |
+| CLAUDE.md  | Code-reuse          | n/a     | no new code                       |
+| CLAUDE.md  | Devlog + GH issue   | applied | #57                               |
 
 ## Resource consumption
 
-| Phase          | Tokens (approx) | Wall time |
-| -------------- | --------------- | --------- |
-| Diagnosis      | ~8k             | ~5 min    |
-| Fix + verify   | ~6k             | ~5 min    |
-| Devlog + PR    | ~4k             | ~3 min    |
+| Phase        | Tokens (approx) | Wall time |
+| ------------ | --------------- | --------- |
+| Diagnosis    | ~8k             | ~5 min    |
+| Fix + verify | ~6k             | ~5 min    |
+| Devlog + PR  | ~4k             | ~3 min    |
 
 | Counter       | Value |
 | ------------- | ----- |
