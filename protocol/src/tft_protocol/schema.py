@@ -112,7 +112,7 @@ class Command(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _arg_order_invariants(self) -> "Command":
+    def _arg_order_invariants(self) -> Command:
         seen_optional = False
         for i, a in enumerate(self.args):
             if a.type in TRAILING_TYPES and i != len(self.args) - 1:
@@ -138,7 +138,7 @@ class Protocol(BaseModel):
     commands: list[Command]
 
     @model_validator(mode="after")
-    def _names_and_hashes_unique(self) -> "Protocol":
+    def _names_and_hashes_unique(self) -> Protocol:
         from .load import fw_hash
 
         seen_names: set[str] = set()

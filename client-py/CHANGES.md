@@ -3,6 +3,7 @@
 ## Version 0.2.1:
 
 - Require `claude-busy-monitor>=1.0.6`.
+- Protocol tooling: ruff 0.16 lint fixes; `make require` now installs from `uv.lock` so CI matches local (#57).
 
 ## Version 0.2.0:
 

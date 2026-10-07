@@ -23,8 +23,7 @@ help: ## print this help
 
 .PHONY: require
 require: ## create venv + install deps (idempotent)
-	uv venv -q
-	uv pip install -q -e '.[dev]'
+	uv sync -q --extra dev
 
 .PHONY: validate
 validate: ## validate protocol.yaml against the schema
