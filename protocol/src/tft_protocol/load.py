@@ -25,5 +25,5 @@ def fw_hash(s: str) -> int:
 def load_protocol(path: str | Path) -> Protocol:
     data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     if not isinstance(data, list):
-        raise ValueError("protocol.yaml top level must be a list of commands")
+        raise TypeError("protocol.yaml top level must be a list of commands")
     return Protocol(commands=data)
